@@ -39,7 +39,6 @@ Contains
      e_rad = k
     endif
    enddo
-   e_rad = nz-5
  
    ! Determination of the output height 
    temp_r = 1.0 + obsheight/rsun
@@ -50,7 +49,6 @@ Contains
      o_rad = k
     endif
    enddo
-   o_rad = nz-1
 
  
 

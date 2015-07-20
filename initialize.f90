@@ -1018,6 +1018,7 @@ if (lexist1) then
     inquire(file='compute_synth',exist=COMPUTE_SYNTH)
     !LINESEARCH = .FALSE.
     inquire(file='linesearch',exist=LINESEARCH)
+    print *,"linesearch",LINESEARCH
     COMPUTE_DATA = .false.
     inquire(file='compute_data', exist = COMPUTE_DATA)
     !if (lexist) LINESEARCH = .TRUE.

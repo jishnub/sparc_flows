@@ -1,4 +1,4 @@
-import os,shutil,glob,re,subprocess
+import os,shutil,glob,re,subprocess,datetime
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
@@ -27,12 +27,14 @@ def compute_forward_adjoint_kernel(src):
     ttname="vz_cc_src"+src+".fits"
     tdiff0name="ttdiff_src"+src+".fmode"
     tdiff1name="ttdiff_src"+src+".p1mode"
+    tdiff2name="ttdiff_src"+src+".p2mode"
     Spectral=os.path.join(codedir,"Spectral")
     Adjoint=os.path.join(codedir,"Adjoint")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
     
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
+    mpipath=os.path.join("/home/apps/openmpi-1.6.5/bin/mpiexec")
+    #mpipath=os.path.join("/home/shivam/anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
     
     ####################################################################
@@ -60,6 +62,9 @@ def compute_forward_adjoint_kernel(src):
                         
         shutil.copyfile(os.path.join(data,forward,"ttdiff.1"),
                         os.path.join(data,"tt","iter"+itername,tdiff1name))
+                        
+        shutil.copyfile(os.path.join(data,forward,"ttdiff.2"),
+                        os.path.join(data,"tt","iter"+itername,tdiff2name))
     
     ####################################################################
     #~ Adjoint
@@ -82,5 +87,7 @@ def compute_forward_adjoint_kernel(src):
     
     return 0
     
+print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
 
 compute_forward_adjoint_kernel(src)
+print "Finishing on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')

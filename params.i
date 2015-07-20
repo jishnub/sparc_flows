@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/data'
+character (LEN = *), PARAMETER :: directory = '/scratch/shivam/flows/data/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -89,8 +89,8 @@ parameter (npmlhor = 9)
 
 ! ENTER THE LOCATION OF THE 3D pressure, density, and magnetic background files
 ! DEFAULT LOCATION IS THE SAME AS OUTPUT DIRECTORY
-character (LEN = *), PARAMETER :: dirbackmag = '/scratch/jishnu/flows/start/'
-character (LEN = *), PARAMETER :: dirbacktrue = '/scratch/jishnu/flows/true/'
+character (LEN = *), PARAMETER :: dirbackmag = '/scratch/shivam/flows/start/'
+character (LEN = *), PARAMETER :: dirbacktrue = '/scratch/shivam/flows/true/'
 
 ! --------
 
@@ -126,7 +126,7 @@ parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
 real*8 solartime
-parameter(solartime = 1.528)
+parameter(solartime = 2.8)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well

@@ -18,11 +18,14 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 OBJS2=	grad.o
 
 FC=	/home/apps/openmpi-1.6.5/bin/mpif90
+#FC= mpif90
 FC77=   /home/apps/openmpi-1.6.5/bin/mpif77
+#FC77= mpif77
+
 FFLAGS= -O3 -DDOUBLE_PRECISION ##-p -g ##-check all ##-fpe0 -traceback -debug #-check bounds
 #INCLUDE= /opt/users/apps/intel/composer_xe_2015.2.164/mkl/include/fftw/fftw3.f
-LIBS1 = -L/home/jishnu/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
-LIBS2= -lcfitsio -L/home/jishnu/lib/fftw-3.3.4/lib -lfftw3
+LIBS1 = -L/home/shivam/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
+LIBS2= -lcfitsio -L/home/shivam/lib/fftw-3.3.4/lib -lfftw3
 
 COMMAND1=	sparc
 COMMAND2=	grad

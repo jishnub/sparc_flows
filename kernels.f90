@@ -31,6 +31,7 @@ SUBROUTINE PRODUCE_KERNELS
 
   test_in_2d = .true.
 
+
   inquire(file=directory//'model_c_ls'//jobno//'.fits',exist = lexist)
   if (lexist) then
    call readfits(directory//'model_c_ls'//jobno//'.fits', temp1, nz)
@@ -42,13 +43,15 @@ SUBROUTINE PRODUCE_KERNELS
   
 
   if (flows) then
-   inquire(file=directory//'model_psi_'//jobno//'.fits', exist = lexist)
+   inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = lexist)
    if (lexist) then
     allocate(psivar(nx,dim2(rank),nz_kern))
-    call readfits(directory//'model_psi_'//jobno//'.fits',psivar,nz)
-    deallocate(psivar)
+    call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
+!    deallocate(psivar)
    endif
   endif
+
+
 
   if (magnetic) then
 
@@ -57,6 +60,7 @@ SUBROUTINE PRODUCE_KERNELS
         aby(nx,dim2(rank),nz_kern), abz(nx,dim2(rank),nz_kern), &
         tempy(nx,dim2(rank),nz_kern), tempz(nx,dim2(rank),nz_kern),&
 	temp(nx,dim2(rank),nz))
+
 
    !call readfits(dirbackmag//'densityclassic.fits', temp, nz)
 !   call readfits(dirbackmag//'density2D.fits', temp, nz)
@@ -100,11 +104,11 @@ SUBROUTINE PRODUCE_KERNELS
 !    reduction = 1.0
     boy=0.0
   
-    inquire(file=directory//'model_vectorpsi_ls'//jobno//'.fits', exist = lexist)
+    inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = lexist)
     lexist = .true.
     if (lexist) then
      allocate(psivar(nx,dim2(rank),nz_kern))
-     call readfits(directory//'model_vectorpsi_ls'//jobno//'.fits',psivar,nz)
+     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
      call ddzkern(psivar, box, 0)
      box = -box
 !     box(:,:,180:230) = 0.0
@@ -116,6 +120,7 @@ SUBROUTINE PRODUCE_KERNELS
      print *,"Max value of Bz",maxval(abs(boz))
      deallocate(psivar)
    
+
      call readfits(dirbacktrue//'pressure2D.fits',p0,nz)
      call readfits(dirbacktrue//'density2D.fits',rho0,nz)
 
@@ -128,6 +133,7 @@ SUBROUTINE PRODUCE_KERNELS
      rho0 = rho0/dimrho
 
 
+
      call curl_kern(box, boy, boz, curlbox, curlboy, curlboz)
      !curlboy = curlboy * reduction**0.5
 !    box = box * reduction**0.5
@@ -136,12 +142,14 @@ SUBROUTINE PRODUCE_KERNELS
 
 !    deallocate(reduction)
     else
-     print *,'No vector psi!'
+     print *,'No psi!'
      stop
     endif
 
     deallocate(temp)
   endif
+
+
 
   call ddxkern(rho0, gradrho0_x, 1)
   call ddykern(rho0, gradrho0_y, 1)
@@ -163,11 +171,13 @@ SUBROUTINE PRODUCE_KERNELS
     deallocate(c2a)
   endif
 
-  if (background_flows_exist) then
-   call readfits(dirbackmag//'v0_x.fits', v0_x, nz_kern)
-   call readfits(dirbackmag//'v0_y.fits', v0_y, nz_kern)
-   call readfits(dirbackmag//'v0_z.fits', v0_z, nz_kern)
-  endif
+
+
+!  if (background_flows_exist) then
+!   call readfits(dirbackmag//'v0_x.fits', v0_x, nz_kern)
+!   call readfits(dirbackmag//'v0_y.fits', v0_y, nz_kern)
+!   call readfits(dirbackmag//'v0_z.fits', v0_z, nz_kern)
+!  endif
 
  hessian = 0.0
  kernelv = 0.0
@@ -175,11 +185,15 @@ SUBROUTINE PRODUCE_KERNELS
  kernelp = 0.0
  kernelrho = 0.0
 
+
+
  sound_speed_kernels = .true.
+ magnetic_kernels = .false.
  flow_kernels = .false.
  if (FLOWS) flow_kernels = .true.
  if (magnetic) magnetic_kernels = .true.
  density_kernels = .true.
+
 
 ! grav =0.
  
@@ -189,7 +203,7 @@ SUBROUTINE PRODUCE_KERNELS
 
  call read_parameters_kernel
 
-! nt_kern = floor((final_time - local_time)*timestep/outputcad) + 1
+! nt_kern = floor((final_time - local_time)*timestep/out	putcad) + 1
  if (rank==0) print *,'Total number of temporal steps:', nt_kern,totkern
 
  do k=1,nt_kern
@@ -226,6 +240,8 @@ SUBROUTINE PRODUCE_KERNELS
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vx_'//charnum//'_partial.fits', &
 		f_vel_x, nz_kern)
 
+
+
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/acc_z_'//charnum//'_partial.fits', &
 		f_acc_z, nz_kern)
   f_acc_y = 0.
@@ -233,6 +249,7 @@ SUBROUTINE PRODUCE_KERNELS
 		f_acc_y, nz_kern)
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/acc_x_'//charnum//'_partial.fits', & 
 	f_acc_x, nz_kern)
+
 
 
   ! REVERSED-TIME ADJOINT 
@@ -251,6 +268,8 @@ SUBROUTINE PRODUCE_KERNELS
 	a_vel_y, nz_kern)
   call readfits(directory//'adjoint_src'//contrib//'/vx_'//charnum//'_partial.fits', &!//'_'//contrib
 	a_vel_x, nz_kern)
+
+
 
   call readfits(directory//'adjoint_src'//contrib//'/acc_z_'//charnum//'_partial.fits', &
 		a_acc_z, nz_kern)
@@ -274,6 +293,11 @@ SUBROUTINE PRODUCE_KERNELS
   hessian = hessian + f_acc_z * f_acc_z + f_acc_x * f_acc_x + &
 	f_acc_y * f_acc_y
 
+ 
+  !print *,f_acc_x 
+  !print *,f_acc_y
+  !print *,f_acc_z
+
   if (sound_speed_kernels) then
 
    call compute_div(f_xi_x,f_xi_y,f_xi_z,temp2)
@@ -293,6 +317,7 @@ SUBROUTINE PRODUCE_KERNELS
 		f_acc_x * a_vel_x + &
 		f_acc_y * a_vel_y
  
+
 
    do j=1,nz_kern
     temp2(:,:,j) = a_vel_z(:,:,j) * grav(j)
@@ -329,6 +354,7 @@ SUBROUTINE PRODUCE_KERNELS
 		     deriv_ij(:,:,:,3,3) * a_vel_z + &
 		     kernelv(:,:,:,3)
 
+
   endif
 
 
@@ -345,6 +371,9 @@ SUBROUTINE PRODUCE_KERNELS
 	tempx, tempy, tempz, temp1, temp2, temp3)
 
    kernelb(:,:,:,1) = kernelb(:,:,:,1) + temp1
+
+
+
    kernelb(:,:,:,2) = kernelb(:,:,:,2) + temp2
    kernelb(:,:,:,3) = kernelb(:,:,:,3) + temp3
 
@@ -362,6 +391,7 @@ SUBROUTINE PRODUCE_KERNELS
 
 
   ! THE THIRD TERM 
+
 
 
    call cross_kern(a_vel_x,a_vel_y,a_vel_z, &
@@ -385,6 +415,7 @@ SUBROUTINE PRODUCE_KERNELS
 		curlbox, curlboy, curlboz, temp1, temp2, temp3)
 
 
+
    call curl_kern(temp1, temp2, temp3, tempx, tempy, tempz)
 
    call cross_kern(tempx, tempy, tempz, f_xi_x, f_xi_y, &
@@ -395,6 +426,7 @@ SUBROUTINE PRODUCE_KERNELS
    kernelb(:,:,:,2) = kernelb(:,:,:,2) + temp2
    kernelb(:,:,:,3) = kernelb(:,:,:,3) + temp3
  
+
 
   ! THE FOURTH TERM  (FINAL TERM)
 
@@ -479,9 +511,11 @@ SUBROUTINE PRODUCE_KERNELS
   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
   kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
                    (rho0*Lregular*c2**0.5*psivar)*stepskern*timestep * dimen
+
   do i=1,3
    kernelv(:,:,:,i) = - 2.0 * kernelv(:,:,:,i) * rho0 * stepskern * timestep * dimen ! the other time-unit
   enddo
+
 
 
   if (rank==0) print *,'DIMENSIONS OF VELOCITY KERNELS ARE Mm^-3 km^-1 s^3'
@@ -512,7 +546,7 @@ SUBROUTINE PRODUCE_KERNELS
   if (.not. test_in_2d) &
     call writefits_3d(adjustl(trim(directory_rel))//'kernel_by_'//contrib//'.fits', kernelb(:,:,:,2), nz_kern)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_bz_'//contrib//'.fits', kernelb(:,:,:,3), nz_kern)
-  call writefits_3d(adjustl(trim(directory_rel))//'kernel_vectorpsi_'//contrib//'.fits', kernelpsi, nz_kern)
+  call writefits_3d(adjustl(trim(directory_rel))//'kernel_psi_'//contrib//'.fits', kernelpsi, nz_kern)
 
 
  endif
@@ -609,6 +643,7 @@ SUBROUTINE ddzkern(var, dvar, bc)
  real*8 var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
  integer i,j,k,bc
 
+
   call dbyd2(dvar,var,nx*dim2(rank),nz_kern,bc)
   do k=1,nz_kern
    dvar(:,:,k) = dvar(:,:,k)*stretchkern(k)
@@ -642,7 +677,7 @@ SUBROUTINE ddxkern(var, dvar,bc)
 
  elseif (.NOT. PERIODIC) then
   call dbyd1(dvar,var,nx,dim2(rank)*nz_kern,bc)
-  
+
  endif
  dvar = dvar*stretchx
 
@@ -663,6 +698,8 @@ SUBROUTINE ddykern(var, dvar,bc)
  allocate(temp(nx,dim1(rank),nz_kern) , trans(ny, dim1(rank), nz_kern))
  call transpose_3D_y_kern(var, temp)
  
+
+
  if ((PERIODIC) .AND. (USE_FFT)) then
   allocate(tempcomp(ny/2+1,dim1(rank), nz_kern))
   call dfftw_execute_dft_r2c(fftw_plan_fwd_y, temp, tempcomp)
@@ -680,6 +717,7 @@ SUBROUTINE ddykern(var, dvar,bc)
  elseif (.NOT. PERIODIC) then
   call dbyd1(trans,temp,ny,dim1(rank)*nz_kern,bc)
  endif
+
 
  call inv_transpose_3D_y_kern(trans, dvar)
    
@@ -730,6 +768,7 @@ SUBROUTINE INV_TRANSPOSE_3D_Y_KERN(input, output)
 
  ! Non - communicative transpose
 
+
  do j=1,dim1(rank)
   do i=1,dim2(rank)
    output(j+inv_rdispls(rank)-1,i,:) = input(i+inv_sdispls(rank)-1,j,:)
@@ -757,6 +796,7 @@ SUBROUTINE CROSS_KERN(a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z)
   implicit none
   real*8, dimension(nx, dim2(rank), nz_kern) :: a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z
 
+
   c_x = a_y * b_z - a_z * b_y
   c_y = b_x * a_z - a_x * b_z
   c_z = a_x * b_y - a_y * b_x
@@ -773,7 +813,7 @@ SUBROUTINE CURL_KERN(f_x, f_y, f_z, curl_x, curl_y, curl_z)
   real*8, dimension(:,:,:), allocatable :: temp
 
   allocate(temp(nx, dim2(rank), nz_kern))
-                                                                                                                                                            
+                                                                                                                            
   call ddxkern(f_y, curl_z, bcx)
   call ddykern(f_x, temp, bcy)
   curl_z = curl_z - temp
@@ -785,7 +825,7 @@ SUBROUTINE CURL_KERN(f_x, f_y, f_z, curl_x, curl_y, curl_z)
   call ddzkern(f_x, curl_y,bcz)
   call ddxkern(f_z, temp, bcx)
   curl_y = curl_y - temp
-                                                                                                                                                            
+                                                                                                                                                     
   deallocate(temp)
                                                                                                                                                             
 END SUBROUTINE CURL_KERN
@@ -822,6 +862,7 @@ SUBROUTINE COMPUTE_DEL(fx, fy, fz, deriv_ij)
  real*8, dimension(nx,dim2(rank),nz_kern) :: fx, fy, fz
  real*8, dimension(nx,dim2(rank),nz_kern,3,3) :: deriv_ij 
 
+
  call ddxkern(fx,deriv_ij(:,:,:,1,1),1)
  call ddxkern(fy,deriv_ij(:,:,:,1,2),1)
  call ddxkern(fz,deriv_ij(:,:,:,1,3),1)
@@ -852,12 +893,13 @@ SUBROUTINE FILTER_VAR_Z(var)
   coeffs(3) = 0.08789062500000
   coeffs(4) = -0.01953125000000
   coeffs(5) = 0.00195312500000
-  
+
 
   temp(:,:,2) = 0.5 * (var(:,:,3) + var(:,:,1))
   temp(:,:,3) = 0.5 * (var(:,:,4) + var(:,:,2))
   temp(:,:,4) = 0.5 * (var(:,:,5) + var(:,:,3))
   temp(:,:,5) = 0.5 * (var(:,:,6) + var(:,:,4))
+
 
   do k=6,nz_kern-5
    temp(:,:,k) = coeffs(0)*var(:,:,k) + 0.5*coeffs(1)*(var(:,:,k-1) + var(:,:,k+1)) &
@@ -890,6 +932,7 @@ function normkern(matrix)
    normkern  = 0.0
    sum = 0.0
 
+
    do k = 1,nz_kern
     do j =1,dim2(rank)
      do i =1,nx
@@ -915,6 +958,8 @@ SUBROUTINE READ_PARAMETERS_KERNEL
 
  open(44,file=directory//'adjoint_src'//contrib//'/kernel_info',form='formatted',status='unknown')
 
+
+
   read(44,*) nt_kern
   read(44,*) adj_end_stamp
 
@@ -925,6 +970,8 @@ SUBROUTINE READ_PARAMETERS_KERNEL
 
   read(44,*) fwd_start_stamp
   read(44,*) j
+
+
 
  close(44)
 

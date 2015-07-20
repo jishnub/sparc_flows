@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N  full
-#PBS -l nodes=1:ppn=24
+#PBS -l nodes=8:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full
 #PBS -l walltime=12:00:00
@@ -34,7 +34,7 @@ do
     rm $directory/kernel/misfit_all_"$src"_00
 done
 
-cp $directory/model_vectorpsi_ls00.fits $directory/update/model_vectorpsi_"$itername".fits
+cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
 cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
 
 find . -name "core.*" -exec rm -f {} \; 

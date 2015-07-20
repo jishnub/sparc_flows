@@ -1,0 +1,10 @@
+*.mod
+*.o
+*.out
+sparc
+grad
+*.fits
+output*
+error*
+source.txt
+*~

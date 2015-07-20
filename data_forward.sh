@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N  data_forward
-#PBS -l nodes=1:ppn=24
+#PBS -l nodes=8:ppn=24
 #PBS -o  output-data_forward
 #PBS -e  error-data_forward
 #PBS -l walltime=12:00:00

@@ -1,6 +1,6 @@
 import os
 
-directory="/scratch/jishnu/magnetic/data"
+directory="/scratch/shivam/flows/data"
 with open(os.path.join(directory,"master.pixels"),'r') as masterpixels:
     nmasterpixels=sum(1 for _ in masterpixels)
 

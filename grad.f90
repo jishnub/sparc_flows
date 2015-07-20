@@ -10,7 +10,7 @@ PROGRAM CONJGRAD
     real*8 x(nx), smooth_x, smooth_z, ran, z0(nz),con,den,back(6,nz), eps
     parameter(smooth_x = 4, smooth_z = 4)
     real*8, dimension(:), allocatable :: alph
-    real*8, dimension(nx,1,nz) :: totkern_c, totkern_psi, &
+    real*8, dimension(nx,1,nz) :: totkern_c, totkern_psi, b, &
     kern, update_c, update, update0, update_psi, &
     lastupdate, lastmodel, model, gradc, lastgradc,  &
     lastgradpsi, gradpsi, hess, lastmodel_psi, lastmodel_c
@@ -67,7 +67,7 @@ PROGRAM CONJGRAD
 
     write(iter, '(I2.2)') iteration
     write(itermin, '(I2.2)') iteration-1
-
+ 
     call dfftw_plan_dft_r2c_3d(fwdplan, nx, 1, nz, kern, temp, FFTW_ESTIMATE)
     call dfftw_plan_dft_c2r_3d(invplan, nx, 1, nz, temp, kern, FFTW_ESTIMATE)
     open(356,file=adjustl(trim(directory))//'master.pixels',action='read',position='rewind')
@@ -86,22 +86,30 @@ PROGRAM CONJGRAD
         write(pixnum, '(I2.2)') i 
         print *,pixnum,i
 
-        call readfits(adjustl(trim(directory))//'kernel/kernel_c2_'//pixnum//'.fits',kern, nx, 1, nz)
+        call readfits(adjustl(trim(directory))//'kernel/kernel_c_'//pixnum//'.fits',kern, nx, 1, nz)
         call filter_z(kern)
-        kern(:,1,1:10) = 0.0
-        kern(:,1,nz-9:nz) = 0.0
+        !kern(:,1,1:10) = 0.0
+        !kern(:,1,nz-9:nz) = 0.0
+       
         totkern_c = totkern_c + kern
-
+        !call writefits_3d(adjustl(trim(directory))//'update/totkern_c_'//pixnum//'.fits',totkern_c,nx, 1,  nz)
+        
+        !call countzeros(totkern_c,'totkern_c')
+        
         call readfits(adjustl(trim(directory))//'kernel/kernel_psi_'//pixnum//'.fits',kern, nx, 1, nz)
         call filter_z(kern)
-        kern(:,1,1:10) = 0.0
-        kern(:,1,nz-9:nz) = 0.0
+        !kern(:,1,1:10) = 0.0
+        !kern(:,1,nz-9:nz) = 0.0
         totkern_psi = totkern_psi + kern
-
+        !call writefits_3d(adjustl(trim(directory))//'update/totkern_psi_'//pixnum//'.fits',totkern_psi,nx, 1,  nz)
+	    !call countzeros(totkern_psi,'totkern_psi')
+        
         call readfits(adjustl(trim(directory))//'kernel/hessian_'//pixnum//'.fits',kern, nx, 1, nz)
         call filter_z(kern)
         hess = hess + abs(kern)
-
+        !call writefits_3d(adjustl(trim(directory))//'update/hess'//pixnum//'.fits',hess,nx, 1,  nz)
+        !call countzeros(hess,'hess')
+	
         !  call readfits(adjustl(trim(directory))//'kernel/kernel_vz_'//pixnum//'.fits',kern, nx, 1, nz)
         !  kern(:,1,1:10) = 0.0
         !  kern(:,1,nz-9:nz) = 0.0
@@ -118,6 +126,9 @@ PROGRAM CONJGRAD
 
     con = 0.005
     hess = (hess)/maxval(abs(hess))
+    !call countzeros(hess,'hess')
+    !call writefits_3d(adjustl(trim(directory))//'update/hesss.fits',hess,nx, 1,  nz)
+
     do k=1,nz
         do i=1,nx
             !if (hess(i,1,k) < 0.01 .and. hess(i,1,k) .ge. 0.) hess(i,1,k) = 0.01
@@ -126,11 +137,13 @@ PROGRAM CONJGRAD
         enddo
     enddo
     hess = hess/maxval(abs(hess))
-    !  call writefits_3d('hess.fits',hess,nx,1,nz)
-
+  
+    !call writefits_3d(adjustl(trim(directory))//'update/hessss.fits',hess,nx, 1,  nz)
 
     !hess = 1.0
     kern = totkern_c/hess
+    !call writefits_3d(adjustl(trim(directory))//'update/kernn.fits',kern,nx, 1,  nz)
+    !call countzeros(kern,'kern')
     call dfftw_execute(fwdplan)
     do k=1,nz
         temp(:,1,k) = temp(:,1,k)*filtx!*filtz(k)
@@ -140,9 +153,16 @@ PROGRAM CONJGRAD
     totkern_c = kern
 
     kern = totkern_psi/hess
-    do k=1,nz
-        kern(:,1,k) = sum(kern(:,1,k))
-    enddo
+    !call countzeros(kern,'kern')
+    !call writefits_3d(adjustl(trim(directory))//'update/kernnn.fits',kern,nx, 1,  nz)
+    
+    !do k=1,nz
+    !    kern(:,1,k) = sum(kern(:,1,k))
+    !enddo
+    !call writefits_3d(adjustl(trim(directory))//'update/kernnnn.fits',kern,nx, 1,  nz)
+
+    !ckern,'kern')
+    
     call dfftw_execute(fwdplan)
     do k=1,nz
         temp(:,1,k) = temp(:,1,k)*filtx*filtz(k)
@@ -154,7 +174,10 @@ PROGRAM CONJGRAD
     enddo
     call dfftw_execute(invplan)
     totkern_psi = kern
-
+    
+    !call countzeros(totkern_psi,'totkern_psi')
+    
+    !call writefits_3d(adjustl(trim(directory))//'update/totkernpsi.fits', totkern_psi,nx, 1,  nz)
     !  kern = totkern_vz/hess
     !  call dfftw_execute(fwdplan)
     !  do k=1,nz
@@ -169,10 +192,11 @@ PROGRAM CONJGRAD
 
     
     call antisymmetrize(totkern_psi)
-    do i=1,15
+    do i=1,5
         call filter_z(totkern_psi)
     enddo
     call filter_z(totkern_c)  
+    !call countzeros(totkern_psi,'totkern_psi')
     
     call writefits_3d(adjustl(trim(directory))//'update/gradient_c_'//itermin//'.fits',totkern_c,nx, 1, nz)
     call writefits_3d(adjustl(trim(directory))//'update/gradient_psi_'//itermin//'.fits',totkern_psi,nx, 1, nz)
@@ -193,6 +217,8 @@ PROGRAM CONJGRAD
         print *,'Reading in previous model ', itermin
         call readfits(adjustl(trim(directory))//'update/model_c_'//itermin//'.fits', lastmodel_c,nx, 1,  nz)  
         call readfits(adjustl(trim(directory))//'update/model_psi_'//itermin//'.fits', lastmodel_psi,nx, 1,  nz)  
+        
+        call countzeros(lastmodel_psi,'lastmodel_psi')
         !   lastmodel_psi = 250e-4
         !  endif
 
@@ -209,6 +235,7 @@ PROGRAM CONJGRAD
 
         update_c = totkern_c 
         update_psi = totkern_psi
+        
         !  update_vx = totkern_vx
         !  update_vz = totkern_vz
         
@@ -355,14 +382,14 @@ PROGRAM CONJGRAD
 
 
     endif
-
+    call writefits_3d(adjustl(trim(directory))//'update/updatepsi.fits', update,nx, 1,  nz)
     con = maxval(abs(update_psi))
     den = maxval(abs(update_c))
     print *,con,den
     ! if (con .lt. den) con = den
     update_c = update_c/con
     update_psi = update_psi/con
-    eps = 0.02
+    eps = 0.15
 
     open(7,file = file_data,form = 'formatted',status = 'old')
     do k = 1,nz
@@ -379,9 +406,13 @@ PROGRAM CONJGRAD
         write(charnum,'(I1.1)') i
 
         update = lastmodel_c*(1. + eps * (i) * update_c)
+       ! call countzeros(update,'updatec')
+        
         call writefits_3d(adjustl(trim(directory))//'update/test_c_'//charnum//'.fits', update,nx, 1,  nz)
 
         update = lastmodel_psi*(1. + eps * (i) * update_psi)
+        !call countzeros(update,'updatepsi')
+        
         !  do k=1,nz
         !    update(:,1,k) = (update(:,1,k) -update(1,1,1))/(1. + exp((z0(k) + 3.6)/0.3)) + update(1,1,1) 
         !  enddo
@@ -551,13 +582,35 @@ SUBROUTINE ANTISYMMETRIZE(a)
     include 'params.i'
     real*8 a(nx,1,nz),b(nx,1,nz)
     integer i,j,k
+    print *, 'in antisym \n'
+    !call countzeros(a,'a')
     do k=1,nz
         do i=1,nx
             b(i,1,k)=a(nx-i+1,1,k)
         end do   
     end do
+    !call countzeros(b,'b')
     a=(a-b)*0.5
   
 END SUBROUTINE ANTISYMMETRIZE
 
 !================================================================================
+
+subroutine countzeros(a,arrname)
+    implicit none
+    include 'params.i'
+    real*8,intent(in) :: a(nx,1,nz)
+    integer :: numzeros,i,k
+    character(len=15),intent(in) :: arrname
+    
+    numzeros=0
+    do k=1,nz
+        do i=1,nx
+            if (a(i,1,k)==0) numzeros=numzeros+1
+        end do   
+    end do
+    
+    print *,"Number of zeros in "//arrname,numzeros,"out of",nx*nz
+    
+end subroutine countzeros
+    

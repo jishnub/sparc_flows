@@ -23,10 +23,11 @@ def compute_data(src):
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
     shutil.copyfile(Spectral,Instruction)
-    
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
+
+    #mpipath=os.path.join("/home/shivam/anaconda/bin/mpiexec") 
+    mpipath="/usr/mpi/gcc/openmpi-1.6.5/bin/mpiexec"
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
-    
+   
     with open(os.path.join(datadir,forward,"out_data_forward"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
