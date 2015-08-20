@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/shivam/flows/data/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/data/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -49,7 +49,7 @@ parameter( cadforcing = 30.0)
 ! NOTE THIS fUNCTION STILL NEEDS TO BE IMPLEMENTED
 ! I HAVE THE BASIC MACHINERY IN PLACE BUT NEED DAMPING INFO
 ! DAMPING FUNCTION - IN ORDER TO DAMP WAVES - IN REAL SPACE (x,y,z)
-logical, parameter :: DAMP_WAVES = .TRUE.
+logical, parameter :: DAMP_WAVES = .falsE.
 
 
 ! TYPE OF SIMULATION (DEFAULT IS QUIET OR SOURCE/SOUND-SPEED ANOMALIES):: FLOWS OR MAGNETIC FIELDS 

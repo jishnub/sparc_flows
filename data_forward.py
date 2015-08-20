@@ -1,18 +1,28 @@
-import os,sys,shutil,glob,subprocess
+import os,sys,shutil,glob,subprocess,time
 
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
-HOME=os.environ['HOME']
-codedir=os.path.join(HOME,"sparc")
-datadir="/scratch/shivam/flows/data"
+codedir=os.path.dirname(os.path.abspath(__file__))
+HOME=os.environ["HOME"]
+
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
 
 procno=int(os.environ["PBS_VNODENUM"])
+nodeno=int(os.environ["PBS_NODENUM"])
 
 with open(os.path.join(datadir,'master.pixels'),'r') as mp:
     nmasterpixels=sum(1 for _ in mp)
 
-if procno>=nmasterpixels: quit()
+if procno>=nmasterpixels: 
+    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
+    quit()
 
 src=str(procno+1).zfill(2)
 
@@ -24,8 +34,7 @@ def compute_data(src):
     
     shutil.copyfile(Spectral,Instruction)
 
-    #mpipath=os.path.join("/home/shivam/anaconda/bin/mpiexec") 
-    mpipath="/usr/mpi/gcc/openmpi-1.6.5/bin/mpiexec"
+    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec") 
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
    
     with open(os.path.join(datadir,forward,"out_data_forward"),'w') as outfile:
@@ -45,8 +54,11 @@ def compute_data(src):
         shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
         shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
 
+print "Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
 compute_data(src)
 
 file_to_remove=os.path.join(datadir,"status","forward_src"+src+"_ls00")
 if os.path.exists(file_to_remove): os.remove(file_to_remove)
+
+print "Finished computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
 

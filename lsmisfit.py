@@ -1,12 +1,20 @@
 import sys,os,glob,re
 import numpy as np
 
-data="/scratch/shivam/flows/data"
+codedir=os.path.dirname(os.path.abspath(__file__))
+
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory'].replace('$USER',os.environ['USER'])
 
 if len(sys.argv)>1:
-    iterno=sys.argv[1].zfill(2)
+    iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
 else:
-    lsfiles=[f for f in glob.glob(os.path.join(data,"update","linesearch_*")) if "all" not in f]
+    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in f]
     nfiles=len(lsfiles)
     if nfiles==0:
         print "No linesearch files found"
@@ -16,9 +24,13 @@ else:
 no_of_linesearches=5
 
 
-lsfile=os.path.join(data,"update","linesearch_"+iterno)
+lsfile=os.path.join(datadir,"update","linesearch_"+iterno)
 
-with open(os.path.join(data,'master.pixels'),'r') as mpixfile:
+if not os.path.exists(lsfile):
+    print lsfile,"doesn't exist"
+    quit()
+
+with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
     nmasterpixels=sum(1 for _ in mpixfile)
 
 lsdata=np.loadtxt(lsfile,usecols=[2])

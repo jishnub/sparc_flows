@@ -2,22 +2,29 @@ import os,sys,shutil,glob,time,re,subprocess
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
-HOME=os.environ['HOME']
-codedir=os.path.join(HOME,"sparc")
-data="/scratch/shivam/flows/data"
+codedir=os.path.dirname(os.path.abspath(__file__))
+HOME=os.environ["HOME"]
+
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
 
 procno=int(env["PBS_VNODENUM"])
 nodeno=int(env["PBS_NODENUM"])
 
 
-with open(os.path.join(data,'master.pixels'),'r') as mpixfile:
+with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
     nmasterpixels=sum(1 for _ in mpixfile)
 
 total_no_of_linesearches=5
 total_no_of_jobs=nmasterpixels*total_no_of_linesearches
 
 if procno>=total_no_of_jobs: 
-    print "Stopping job on processor no",procno
+    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
     quit()
 
 linesearch_no=procno/nmasterpixels+1
@@ -32,7 +39,7 @@ def compute_forward(linesearch_no,src):
     
     Spectral=os.path.join(codedir,"Spectral")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls"+linesearch_no)
-    forward = os.path.join(data,"forward_src"+src+"_ls"+linesearch_no)
+    forward = os.path.join(datadir,"forward_src"+src+"_ls"+linesearch_no)
     
     shutil.copyfile(Spectral,Instruction)
     
@@ -41,7 +48,7 @@ def compute_forward(linesearch_no,src):
     
     
     t0=time.time()
-    with open(os.path.join(data,forward,"out_linesearch_"+linesearch_no),'w') as outfile:
+    with open(os.path.join(datadir,forward,"out_linesearch_"+linesearch_no),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     t1=time.time()
     

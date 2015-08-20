@@ -1,10 +1,17 @@
-import os,shutil,glob,re,subprocess,datetime
+import os,shutil,glob,re,subprocess,datetime,time
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
-HOME=os.environ['HOME']
-codedir=os.path.join(HOME,"sparc")
-data="/scratch/shivam/flows/data"
+codedir=os.path.dirname(os.path.abspath(__file__))
+HOME=os.environ["HOME"]
+
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+data=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
 
 iterno=len([f for f in os.listdir(os.path.join(data,'update')) if re.match(r'misfit_[0-9]{2}$',f)])
 itername=str(iterno).zfill(2)
@@ -13,8 +20,11 @@ with open(os.path.join(data,'master.pixels'),'r') as mp:
     nmasterpixels=sum(1 for _ in mp)
 
 procno=int(os.environ["PBS_VNODENUM"])
+nodeno=int(os.environ["PBS_NODENUM"])
 
-if procno>=nmasterpixels: quit()
+if procno>=nmasterpixels: 
+    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
+    quit()
 
 src=str(procno+1).zfill(2)
 
@@ -33,8 +43,7 @@ def compute_forward_adjoint_kernel(src):
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
     
-    mpipath=os.path.join("/home/apps/openmpi-1.6.5/bin/mpiexec")
-    #mpipath=os.path.join("/home/shivam/anaconda/bin/mpiexec")
+    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
     
     ####################################################################

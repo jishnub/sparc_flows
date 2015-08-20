@@ -1540,7 +1540,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
      !vel(0) = 0.85 !for the f mode
      !vel(1) = 1.25 ! for the p1 mode
 	 vel(0) = 0.4720
-	 vel(1) = 0.7108
+!~ 	 vel(1) = 0.7108
+	 vel(1) = 0.60
 	 vel(2) = 0.9315
 	 
      do i=1,nt

@@ -117,10 +117,17 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 ########################################################################
 
 
+codedir=os.path.dirname(os.path.abspath(__file__))
+
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory']
 
 Rsun=695.9895 # Mm
-    
-datadir="/scratch/shivam/flows/data"
 
 #~ Decide on algorithm
 steepest_descent = False
@@ -320,7 +327,8 @@ psimax = abs(update_psi).max()
 #~ update_c = update_c/psimax #Muted, since c is not being updated right now
 update_psi = update_psi/psimax 
 
-eps =0.0025# 0.005 inc 0.001 dec
+#~ eps =0.0025# 0.005 inc 0.001 dec
+eps =0
 
 psi_scale=rms(lastmodel_psi)
 

@@ -1,28 +1,65 @@
 import sys,os,glob,re
 import numpy as np
+import pyfits
 
-data="/scratch/shivam/flows/data"
+codedir=os.path.dirname(os.path.abspath(__file__))
 
-if len(sys.argv)>1:
-    iterno=sys.argv[1].zfill(2)
-else:
-    lsfiles=[f for f in glob.glob(os.path.join(data,"update","misfit_*")) if "all" not in f]
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory'].replace('$USER',os.environ['USER'])
+
+try:
+    misfittype=next(element for element in sys.argv if element in ['data','model_psi'])
+except StopIteration:
+    misfittype="data"
+
+try:
+    iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
+except StopIteration:
+    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in f]
     nfiles=len(lsfiles)
     if nfiles==0:
         print "No misfit files found"
         quit()
     else:
         iterno=str(nfiles-1).zfill(2)
-no_of_linesearches=5
 
+if misfittype=="data":
+    
+    misfitfile=os.path.join(datadir,"update","misfit_"+iterno)
+    
+    if not os.path.exists(misfitfile):
+        print misfitfile,"doesn't exist"
+        quit()
 
-lsfile=os.path.join(data,"update","misfit_"+iterno)
+    with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
+        nmasterpixels=sum(1 for _ in mpixfile)
 
-with open(os.path.join(data,'master.pixels'),'r') as mpixfile:
-    nmasterpixels=sum(1 for _ in mpixfile)
+    misfitdata=np.loadtxt(misfitfile,usecols=[2])
 
-lsdata=np.loadtxt(lsfile,usecols=[2],ndmin=1)
+    misfit=sum(misfitdata[:nmasterpixels])
 
-misfit=sum(lsdata[:nmasterpixels])
+    print misfit
 
-print misfit
+#~ elif misfittype=="model_c":
+    #~ 
+    #~ truemodel=np.squeeze(pyfits.getdata(os.path.join("/scratch",user,"magnetic/true_c_change_B/soundspeed2D.fits")))
+    #~ itermodel=np.squeeze(pyfits.getdata(os.path.join("/scratch",user,"magnetic/data/update","model_c_"+iterno+".fits")))
+    #~ 
+    #~ datamisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+    #~ 
+    #~ print datamisfit
+    #~ 
+#~ elif misfittype=="model_psi":
+    #~ 
+    #~ truemodel=np.squeeze(pyfits.getdata(os.path.join("/scratch",user,"magnetic/true_c_change_B/true_psi.fits")))
+    #~ itermodel=np.squeeze(pyfits.getdata(os.path.join("/scratch",user,"magnetic/data/update","model_psi_"+iterno+".fits")))
+    #~ 
+    #~ datamisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+    #~ 
+    #~ print datamisfit
+    

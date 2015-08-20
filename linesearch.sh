@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  linesearch
+#PBS -N  flows_linesearch
 #PBS -l nodes=2:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
@@ -10,7 +10,7 @@ export TERM=xterm
 
 
 
-directory="/scratch/shivam/flows/data"
+source varlist.sh
 
 find $directory -name "linesearch" -exec rm -f {} \; 
 find $directory -name "compute_data" -exec rm -f {} \; 
@@ -19,14 +19,14 @@ find $directory -name "compute_synth" -exec rm -f {} \;
 iter=`find $directory/update -name 'linesearch_[0-9][0-9]'|wc -l`
 itername=`printf "%02d" $iter`
 
-touch $directory/linesearch
+touch linesearch
 echo "Starting iterations at "`date`
 
 for lin in `seq 1 5`
 do
     linzpd=`printf "%02d" $lin`
-    cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
-    cp $directory/update/test_vectorpsi_"$lin".fits  $directory/model_vectorpsi_ls"$linzpd".fits
+    #~ cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
+    cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
 done
 
 ########################################################################
@@ -51,15 +51,15 @@ do
         find $directory/adjoint_src"$src" -name "*full*" -exec rm -f {} \; 
         find $directory/adjoint_src"$src" -name "*partial*" -exec rm -f {} \; 
     done
-    rm $directory/model_c_ls"$lin".fits
-    rm $directory/model_vectorpsi_ls"$lin".fits
+    #~ rm $directory/model_c_ls"$lin".fits
+    rm $directory/model_psi_ls"$lin".fits
 done
 
 
-find $directory/update -name "tested*" -exec rm -f {} \; 
-find $directory -name "update.fits" -exec rm -f {} \; 
-find $directory -name "linesearch" -exec rm -f {} \; 
-find $directory/status -name "forward*" -exec rm -f {} \;
+#~ find $directory/update -name "tested*" -exec rm -f {} \; 
+#~ find $directory -name "update.fits" -exec rm -f {} \; 
+find . -name "linesearch" -exec rm -f {} \; 
+#~ find $directory/status -name "forward*" -exec rm -f {} \;
 
 find . -name "core.*" -exec rm -f {} \; 
 find . -name "fort.*" -exec rm -f {} \; 

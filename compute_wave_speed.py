@@ -9,8 +9,15 @@ import os
 Lx=800 #Mm
 dt=30/60 #minutes
 Nx=512
-codedir='/home/shivam/sparc'
-datadir='/scratch/shivam/flows/data'
+codedir=os.path.dirname(os.path.abspath(__file__))
+configvars={}
+with open(os.path.join(codedir,"varlist.sh")) as myfile:
+    for line in myfile:
+        name,var=line.partition("=")[::2]
+        configvars[name.strip()]=var.strip().strip('"')
+
+datadir=configvars['directory'].replace('$USER',os.environ['USER'])
+
 master_pixels=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
 Nsources=len(master_pixels)
 
