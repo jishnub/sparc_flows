@@ -1,22 +1,16 @@
-import os,shutil,glob,re,subprocess,datetime,time
+import os,shutil,glob,re,subprocess,datetime,time,read_params,sys
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=os.environ["HOME"]
 
-configvars={}
-with open(os.path.join(codedir,"varlist.sh")) as myfile:
-    for line in myfile:
-        name,var=line.partition("=")[::2]
-        configvars[name.strip()]=var.strip().strip('"')
+datadir=read_params.get_directory()
 
-data=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
+iterno=len([f for f in os.listdir(os.path.join(datadir,'update')) if re.match(r'misfit_[0-9]{2}$',f)])
+iterno2dig=str(iterno).zfill(2)
 
-iterno=len([f for f in os.listdir(os.path.join(data,'update')) if re.match(r'misfit_[0-9]{2}$',f)])
-itername=str(iterno).zfill(2)
-
-with open(os.path.join(data,'master.pixels'),'r') as mp:
+with open(os.path.join(datadir,'master.pixels'),'r') as mp:
     nmasterpixels=sum(1 for _ in mp)
 
 procno=int(os.environ["PBS_VNODENUM"])
@@ -35,13 +29,11 @@ def compute_forward_adjoint_kernel(src):
     kernel="kernel"
 
     ttname="vz_cc_src"+src+".fits"
-    tdiff0name="ttdiff_src"+src+".fmode"
-    tdiff1name="ttdiff_src"+src+".p1mode"
-    tdiff2name="ttdiff_src"+src+".p2mode"
     Spectral=os.path.join(codedir,"Spectral")
     Adjoint=os.path.join(codedir,"Adjoint")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
+    modes={'0':'fmode','1':'p1mode','2':'p2mode'}
     
     mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
@@ -50,51 +42,56 @@ def compute_forward_adjoint_kernel(src):
     #~ Forward
     ####################################################################
     
-    if not os.path.exists(os.path.join(data,"status",forward)):
+    if not os.path.exists(os.path.join(datadir,"status",forward)):
 
         shutil.copyfile(Spectral,Instruction)
 
-        with open(os.path.join(data,forward,"out"+forward),'w') as outfile:
+        with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
             fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
         
-        if not os.path.exists(os.path.join(data,"tt","iter"+itername)):
-            os.makedirs(os.path.join(data,"tt","iter"+itername))
+        if not os.path.exists(os.path.join(datadir,"tt","iter"+iterno2dig)):
+            os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig))
             
-        shutil.copyfile(os.path.join(data,forward,"vz_cc.fits"),
-                        os.path.join(data,"tt","iter"+itername,ttname))
+        shutil.copyfile(os.path.join(datadir,forward,"vz_cc.fits"),
+                        os.path.join(datadir,"tt","iter"+iterno2dig,ttname))
                         
-        shutil.copyfile(os.path.join(data,forward,"vz_cc.fits"),
-                        os.path.join(data,forward,"vz_cc_00.fits"))
+        shutil.copyfile(os.path.join(datadir,forward,"vz_cc.fits"),
+                        os.path.join(datadir,forward,"vz_cc_00.fits"))
                         
-        shutil.copyfile(os.path.join(data,forward,"ttdiff.0"),
-                        os.path.join(data,"tt","iter"+itername,tdiff0name))
+        shutil.copyfile(os.path.join(codedir,"vz_00.fits"),
+                        os.path.join(datadir,"update","vz_"+iterno2dig+".fits"))
                         
-        shutil.copyfile(os.path.join(data,forward,"ttdiff.1"),
-                        os.path.join(data,"tt","iter"+itername,tdiff1name))
+        shutil.copyfile(os.path.join(codedir,"vx_00.fits"),
+                        os.path.join(datadir,"update","vx_"+iterno2dig+".fits"))
                         
-        shutil.copyfile(os.path.join(data,forward,"ttdiff.2"),
-                        os.path.join(data,"tt","iter"+itername,tdiff2name))
+        ridge_filters=read_params.get_ridge_filter()
+        
+        for ridge_filter in ridge_filters:
+            try:
+                shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
+                                os.path.join(datadir,"tt","iter"+iterno2dig,"ttdiff."+modes.get(ridge_filter,ridge_filter)))
+            except IOError:
+                sys.stderr.write("Could not copy "+os.path.join(datadir,forward,"ttdiff."+ridge_filter))
+                sys.stderr.flush()
     
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    if not os.path.exists(os.path.join(data,"status",adjoint)):
+    if not os.path.exists(os.path.join(datadir,"status",adjoint)):
         shutil.copyfile(Adjoint,Instruction)
 
-        with open(os.path.join(data,adjoint,"out"+adjoint),'w') as outfile:
+        with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
             adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
             
     ####################################################################
     #~ Kernel
     ####################################################################
 
-    if not os.path.exists(os.path.join(data,"status",kernel+src)):
+    if not os.path.exists(os.path.join(datadir,"status",kernel+src)):
 
-        with open(os.path.join(data,kernel,"out_kernel"+src),'w') as outfile:
+        with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
             kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-    
-    return 0
     
 print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
 

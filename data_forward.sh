@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  flows_data
+#PBS -N  data_2hr_f_p1_p2
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-data_forward
 #PBS -e  error-data_forward
@@ -7,8 +7,10 @@
 echo $PBS_JOBID
 export TERM=xterm
 cd $PBS_O_WORKDIR
+python $PBS_O_WORKDIR/setup.py
 export MPI_TYPE_MAX=1280280
 echo "Starting at "`date`
+find . -name "linesearch" -exec rm -f {} \; 
 touch compute_data
 /usr/local/bin/pbsdsh python $PBS_O_WORKDIR/data_forward.py
 find . -name "compute_data"  -exec rm -f {} \;

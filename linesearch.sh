@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -N  flows_linesearch
-#PBS -l nodes=2:ppn=24
+#PBS -N  ls_2hr_f_p1_p2
+#PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
 #PBS -l walltime=12:00:00
@@ -8,9 +8,7 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
-
-
-source varlist.sh
+directory=`python -c 'import read_params; print read_params.get_directory()'`
 
 find $directory -name "linesearch" -exec rm -f {} \; 
 find $directory -name "compute_data" -exec rm -f {} \; 
@@ -25,8 +23,9 @@ echo "Starting iterations at "`date`
 for lin in `seq 1 5`
 do
     linzpd=`printf "%02d" $lin`
-    #~ cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
     cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
+    find . -name "vx_$linzpd_00.fits" -exec rm -f {} \; 
+    find . -name "vz_$linzpd_00.fits" -exec rm -f {} \; 
 done
 
 ########################################################################
@@ -44,8 +43,8 @@ do
     do
         cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername
         cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername
-        rm $directory/kernel/misfit_"$src"_"$lin"
-        rm $directory/kernel/misfit_all_"$src"_"$lin"
+        #~ rm $directory/kernel/misfit_"$src"_"$lin"
+        #~ rm $directory/kernel/misfit_all_"$src"_"$lin"
         find $directory/forward_src"$src"_ls00 -name "*full*" -exec rm -f {} \; 
         find $directory/forward_src"$src"_ls00 -name "*partial*" -exec rm -f {} \; 
         find $directory/adjoint_src"$src" -name "*full*" -exec rm -f {} \; 
@@ -59,7 +58,7 @@ done
 #~ find $directory/update -name "tested*" -exec rm -f {} \; 
 #~ find $directory -name "update.fits" -exec rm -f {} \; 
 find . -name "linesearch" -exec rm -f {} \; 
-#~ find $directory/status -name "forward*" -exec rm -f {} \;
+find $directory/status -name "forward*" -exec rm -f {} \;
 
 find . -name "core.*" -exec rm -f {} \; 
 find . -name "fort.*" -exec rm -f {} \; 
