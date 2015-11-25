@@ -9,7 +9,8 @@ import read_params
 def fitsread(fitsfile): return np.squeeze(pf.getdata(fitsfile))
 
 codedir=os.path.dirname(os.path.abspath(__file__))
-datadir=read_params.get_directory()
+#~ datadir=read_params.get_directory()
+datadir="/scratch/jishnu/flows/old/p1_to_p5"
 masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 

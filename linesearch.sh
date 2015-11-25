@@ -46,8 +46,8 @@ do
     do
         cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername
         cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername
-        rm $directory/kernel/misfit_"$src"_"$lin"
-        rm $directory/kernel/misfit_all_"$src"_"$lin"
+        #~ rm $directory/kernel/misfit_"$src"_"$lin"
+        #~ rm $directory/kernel/misfit_all_"$src"_"$lin"
         find $directory/forward_src"$src"_ls00 -name "*full*" -exec rm -f {} \; 
         find $directory/forward_src"$src"_ls00 -name "*partial*" -exec rm -f {} \; 
         find $directory/adjoint_src"$src" -name "*full*" -exec rm -f {} \; 

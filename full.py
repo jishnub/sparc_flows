@@ -91,6 +91,7 @@ def compute_forward_adjoint_kernel(src):
         safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                         os.path.join(datadir,"tt","iter"+iterno2dig,
                         "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
+
     
     ####################################################################
     #~ Adjoint
@@ -100,6 +101,7 @@ def compute_forward_adjoint_kernel(src):
 
     with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
         adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
             
     ####################################################################
     #~ Kernel
@@ -107,7 +109,7 @@ def compute_forward_adjoint_kernel(src):
 
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-    
+
 print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
 
 compute_forward_adjoint_kernel(src)

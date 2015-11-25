@@ -418,16 +418,7 @@ def main(eps):
             
         for i in xrange(minBFGS,iterno-1):
         
-                model=fitsread(updatedir('model_psi_'+twodigit(i)+'.fits'))
-                grad_c=fitsread(updatedir('gradient_psi_'+twodigit(i)+'.fits'))
-                
-                alph[i] = alph[i] - np.sum((grad_psi-lastgrad_psi)*update_psi) /np.sum((model-lastmodel)*(grad_psi-lastgrad_psi))
-                update_psi = update_psi + alph[i] * (model - lastmodel) 
-
-
-                lastmodel = model
-                lastgrad_psi = grad_psi
-                    
+           
     #~ Create new models to be used for linesearch
     
     if enf_cont and psi_cont:
@@ -493,6 +484,7 @@ def main(eps):
         epslist=[[iterno,eps]]
 
     np.savez('epslist.npz',epslist=epslist)
+
 
 ########################################################################
 

@@ -84,7 +84,6 @@ Program driver
             sigmaz = 0.912*10.**8./diml
             rand2 = 240.*100./dimc * 1./kay
             call ddz(rho0,gradrho0_z,1)
-            
             do k=1,nz
                 do i=1,nx
                     signt = 1.0
@@ -287,7 +286,7 @@ Program driver
     if (rank ==0) then
         print *,'FREQUENCY OF OUTPUT AT', steps, 'TIMESTEPS'
         print *, 'TIMESTEP =', timestep 
-!~         !    print *,'XXXXXX ------ NOT WRITING OUT XI VARIABLES -------- XXXXXXXX'
+        !    print *,'XXXXXX ------ NOT WRITING OUT XI VARIABLES -------- XXXXXXXX'
         print *,'OBSERVATION GRID POINT: ', o_rad, 'AND RADIUS:', z(o_Rad)
     endif
 
@@ -1199,6 +1198,7 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
     Polylow(0)=0.7
     Polylow(1)=1.7
     Polylow(2)=-0.2
+
   f_low = 1.1
   df = 0.5
   
@@ -1560,7 +1560,6 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
 END SUBROUTINE P5MODE_FILTER
 !================================================================================
 
-
 SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
   use initialize
   implicit none
@@ -1752,6 +1751,10 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         fmode(:,1,i) = fmode(:,1,i) * filt(i)!* UNKNOWN
     enddo
 
+    call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vz_cc.fits', temparr, nt)
+    acc = cmplx(temparr)
+    call readfits(directory//'data/'//contrib//'.fits', temparr, nt)
+    dat = cmplx(temparr)
 
     inquire(file=directory//'filter.params.1', exist=lexist)
     if (lexist) then
@@ -1832,7 +1835,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             if (pord==3) filter = p3mode
             if (pord==4) filter = p4mode
             if (pord==5) filter = p5mode
-            
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
 
