@@ -1,5 +1,8 @@
 *.mod
 *.o
+*.so
+*.pyc
+*.npz
 *.out
 sparc
 grad
@@ -7,4 +10,7 @@ grad
 output*
 error*
 source.txt
+plots/
+useless/
 *~
+code_python/

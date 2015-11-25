@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -N  flows_linesearch
-#PBS -l nodes=2:ppn=24
+#PBS -N  ls_p1
+#PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
 #PBS -l walltime=12:00:00
@@ -8,9 +8,7 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
-
-
-source varlist.sh
+directory=`python -c 'import read_params; print read_params.get_directory()'`
 
 find $directory -name "linesearch" -exec rm -f {} \; 
 find $directory -name "compute_data" -exec rm -f {} \; 
@@ -25,8 +23,12 @@ echo "Starting iterations at "`date`
 for lin in `seq 1 5`
 do
     linzpd=`printf "%02d" $lin`
-    #~ cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
-    cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
+    [[ -e $directory/update/test_c_"$lin".fits ]] && cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
+    [[ -e $directory/update/test_psi_"$lin".fits ]] && cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
+    [[ -e $directory/update/test_vx_"$lin".fits ]] && cp $directory/update/test_vx_"$lin".fits  $directory/model_vx_ls"$linzpd".fits
+    [[ -e $directory/update/test_vz_"$lin".fits ]] && cp $directory/update/test_vz_"$lin".fits  $directory/model_vz_ls"$linzpd".fits
+    #~ find . -name "vx_$linzpd_00.fits" -exec rm -f {} \; 
+    #~ find . -name "vz_$linzpd_00.fits" -exec rm -f {} \; 
 done
 
 ########################################################################
@@ -51,15 +53,17 @@ do
         find $directory/adjoint_src"$src" -name "*full*" -exec rm -f {} \; 
         find $directory/adjoint_src"$src" -name "*partial*" -exec rm -f {} \; 
     done
-    #~ rm $directory/model_c_ls"$lin".fits
-    rm $directory/model_psi_ls"$lin".fits
+    [[ -e $directory/model_c_ls"$lin".fits ]] && rm $directory/model_c_ls"$lin".fits
+    [[ -e $directory/model_psi_ls"$lin".fits ]] && rm $directory/model_psi_ls"$lin".fits
+    [[ -e $directory/model_vx_ls"$lin".fits ]] && rm $directory/model_vx_ls"$lin".fits
+    [[ -e $directory/model_vz_ls"$lin".fits ]] && rm $directory/model_vz_ls"$lin".fits
 done
 
 
 #~ find $directory/update -name "tested*" -exec rm -f {} \; 
 #~ find $directory -name "update.fits" -exec rm -f {} \; 
 find . -name "linesearch" -exec rm -f {} \; 
-#~ find $directory/status -name "forward*" -exec rm -f {} \;
+find $directory/status -name "forward*" -exec rm -f {} \;
 
 find . -name "core.*" -exec rm -f {} \; 
 find . -name "fort.*" -exec rm -f {} \; 

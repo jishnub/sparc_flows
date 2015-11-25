@@ -508,9 +508,9 @@ SUBROUTINE PRODUCE_KERNELS
 !  kernelv(:,:,:,3) = 0.0
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!
-  call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
-  kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
-                   (rho0*Lregular*c2**0.5*psivar)*stepskern*timestep * dimen
+!~   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
+!~   kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
+!~                    (rho0*Lregular*c2**0.5*psivar)*stepskern*timestep * dimen
 
   do i=1,3
    kernelv(:,:,:,i) = - 2.0 * kernelv(:,:,:,i) * rho0 * stepskern * timestep * dimen ! the other time-unit
@@ -523,7 +523,7 @@ SUBROUTINE PRODUCE_KERNELS
   if (.not. TEST_IN_2D) &
      call writefits_3d(adjustl(trim(directory_rel))//'kernel_vy_'//contrib//'.fits', kernelv(:,:,:,2), nz_kern)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_vz_'//contrib//'.fits', kernelv(:,:,:,3), nz_kern)
-  call writefits_3d(adjustl(trim(directory_rel))//'kernel_psi_'//contrib//'.fits', kernelpsi, nz_kern)
+!~   call writefits_3d(adjustl(trim(directory_rel))//'kernel_psi_'//contrib//'.fits', kernelpsi, nz_kern)
 
  endif
 
@@ -560,20 +560,20 @@ SUBROUTINE PRODUCE_KERNELS
  if (DENSITY_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED DENSITY KERNELS ARE Mm^-3 s^2'
   kernelrho = - rho0 * kernelrho * stepskern * timestep * dimen
-  if (flows) kernelrho = kernelrho + kernelpsi*(1.-psivar(1,1,1)/psivar)
+  if (flows .and. psi_cont) kernelrho = kernelrho + kernelpsi*(1.-psivar(1,1,1)/psivar)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_rho_'//contrib//'.fits', kernelrho, nz_kern)
  endif
 
  if (SOUND_SPEED_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED SOUND-SPEED KERNELS ARE s^2 Mm^-3'
   kernelc2 = - kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
-  if (flows) kernelc2 = kernelc2 + kernelpsi*(1.-psivar(1,1,1)/psivar)*2.0
+  if (flows .and. psi_cont) kernelc2 = kernelc2 + kernelpsi*(1.-psivar(1,1,1)/psivar)*2.0
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_c_'//contrib//'.fits', kernelc2, nz_kern)
 
-  if (rank==0) then
-  open(443,file=directory//'status/kernel_src'//contrib,status='unknown')
-  close(443)
-  endif
+!~   if (rank==0) then
+!~   open(443,file=directory//'status/kernel_src'//contrib,status='unknown')
+!~   close(443)
+!~   endif
 
  endif
 

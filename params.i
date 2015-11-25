@@ -22,22 +22,22 @@
 ! A timestep of 2 seconds is generally pretty solid. Too large and the sim
 ! will explode. Too small and the expense is large.
 integer nx, ny, nz
-parameter (nx = 512, ny = 1, nz = 300)
+parameter (nx = 256, ny = 1, nz = 300)
 real*8 xlength, ylength, timestep
-parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
+parameter (xlength = 200.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
 ! DIRECTORY INFORMATION 
 !
 ! ENTER THE LOCATION OF THE BACKGROUND MODEL (i.e. the quiet Sun model)
-character (LEN = *), PARAMETER :: file_data = 'solar_deep'
+character (LEN = *), PARAMETER :: file_data = 'solar_model'
 !'solar_model'
 
 ! IF THE MODEL REQUIRES STABILIZING
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/data/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/p1/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -89,8 +89,8 @@ parameter (npmlhor = 9)
 
 ! ENTER THE LOCATION OF THE 3D pressure, density, and magnetic background files
 ! DEFAULT LOCATION IS THE SAME AS OUTPUT DIRECTORY
-character (LEN = *), PARAMETER :: dirbackmag = '/scratch/shivam/flows/start/'
-character (LEN = *), PARAMETER :: dirbacktrue = '/scratch/shivam/flows/true/'
+character (LEN = *), PARAMETER :: dirbackmag = '/scratch/jishnu/flows/start/'
+character (LEN = *), PARAMETER :: dirbacktrue = '/scratch/jishnu/flows/true/'
 
 ! --------
 
@@ -126,7 +126,7 @@ parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
 real*8 solartime
-parameter(solartime = 2.8)
+parameter(solartime = 2.0)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well
@@ -148,4 +148,9 @@ parameter (timestamp_size = 6)
 ! excitdep is in cgs units
 real*8 excitdep
 parameter( excitdep = - 15000000.0)
+
+! CONTINUITY
+logical enf_cont, psi_cont
+parameter (enf_cont = .TRUE.)
+parameter (psi_cont = .FALSE.)
 

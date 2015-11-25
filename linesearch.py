@@ -1,17 +1,11 @@
-import os,sys,shutil,glob,time,re,subprocess
+import os,sys,shutil,glob,time,re,subprocess,read_params
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=os.environ["HOME"]
 
-configvars={}
-with open(os.path.join(codedir,"varlist.sh")) as myfile:
-    for line in myfile:
-        name,var=line.partition("=")[::2]
-        configvars[name.strip()]=var.strip().strip('"')
-
-datadir=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
+datadir=read_params.get_directory()
 
 procno=int(env["PBS_VNODENUM"])
 nodeno=int(env["PBS_NODENUM"])

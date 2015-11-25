@@ -35,7 +35,7 @@ MODULE INITIALIZE
 	   height(nz), visc(nz), cq(nz)
 
    parameter(normx=1.0/DBLE(nx), normy = 1.0/DBLE(ny))
-   parameter(rsun = 69598946770.0, pi = 3.14159265358979) 
+   parameter(rsun = 6.95989467700E10, pi = 3.14159265358979) ! rsun in cm
    real*8  stretch(nz), unstretch(nz), stretchx, stretchy, decay_coeff_x(nx/2+1)
    real*8 decay_coeff_y(ny/2+1), delta_width
    logical initcond, generate_wavefield, linesearch

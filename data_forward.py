@@ -1,4 +1,4 @@
-import os,sys,shutil,glob,subprocess,time
+import os,sys,shutil,glob,subprocess,time,read_params
 
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
@@ -6,19 +6,19 @@ env=dict(os.environ, MPI_TYPE_MAX="1280280")
 codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=os.environ["HOME"]
 
-configvars={}
-with open(os.path.join(codedir,"varlist.sh")) as myfile:
-    for line in myfile:
-        name,var=line.partition("=")[::2]
-        configvars[name.strip()]=var.strip().strip('"')
-
-datadir=configvars['directory'].replace('$USER',os.environ['PBS_O_LOGNAME'])
+datadir=read_params.get_directory()
 
 procno=int(os.environ["PBS_VNODENUM"])
 nodeno=int(os.environ["PBS_NODENUM"])
 
-with open(os.path.join(datadir,'master.pixels'),'r') as mp:
-    nmasterpixels=sum(1 for _ in mp)
+try:
+    with open(os.path.join(datadir,'master.pixels'),'r') as mp:
+        nmasterpixels=sum(1 for _ in mp)
+except IOError:
+    sys.stderr.write("Proc"+str(procno).zfill(2)+
+                ": Could not read master.pixels, check if it exists\n") 
+    sys.stderr.flush()
+    quit()
 
 if procno>=nmasterpixels: 
     print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
@@ -47,12 +47,17 @@ def compute_data(src):
     for f in fullfiles: os.remove(f)
     
     if not os.path.exists(os.path.join(datadir,"tt","data")):
-        os.makedirs(os.path.join(datadir,"tt","data"))
+        try: os.makedirs(os.path.join(datadir,"tt","data"))
+        except OSError as e:
+            if e.errno == 17: pass
+            else: print e
     
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
         shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
         shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
         shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
+        
+    if os.path.exists(Instruction): os.remove(Instruction)
 
 print "Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
 compute_data(src)

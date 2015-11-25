@@ -1,15 +1,9 @@
-import os
+import os,read_params
 
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 
-configvars={}
-with open(os.path.join(codedir,"varlist.sh")) as myfile:
-    for line in myfile:
-        name,var=line.partition("=")[::2]
-        configvars[name.strip()]=var.strip().strip('"')
-
-datadir=configvars['directory']
+datadir=read_params.get_directory()
 
 try:
     with open(os.path.join(datadir,"master.pixels"),'r') as masterpixels:

@@ -1,15 +1,11 @@
 import sys,os,glob,re
 import numpy as np
+import read_params
+import grad
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 
-configvars={}
-with open(os.path.join(codedir,"varlist.sh")) as myfile:
-    for line in myfile:
-        name,var=line.partition("=")[::2]
-        configvars[name.strip()]=var.strip().strip('"')
-
-datadir=configvars['directory'].replace('$USER',os.environ['USER'])
+datadir=read_params.get_directory()
 
 if len(sys.argv)>1:
     iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
@@ -23,7 +19,6 @@ else:
         iterno=str(nfiles-1).zfill(2)
 no_of_linesearches=5
 
-
 lsfile=os.path.join(datadir,"update","linesearch_"+iterno)
 
 if not os.path.exists(lsfile):
@@ -36,5 +31,18 @@ with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
 lsdata=np.loadtxt(lsfile,usecols=[2])
 
 misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in xrange(no_of_linesearches)]
+
+print "iteration",int(iterno)
+
+eps=grad.eps
+try:
+    epslist=np.load('epslist.npz')['epslist']
+    iterind=np.where(epslist[:,0]==(int(iterno)+1))
+    if len(iterind[0])>0:
+        iterind=iterind[0][0]
+        eps=epslist[iterind,1]
+except IOError:
+    pass
+print "eps",eps
 
 for m in misfit: print m
