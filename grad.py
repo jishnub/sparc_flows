@@ -474,13 +474,12 @@ def main(eps):
         update_vx/=vx_max
         if model_c_exists:
             update_c = update_c/vx_max
-        vx_scale = 2000
+        vx_scale = 200
         
-        vz_max = abs(update_vz).max()
-        update_vz/=vz_max
-        vz_scale = 1000
+        update_vz/=vx_max
+        vz_scale = 100
         if model_c_exists:
-            update_c = update_c/vz_max
+            update_c = update_c/vx_max
     
     for i in xrange(1,6):
         if model_c_exists:
