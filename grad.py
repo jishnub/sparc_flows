@@ -121,7 +121,7 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 ########################################################################
 
-eps = 0.1
+eps = 1e-7
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
@@ -156,22 +156,37 @@ def main(eps):
     totkern_vx=np.zeros(array_shape)
     totkern_vz=np.zeros(array_shape)
     hess=np.zeros(array_shape)
+    
+    
+    enf_cont=read_params.get_enforced_continuity()
+    cont_var=read_params.get_continuity_variable()
+    psi_cont = False
+    vx_cont = False
+    vz_cont = False
+    if enf_cont:
+        if cont_var == 'psi': psi_cont = True 
+        elif cont_var == 'vx': vx_cont = True 
+        elif cont_var == 'vz': vz_cont = True 
+        else: 
+            print "Continuity variable unknown, check params.i"
+            quit()
 
     for src in xrange(1,num_src+1):
         
         kern=fitsread(os.path.join(datadir,'kernel','kernel_c_'+twodigit(src)+'.fits'))
         totkern_c+=kern
         
-        enf_cont=read_params.get_enforced_continuity()
-        psi_cont=read_params.get_psi_continuity()
-        
         if enf_cont and psi_cont:
             kern=fitsread(os.path.join(datadir,'kernel','kernel_psi_'+twodigit(src)+'.fits'))
             totkern_psi+=kern
         
-        elif enf_cont and not psi_cont:
+        elif enf_cont and vx_cont:
             kern=fitsread(os.path.join(datadir,'kernel','kernel_vx_'+twodigit(src)+'.fits'))
             totkern_vx+=kern
+            
+        elif enf_cont and vz_cont:
+            kern=fitsread(os.path.join(datadir,'kernel','kernel_vz_'+twodigit(src)+'.fits'))
+            totkern_vz+=kern
         else:
             kern=fitsread(os.path.join(datadir,'kernel','kernel_vx_'+twodigit(src)+'.fits'))
             totkern_vx+=kern
@@ -197,14 +212,14 @@ def main(eps):
     kern = totkern_psi/hess
     filterx(kern)
     antisymmetrize(kern)
-    filterz(kern,algo='gaussian',sp=2.0)
+    filterz(kern,algo='gaussian',sp=1.0)
     totkern_psi=kern
     
     #~ Velocity kernels
     kern = totkern_vx/hess
-    filterx(kern)
-    antisymmetrize(kern)
-    filterz(kern,algo='gaussian',sp=2.0)
+    #~ filterx(kern)
+    #~ antisymmetrize(kern)
+    #~ filterz(kern,algo='gaussian',sp=2.0)
     totkern_vx = kern
     
     kern = totkern_vz/hess
@@ -217,8 +232,10 @@ def main(eps):
     
     if enf_cont and psi_cont:
         fitswrite(updatedir('gradient_psi_'+iterminus(1)+'.fits'),totkern_psi)
-    elif enf_cont and not psi_cont:
+    elif enf_cont and vx_cont:
         fitswrite(updatedir('gradient_vx_'+iterminus(1)+'.fits'),totkern_vx)
+    elif enf_cont and vz_cont:
+        fitswrite(updatedir('gradient_vz_'+iterminus(1)+'.fits'),totkern_vx)
     elif not enf_cont:
         fitswrite(updatedir('gradient_vz_'+iterminus(1)+'.fits'),totkern_vz)
         fitswrite(updatedir('gradient_vx_'+iterminus(1)+'.fits'),totkern_vx)
@@ -251,9 +268,10 @@ def main(eps):
         
         if enf_cont and psi_cont:
             fitswrite(updatedir('update_psi_'+iterminus(1)+'.fits'),totkern_psi)
-        
-        if enf_cont and not psi_cont:
+        elif enf_cont and vx_cont:
             fitswrite(updatedir('update_vx_'+iterminus(1)+'.fits'),totkern_vx)
+        elif enf_cont and vz_cont:
+            fitswrite(updatedir('update_vz_'+iterminus(1)+'.fits'),totkern_vz)
         
         elif not enf_cont:
             fitswrite(updatedir('update_vz_'+iterminus(1)+'.fits'),totkern_vz)
@@ -292,13 +310,21 @@ def main(eps):
             con = np.sum(grad_psi*(grad_psi - lastgrad_psi))
             den = np.sum(lastgrad_psi**2.)
             
-        elif enf_cont and not psi_cont:
+        elif enf_cont and vx_cont:
             grad_vx=fitsread(updatedir('gradient_vx_'+iterminus(1)+'.fits'))
             lastgrad_vx=fitsread(updatedir('gradient_vx_'+iterminus(2)+'.fits'))
             lastupdate_vx=fitsread(updatedir('update_vx_'+iterminus(2)+'.fits'))
             
             con = np.sum(grad_vx*(grad_vx - lastgrad_vx))
             den = np.sum(lastgrad_vx**2.)
+            
+        elif enf_cont and vz_cont:
+            grad_vz=fitsread(updatedir('gradient_vz_'+iterminus(1)+'.fits'))
+            lastgrad_vz=fitsread(updatedir('gradient_vz_'+iterminus(2)+'.fits'))
+            lastupdate_vz=fitsread(updatedir('update_vz_'+iterminus(2)+'.fits'))
+            
+            con = np.sum(grad_vz*(grad_vz - lastgrad_vz))
+            den = np.sum(lastgrad_vz**2.)
         
         elif not enf_cont:
             grad_vz=fitsread(updatedir('gradient_vz_'+iterminus(1)+'.fits'))
@@ -330,9 +356,12 @@ def main(eps):
         if enf_cont and psi_cont:
             update_psi = totkern_psi +  con* lastupdate_psi
             fitswrite(updatedir('update_psi_'+iterminus(1)+'.fits'),update_psi)
-        elif enf_cont and not psi_cont:
+        elif enf_cont and vx_cont:
             update_vx = totkern_vx +  con* lastupdate_vx
             fitswrite(updatedir('update_vx_'+iterminus(1)+'.fits'),update_vx)
+        elif enf_cont and vz_cont:
+            update_vz = totkern_vz +  con* lastupdate_vz
+            fitswrite(updatedir('update_vz_'+iterminus(1)+'.fits'),update_vz)
         elif not enf_cont:
             update_vx = totkern_vx +  con* lastupdate_vx
             fitswrite(updatedir('update_vx_'+iterminus(1)+'.fits'),update_vx)
@@ -416,11 +445,9 @@ def main(eps):
         update_psi = update_psi * hessinv_psi
         
             
-        for i in xrange(minBFGS,iterno-1):
-        
-           
+        #~ for i in xrange(minBFGS,iterno-1): 
     #~ Create new models to be used for linesearch
-    
+
     if enf_cont and psi_cont:
         psimax = abs(update_psi).max()
         update_psi = update_psi/psimax 
@@ -428,12 +455,19 @@ def main(eps):
             update_c = update_c/psimax
         psi_scale=rms(lastmodel_psi)
         
-    elif enf_cont and not psi_cont:
+    elif enf_cont and vx_cont:
         vx_max = abs(update_vx).max()
         update_vx/=vx_max
         if model_c_exists:
             update_c = update_c/vx_max
         vx_scale = 2000
+        
+    elif enf_cont and vz_cont:
+        vz_max = abs(update_vz).max()
+        update_vz/=vz_max
+        if model_c_exists:
+            update_c = update_c/vz_max
+        vz_scale = 1e-8
         
     elif not enf_cont:
         vx_max = abs(update_vx).max()
@@ -455,12 +489,18 @@ def main(eps):
         if enf_cont and psi_cont:
             update = lastmodel_psi + eps * i * psi_scale * update_psi
             fitswrite(updatedir('test_psi_'+str(i)+'.fits'), update)
-        elif enf_cont and not psi_cont:
+        elif enf_cont and vx_cont:
             if model_vx_exists:
                 update = lastmodel_vx - vx_scale * eps * i * update_vx
                 fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
             else:
                 print "model vx doesn't exist"
+        elif enf_cont and vz_cont:
+            if model_vz_exists:
+                update = lastmodel_vz - vz_scale * eps * i * update_vz
+                fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
+            else:
+                print "model vz doesn't exist"
         elif not enf_cont:
             if model_vx_exists:
                 

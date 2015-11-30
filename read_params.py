@@ -102,7 +102,7 @@ def get_enforced_continuity():
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
     return "unknown"
                 
-def get_psi_continuity():
+def get_continuity_variable():
     codedir=os.path.dirname(os.path.abspath(__file__))
     paramsfile = os.path.join(codedir,"params.i")
     with open(paramsfile,'r') as paramsfile:
@@ -110,6 +110,9 @@ def get_psi_continuity():
             line=line.strip()
             if line.startswith("!"): continue
             if ("parameter" in line.lower()) and ("psi_cont" in line.lower()):
-                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
-                elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
+                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'psi'
+            if ("parameter" in line.lower()) and ("vx_cont" in line.lower()):
+                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'vx'
+            if ("parameter" in line.lower()) and ("vz_cont" in line.lower()):
+                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'vz'
     return "unknown"

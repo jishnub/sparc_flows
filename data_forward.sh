@@ -10,8 +10,8 @@ cd $PBS_O_WORKDIR
 python $PBS_O_WORKDIR/setup.py
 export MPI_TYPE_MAX=1280280
 echo "Starting at "`date`
-find . -name "linesearch" -exec rm -f {} \; 
+find . -name "linesearch" -delete
 touch compute_data
 /usr/local/bin/pbsdsh python $PBS_O_WORKDIR/data_forward.py
-find . -name "compute_data"  -exec rm -f {} \;
+find . -name "compute_data" -delete
 echo "Finished at "`date`

@@ -207,12 +207,11 @@ if plot_travel_time_misfit:
                     ttdiff_ridges[mode]["iter_no"].append(iteration_no)
                     ttdiff_ridges[mode]["misfits"].append(np.loadtxt(ttfile))
             
-    #~ print ttdiff_ridges["0"]["iter_no"]
-
     #~ The actual plotting stuff
     
-    tdfig,tdiffaxes=plotc.plt.subplots(2,3)
-    tdiffaxes=tdiffaxes.flatten()
+    splayout=plotc.layout_subplots(len(ridge_filters))
+    tdfig,tdiffaxes=plotc.plt.subplots(*splayout)
+    tdiffaxes=np.array(list([tdiffaxes])).flatten()
     
     c=['olivedrab','burlywood','skyblue','dimgray','red','sienna','black','tomato','grey','teal']
 

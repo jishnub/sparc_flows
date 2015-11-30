@@ -16,37 +16,27 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 	damping.o	kernels.o	bspline90_22.o integrals.o spline.o \
 	splevl.o splint.o
 
-#~ OBJS2=	grad.o
 
-#~ FC=	/home/apps/openmpi-1.6.5/bin/mpif90
 FC= mpif90
-#~ FC77=   /home/apps/openmpi-1.6.5/bin/mpif77
 FC77= mpif77
 
 FFLAGS= -O3 -DDOUBLE_PRECISION ##-p -g ##-check all ##-fpe0 -traceback -debug #-check bounds
-#INCLUDE= /opt/users/apps/intel/composer_xe_2015.2.164/mkl/include/fftw/fftw3.f
-LIBS1 = -L/home/jishnu/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
-#~ LIBS2= -lcfitsio -L/home/jishnu/lib/fftw-3.3.4/lib -lfftw3
+LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
 
 COMMAND1=	sparc
-#~ COMMAND2=	grad
 
 
 $(COMMAND1): $(OBJS1) 
-	$(FC) -I $(INCLUDE) $(FFLAGS) -o $(COMMAND1) $(OBJS1) $(LIBS1) 
+	@$(FC) -I $(INCLUDE) $(FFLAGS) -o $(COMMAND1) $(OBJS1) $(LIBS1) 
 
-
-#~ $(COMMAND2): $(OBJS2) 
-#~ 	$(FC) -I $(INCLUDE) $(FFLAGS) -o $(COMMAND2) $(OBJS2) $(LIBS2) 
 
 %.o : %.f
-	$(FC77) $(FFLAGS) -c $< 
+	@$(FC77) $(FFLAGS) -c $< 
 
 %.o : %.f90
-	$(FC) $(FFLAGS) -c $< 
+	@$(FC) $(FFLAGS) -c $< 
 
 clean:
-#~ 	rm *.o *.mod $(COMMAND1) $(COMMAND2) *.fits
 	@find . -maxdepth 1 -name "*.o" -delete
 	@find . -maxdepth 1 -name "*.mod" -delete
 	@find . -maxdepth 1 -name "*.fits" -delete
@@ -73,4 +63,3 @@ kernels.o:	initialize.o	all_modules.o
 integrals.o: splint.o
 splint.o: splevl.o spline.o
 splevl.o: spline.o
-#~ grad.o:		params.i

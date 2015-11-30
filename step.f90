@@ -124,6 +124,7 @@ Contains
    endif
 
 
+      !print *,maxval(v0_x)*dimc*0.01,maxval(v0_z)*dimc*0.01
 
   End SUBROUTINE step
 !=====================================================================================

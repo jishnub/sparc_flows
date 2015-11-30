@@ -10,7 +10,6 @@ export TERM=xterm
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
-find $directory -name "linesearch" -exec rm -f {} \; 
 find $directory -name "compute_data" -exec rm -f {} \; 
 find $directory -name "compute_synth" -exec rm -f {} \; 
 
@@ -27,8 +26,6 @@ do
     [[ -e $directory/update/test_psi_"$lin".fits ]] && cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
     [[ -e $directory/update/test_vx_"$lin".fits ]] && cp $directory/update/test_vx_"$lin".fits  $directory/model_vx_ls"$linzpd".fits
     [[ -e $directory/update/test_vz_"$lin".fits ]] && cp $directory/update/test_vz_"$lin".fits  $directory/model_vz_ls"$linzpd".fits
-    #~ find . -name "vx_$linzpd_00.fits" -exec rm -f {} \; 
-    #~ find . -name "vz_$linzpd_00.fits" -exec rm -f {} \; 
 done
 
 ########################################################################
@@ -44,14 +41,18 @@ for lin in `seq -f "%02g" 1 5`
 do
     for src in `seq -f "%02g" 1 $((nmasterpixels))`
     do
-        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername
-        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername
-        #~ rm $directory/kernel/misfit_"$src"_"$lin"
-        #~ rm $directory/kernel/misfit_all_"$src"_"$lin"
-        find $directory/forward_src"$src"_ls00 -name "*full*" -exec rm -f {} \; 
-        find $directory/forward_src"$src"_ls00 -name "*partial*" -exec rm -f {} \; 
-        find $directory/adjoint_src"$src" -name "*full*" -exec rm -f {} \; 
-        find $directory/adjoint_src"$src" -name "*partial*" -exec rm -f {} \; 
+        [[ -e $directory/kernel/misfit_"$src"_"$lin" ]]  && \
+        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername &&\
+        rm $directory/kernel/misfit_"$src"_"$lin"
+        
+        [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
+        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername &&\
+        rm $directory/kernel/misfit_all_"$src"_"$lin"
+                
+        find $directory/forward_src"$src"_ls00 -name "*full*" -delete 
+        find $directory/forward_src"$src"_ls00 -name "*partial*" -delete
+        find $directory/adjoint_src"$src" -name "*full*" -delete
+        find $directory/adjoint_src"$src" -name "*partial*" -delete
     done
     [[ -e $directory/model_c_ls"$lin".fits ]] && rm $directory/model_c_ls"$lin".fits
     [[ -e $directory/model_psi_ls"$lin".fits ]] && rm $directory/model_psi_ls"$lin".fits
@@ -62,10 +63,10 @@ done
 
 #~ find $directory/update -name "tested*" -exec rm -f {} \; 
 #~ find $directory -name "update.fits" -exec rm -f {} \; 
-find . -name "linesearch" -exec rm -f {} \; 
-find $directory/status -name "forward*" -exec rm -f {} \;
+find . -name "linesearch" -delete 
+find $directory/status -name "forward*" -delete
 
-find . -name "core.*" -exec rm -f {} \; 
-find . -name "fort.*" -exec rm -f {} \; 
+find . -name "core.*" -delete 
+find . -name "fort.*" -delete
 
 echo "Finished at "`date`

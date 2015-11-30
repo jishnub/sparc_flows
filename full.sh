@@ -12,11 +12,9 @@ echo "Starting at "`date`
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
-find . -name "linesearch" -exec rm -f {} \; 
-find . -name "compute_data" -exec rm -f {} \; 
-find . -name "compute_synth" -exec rm -f {} \; 
-#~ find . -name "vx_00.fits" -exec rm -f {} \;
-#~ find . -name "vz_00.fits" -exec rm -f {} \;
+find . -name "linesearch" -delete
+find . -name "compute_data" -delete
+find . -name "compute_synth" -delete
 
 iter=`find $directory/update -maxdepth 1 -name 'misfit_[0-9][0-9]'|wc -l`
 itername=`printf "%02d" $iter`
@@ -27,22 +25,25 @@ itername=`printf "%02d" $iter`
 nmasterpixels=`wc -l < $directory/master.pixels`
 for src in `seq -f "%02g" 1 $((nmasterpixels))`
 do
-    cat $directory/kernel/misfit_"$src"_00 >> $directory/update/misfit_$itername
-    cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername
+    [[ -e $directory/kernel/misfit_"$src"_00 ]]  && \
+    cat $directory/kernel/misfit_"$src"_00 >> $directory/update/misfit_$itername &&\
     rm $directory/kernel/misfit_"$src"_00
+    
+    [[ -e $directory/kernel/misfit_all_"$src"_00 ]]  && \
+    cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername &&\    
     rm $directory/kernel/misfit_all_"$src"_00
 done
 
-find $directory/status -name "forward*" -exec rm -f {} \;
-find $directory/status -name "adjoint*" -exec rm -f {} \;
-find $directory/status -name "kernel*" -exec rm -f {} \;
+find $directory/status -name "forward*" -delete
+find $directory/status -name "adjoint*" -delete
+find $directory/status -name "kernel*" -delete
 
 [[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
 [[ -e $directory/model_c_ls00.fits ]] && cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
 [[ -e $directory/model_vx_ls00.fits ]] && cp $directory/model_vx_ls00.fits $directory/update/model_vx_"$itername".fits
 [[ -e $directory/model_vz_ls00.fits ]] && cp $directory/model_vz_ls00.fits $directory/update/model_vz_"$itername".fits
 
-find . -name "core.*" -exec rm -f {} \; 
-find . -name "fort.*" -exec rm -f {} \; 
+find . -name "core.*" -delete
+find . -name "fort.*" -delete
 
 echo "Finished at "`date`

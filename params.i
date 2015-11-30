@@ -150,7 +150,9 @@ real*8 excitdep
 parameter( excitdep = - 15000000.0)
 
 ! CONTINUITY
-logical enf_cont, psi_cont
-parameter (enf_cont = .TRUE.)
-parameter (psi_cont = .FALSE.)
+logical enf_cont, psi_cont, vx_cont, vz_cont
+parameter ( enf_cont = .TRUE. )
+parameter ( psi_cont = .FALSE. )
+parameter ( vx_cont = .TRUE. )
+parameter ( vz_cont = .FALSE. )
 

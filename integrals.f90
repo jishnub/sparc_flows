@@ -17,8 +17,8 @@ REAL*8 FUNCTION INTEGRATE_Z(f)
     
     logical use_splines,use_antia
     
-    use_splines = .False.
-    use_antia = .False.
+    use_splines = .True.
+    use_antia = .True.
     
     int_f_spl=0.0
     int_f_tpz=0.0
@@ -27,7 +27,10 @@ REAL*8 FUNCTION INTEGRATE_Z(f)
         
         if (use_antia) then
             call spline(z,f(xdum,1,:),nz,splncoeff,splerr)
-            if (splerr .ne. 0) print *,"Error code in spline",splerr
+            if (splerr .ne. 0) then
+                print *,"Error code in spline",splerr
+                stop
+            endif
             do abcdum=1,nz
                 do abcdum2=1,3
                     if (isnan(splncoeff(abcdum2,abcdum))) then
@@ -35,7 +38,7 @@ REAL*8 FUNCTION INTEGRATE_Z(f)
                     end if
                 end do
             end do
-            do zdum=2,240
+            do zdum=2,nz
 
                 call splint(z(1),z(zdum),int_spl,int_tpz,zdum,z(1:zdum),&
                             f(xdum,1,1:zdum),splncoeff(:,1:zdum),splerr)
@@ -63,6 +66,39 @@ REAL*8 FUNCTION INTEGRATE_Z(f)
 
 END FUNCTION INTEGRATE_Z
 
+REAL*8 FUNCTION INTEGRATE_X(f)
+
+    implicit none
+    real*8, intent(in) :: f(nx,1,nz)
+    real*8 int_f(nx,1,nz)
+    real*8 :: INTEGRATE_x(nx,1,nz)
+    integer zdum
+    integer*8 fwdplan,invplan
+    complex*16 fkx(nx/2+1)
+    real*8 mean,fx(nx),intfx(nx)
+    
+    
+    call dfftw_plan_dft_r2c_1d(fwdplan,nx,fx,fkx,FFTW_ESTIMATE)
+    call dfftw_plan_dft_c2r_1d(invplan,nx,fkx,intfx,FFTW_ESTIMATE)
+    do zdum=1,nz
+        fx = f(:,1,zdum)
+        call dfftw_execute_dft_r2c(fwdplan, fx, fkx)
+        mean = realpart(fkx(1))/nx
+        fkx(1)=(0,0)
+        fkx(2:nx/2)=fkx(2:nx/2)/eyekx(2:nx/2)/nx**2
+        fkx(nx/2+1)=(0,0)
+        call dfftw_execute_dft_c2r(invplan, fkx, intfx)
+        int_f(:,1,zdum) = intfx + mean*x
+    enddo
+    
+    int_f = int_f/stretchx
+    
+    integrate_x = int_f
+    
+    call dfftw_destroy_plan(fwdplan)
+    call dfftw_destroy_plan(invplan)
+
+END FUNCTION INTEGRATE_X
 
 SUBROUTINE INTEGRATE_TIME(f,int_f,dt)
 
@@ -84,7 +120,7 @@ REAL*8 FUNCTION TRAPZ_IRREGULAR(f,z)
     integer k,l
     
     int_f=0.0
-    do k=2,240
+    do k=2,248
         do l=1,k-1
             temp = 0.5*(f(l+1)+f(l))*(z(l+1)-z(l))
             int_f(k) = int_f(k) + temp

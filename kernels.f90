@@ -507,10 +507,12 @@ SUBROUTINE PRODUCE_KERNELS
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!! HERE
 !  kernelv(:,:,:,3) = 0.0
 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!
-!~   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
-!~   kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
-!~                    (rho0*Lregular*c2**0.5*psivar)*stepskern*timestep * dimen
+!~   !!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (enf_cont .and. psi_cont) then
+  call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
+  kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
+                   (rho0*Lregular*c2**0.5*psivar)*stepskern*timestep * dimen
+  end if
 
   do i=1,3
    kernelv(:,:,:,i) = - 2.0 * kernelv(:,:,:,i) * rho0 * stepskern * timestep * dimen ! the other time-unit
@@ -523,7 +525,9 @@ SUBROUTINE PRODUCE_KERNELS
   if (.not. TEST_IN_2D) &
      call writefits_3d(adjustl(trim(directory_rel))//'kernel_vy_'//contrib//'.fits', kernelv(:,:,:,2), nz_kern)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_vz_'//contrib//'.fits', kernelv(:,:,:,3), nz_kern)
-!~   call writefits_3d(adjustl(trim(directory_rel))//'kernel_psi_'//contrib//'.fits', kernelpsi, nz_kern)
+  if (enf_cont .and. psi_cont) then
+  call writefits_3d(adjustl(trim(directory_rel))//'kernel_psi_'//contrib//'.fits', kernelpsi, nz_kern)
+  endif
 
  endif
 

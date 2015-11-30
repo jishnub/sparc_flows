@@ -49,6 +49,7 @@ Program driver
     character*1 ci
     character*5 tempc
     real*8 tau,dt
+!~     logical nancheck
 !~     real*8 intv(nx,1,nz),derv(nx,1,nz)
     
 20  format(8f12.4)
@@ -63,11 +64,12 @@ Program driver
 !~     derv=0.0
 !~     
 !~     do k=1,nz
-!~     intv(:,1,k)=sin(2*pi*x)
+!~     derv(:,1,k)=2*pi*sin(2*pi*x)+0.5
 !~     end do
 !~     
 !~     call ddx(intv,derv,1)
-!~     call writefits_3d("dertest.fits",derv,nz)
+!~     intv = integrate_x(derv) 
+!~     call writefits_3d("intxtest.fits",intv*stretchx,nz)
 !~     stop
 
     
@@ -75,8 +77,6 @@ Program driver
     if (COMPUTE_DATA) then
 
         if (FLOWS) then
-!~             v0_x = 0.0
-!~             v0_z = 0.0
             Rchar = 15. *10.**8/diml
             con= (xlength/diml)/Rchar
             kay = 2.*pi/(2.*Rchar)
@@ -89,8 +89,10 @@ Program driver
                     signt = 1.0
                     if (x(i) .lt. 0.5) signt = -1.0
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                    bes(0) = cos(rand1)!call bessel(0,rand1,bes(0))
-                    bes(1) = sin(rand1)!call bessel(1,rand1,bes(1))
+                    bes(0) = cos(rand1)/3.
+!~                     call bessel(0,rand1,bes(0))
+                    bes(1) = sin(rand1)/3.
+!~                     call bessel(1,rand1,bes(1))
                     v0_z(i,1,k)  = rand2*(bes(0)*kay - bes(1)/Rchar) * &
                      exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2.*sigmaz**2.))  
 
@@ -103,6 +105,24 @@ Program driver
                 enddo
             enddo
             
+            allocate(psivar(nx,dim2(rank),nz))
+
+            do k=1,nz
+                do i=1,nx
+                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
+!~                     call bessel(1,rand1,bes(1))
+                    bes(1) = sin(rand1)/3.
+                    signt = 1.0
+                    if (x(i) .lt. 0.5) signt = -1.0
+                    psivar(i,1,k) = bes(1) * rand2 * exp(-abs(x(i)-0.5)*con &
+                    - (z(k) -z0)**2./(2.*sigmaz**2.)) * signt/c2(i,1,k)**0.5
+                enddo
+            enddo
+            print *,'The fiducial value psi_0 should be (roughly)',695./30.*maxval(psivar)*1./1.04
+            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*695./30.,nz)
+        
+            deallocate(psivar)
+            
             
 
             if (contrib=="01") then
@@ -111,11 +131,6 @@ Program driver
                 call writefits_3d('true_vx.fits',v0_x*dimc*10.**(-2.),nz)
             endif
 
-!~             call readfits('true_vx.fits',v0_x,nz)
-!~             call readfits('true_vz.fits',v0_z,nz)
-            
-            v0_x = v0_x/dimc*10**2
-            v0_z = v0_z/dimc*10**2
             
             !~             CONTINUITY
             call continuity_check(v0_x,v0_z)
@@ -140,8 +155,10 @@ Program driver
         if (FLOWS) then
             if (psi_cont .and. enf_cont) then
                 inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = iteration)
-            elseif (enf_cont .and. (.not. psi_cont)) then
+            elseif (enf_cont .and. vx_cont) then
                 inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
+            elseif (enf_cont .and. vz_cont) then
+                inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = iteration)
             elseif (.not. enf_cont) then
                 inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
                 inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = tempbool)
@@ -149,13 +166,20 @@ Program driver
             endif
             
             if (iteration) then
-
+                
                 ! These logical variables are defined in params.i
                 if (psi_cont .and. enf_cont) then
                 
                     Lregular = 30.0*10.0**8/diml
                     allocate(psivar(nx,dim2(rank),nz))
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
+                    
+                    psivar = rho0*Lregular*(psivar-psivar(1,1,1))*c2**0.5
+
+                    psivar(:,:,1:10) = 0.0
+                    psivar(:,:,nz-9:nz) = 0.0
+                    
+                    call writefits_3d("psivar_used.fits",psivar,nz)
                     
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -171,13 +195,19 @@ Program driver
                         v0_z = v0_z/rho0 
                     endif
                 
-                elseif (enf_cont .and. (.not. psi_cont)) then
-
+                    v0_x(:,:,260:nz)=0
+                    v0_x(:,:,1:30) = 0
+!~                     v0_z(:,:,260:nz)=0
+!~                     v0_z(:,:,1:30) = 0
+                elseif (enf_cont .and. (vx_cont)) then
                     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
-!~                     call readfits('true_vx.fits',v0_x,nz)
                     v0_x = v0_x/dimc * 10.**2
-
                     call vz_from_vx_continuity(v0_x,v0_z)
+                    
+                elseif (enf_cont .and. (vz_cont)) then
+                    call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
+                    v0_z = v0_z/dimc * 10.**2
+                    call vx_from_vz_continuity(v0_z,v0_x)
                 
                 elseif (.not. enf_cont) then
                 
@@ -196,7 +226,9 @@ Program driver
                     ,"vzmax", maxval(abs(v0_z)*dimc*10.**(-2.)),"m/s"
                     call writefits_3d('vx_'//jobno//'.fits',v0_x*dimc*10.**(-2.),nz)
                     call writefits_3d('vz_'//jobno//'.fits',v0_z*dimc*10.**(-2.),nz)
+                    if (enf_cont .and. psi_cont) then
                     call writefits_3d('psivar_'//jobno//'.fits',psivar,nz)
+                    endif
                     
                 end if
                     
@@ -217,8 +249,6 @@ Program driver
         endif
     endif
     
-    stop
-
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS 
 
 
@@ -1030,13 +1060,55 @@ SUBROUTINE VZ_FROM_VX_CONTINUITY(vx,vz)
     real*8, dimension(nx,1,nz), intent(in) :: vx
     real*8, dimension(nx,1,nz) :: dxrhovx
     real*8, dimension(nx,1,nz), intent(out) :: vz
+!~     CHARACTER(len=255) :: cwd,homedir,pythoncmd
+!~     integer e
+!~     logical rhoex
+    
 
     call ddx(rho0*vx,dxrhovx,1)
     call writefits_3d("dxrhovx.fits",dxrhovx,nz)
     vz=-integrate_z(dxrhovx)/rho0
+    
+    
+!~     call writefits_3d("dxrhovx_"//contrib//"_"//jobno//".fits",dxrhovx,nz)
+    !stop
+    
+!~     inquire(file="rho.fits",exist=rhoex)
+!~     if (rhoex .eqv. .false.) then
+!~     call writefits_3d("rho.fits",rho0,nz)
+!~     endif
+!~     CALL getcwd(cwd) 
+!~     CALL getenv("HOME", homedir)
+!~     pythoncmd = trim(trim(homedir)//"/anaconda/bin/python "//trim(cwd)//&
+!~     "/vz_from_vx_continuity.py "//contrib//" "//jobno)
+!~     call system(pythoncmd,e)
+!~     if (e /= 0) print *,"Python call exit code",e
+!~     call readfits('vz_int_'//contrib//'_'//jobno//'.fits',vz,nz)
+!~     call system('rm vz_int_'//contrib//'_'//jobno//'.fits')
+!~     call system("rm dxrhovx_"//contrib//"_"//jobno//".fits")
 
 
 END SUBROUTINE VZ_FROM_VX_CONTINUITY
+
+!================================================================================
+
+SUBROUTINE VX_FROM_VZ_CONTINUITY(vz,vx)
+    
+    use initialize
+    use derivatives
+    use integrals
+    use all_modules
+    implicit none
+
+    real*8, dimension(nx,1,nz), intent(in) :: vz
+    real*8, dimension(nx,1,nz) :: dzrhovz
+    real*8, dimension(nx,1,nz), intent(out) :: vx
+
+    call ddz(rho0*vz,dzrhovz,1)
+!~     call writefits_3d("dzrhovz.fits",dzrhovz,nz)
+    vx=-integrate_x(dzrhovz)/rho0
+
+END SUBROUTINE
 
 !================================================================================
 
@@ -1051,11 +1123,11 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     
     allocate(dxrhovx(nx,1,nz),dzrhovz(nx,1,nz),dzrho(nx,1,nz))
     
-    call ddz(vz,dzrhovz,1)
-    call ddx(vx,dxrhovx,1)
-    call ddz(log(rho0),dzrho,1)
-    cont = (dxrhovx + dzrhovz + vz*dzrho) 
-    cont=cont/c_speed!/dzrho
+    call ddz(rho0*vz,dzrhovz,1)
+    call ddx(rho0*vx,dxrhovx,1)
+    call ddz(rho0,dzrho,1)
+    
+    cont=(dxrhovx + dzrhovz)/c_speed/dzrho
     
     deallocate(dzrhovz,dxrhovx,dzrho)
 
@@ -1064,6 +1136,7 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     if (contrib=="01") call writefits_3d('contcheck_ls'//jobno//'.fits',cont,nz)
         
 END SUBROUTINE CONTINUITY_CHECK
+
 
 !================================================================================
 
@@ -1862,7 +1935,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 !~             RECEIVER PIXEL FLAG
             do i=1,nx
 !~             RECEIVER PIXEL END FLAG
-                print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
+!~                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
@@ -1883,11 +1956,11 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                         if (lexist5 .and. pord==5) read(filenum,*) lef, rig
                     endif
                     
-!~                     call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-                    call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
+                    call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+!~                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
                
 !                         print *,lef,rig,tau,pord,i
-138                 format (I3,X,F14.5,X,I4,X,I4,X,I4,X,I4,X,I4)
+138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
                
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
                     
@@ -2385,8 +2458,8 @@ SUBROUTINE MISFIT_ALL(nt)
         enddo ! end of pord loop
 
         if (rank==0) then
-            write(543,*) indexnum,leftcorner, rightcorner
-            write(543,*) nmeas
+            write(543,*) "#",indexnum,leftcorner, rightcorner
+            write(543,*) "#",nmeas
             write(543,*) misfit_tot*0.5
             print *,misfit_tot*0.5
         endif
