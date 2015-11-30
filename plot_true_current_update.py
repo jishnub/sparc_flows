@@ -139,6 +139,7 @@ elif not enf_cont:
     
     plt.subplots_adjust(hspace=0)
 
+
 plt.subplots_adjust(wspace=0)
 plt.show()
     
