@@ -37,15 +37,19 @@ if enf_cont and (contvar == 'psi'):
     except IOError:
         update=np.zeros_like(current_model)
         print "Could not load update psi"
+    
     _,_,gl=plotc.layout_subplots(3)
+    
     ax1,_=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True psi",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})
     plt.ylabel("Depth (Mm)",fontsize=16)
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+    
     ax2,_=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current psi",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+    
     ax3,_=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update psi",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
@@ -59,16 +63,20 @@ elif enf_cont and (contvar == 'vx'):
     except IOError:
         update=np.zeros_like(current_model)
         print "Could not load update vx"
+    
     _,_,gl=plotc.layout_subplots(3)
-    plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vx",
+    
+    ax1,_=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    axes_properties={})
     plt.ylabel("Depth (Mm)",fontsize=16)
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vx",
+    
+    ax2,_=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vx",
+    
+    ax3,_=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
     
@@ -80,16 +88,20 @@ elif enf_cont and (contvar == 'vz'):
     except IOError:
         update=np.zeros_like(current_model)
         print "Could not load update vz"
+    
     _,_,gl=plotc.layout_subplots(3)
-    plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vz",
+    
+    ax1,_=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vz",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    axes_properties={})
     plt.ylabel("Depth (Mm)",fontsize=16)
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vz",
+    
+    ax2,_=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vz",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vz",
+    
+    ax3,_=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vz",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
     
@@ -112,32 +124,37 @@ elif not enf_cont:
         print "Could not load update vz"
         
     _,_,gl=plotc.layout_subplots(6)
-    plotc.colorplot(true_model_vx,sp=next(gl),x=x,y=z,title="True vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    plotc.colorplot(current_model_vx,sp=next(gl),x=x,y=z,title="Current vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plotc.colorplot(update_vx,sp=next(gl),x=x,y=z,title="Update vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
     
-    plotc.colorplot(true_model_vz,sp=next(gl),x=x,y=z,title="True vz",
+    ax1,_=plotc.colorplot(true_model_vx,sp=next(gl),x=x,y=z,title="True vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    centerzero=True)
     plt.ylabel("Depth (Mm)",fontsize=16)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    plotc.colorplot(current_model_vz,sp=next(gl),x=x,y=z,title="Current vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    plotc.colorplot(update_vz,sp=next(gl),x=x,y=z,title="Update vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
-    plt.subplots_adjust(hspace=0)
+    ax2,_=plotc.colorplot(current_model_vx,sp=next(gl),x=x,y=z,title="Current vx",
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)
+    
+    ax3,_=plotc.colorplot(update_vx,sp=next(gl),x=x,y=z,title="Update vx",
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)
+    
+    ax4,_=plotc.colorplot(true_model_vz,sp=next(gl),x=x,y=z,title="True vz",
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'sharey':ax1},centerzero=True)
+    plt.ylabel("Depth (Mm)",fontsize=16)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+    
+    ax5,_=plotc.colorplot(current_model_vz,sp=next(gl),x=x,y=z,title="Current vz",
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+    
+    ax6,_=plotc.colorplot(update_vz,sp=next(gl),x=x,y=z,title="Update vz",
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+    
+    plt.tight_layout()
 
 
 plt.subplots_adjust(wspace=0)
