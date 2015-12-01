@@ -75,10 +75,12 @@ elif enf_cont and (contvar == 'vx'):
     ax2,_=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
     ax3,_=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vx",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
 elif enf_cont and (contvar == 'vz'):
     true_model = fitsread(os.path.join(codedir,'true_vz.fits'))
@@ -100,10 +102,12 @@ elif enf_cont and (contvar == 'vz'):
     ax2,_=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vz",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
     ax3,_=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vz",
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
 elif not enf_cont:    
     true_model_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
