@@ -1,7 +1,6 @@
 import sys,os,glob,re
 import numpy as np
 import read_params
-import grad
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 
@@ -34,15 +33,15 @@ misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in xrange(no_of_l
 
 print "iteration",int(iterno)
 
-eps=grad.eps
 try:
     epslist=np.load('epslist.npz')['epslist']
     iterind=np.where(epslist[:,0]==(int(iterno)+1))
     if len(iterind[0])>0:
         iterind=iterind[0][0]
         eps=epslist[iterind,1]
+        print "eps",eps
 except IOError:
-    pass
-print "eps",eps
+    print "Could not read epslist.npz"
+
 
 for m in misfit: print m
