@@ -121,7 +121,7 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 ########################################################################
 
-eps = 1e-1
+eps = 1e-3
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
@@ -217,9 +217,9 @@ def main(eps):
     
     #~ Velocity kernels
     kern = totkern_vx/hess
-    #~ filterx(kern)
-    #~ antisymmetrize(kern)
-    #~ filterz(kern,algo='gaussian',sp=2.0)
+    filterx(kern)
+    antisymmetrize(kern)
+    filterz(kern,algo='gaussian',sp=2.0)
     totkern_vx = kern
     
     kern = totkern_vz/hess
@@ -492,24 +492,24 @@ def main(eps):
             fitswrite(updatedir('test_psi_'+str(i)+'.fits'), update)
         elif enf_cont and vx_cont:
             if model_vx_exists:
-                update = lastmodel_vx + vx_scale * eps * i * update_vx
+                update = lastmodel_vx - vx_scale * eps * i * update_vx
                 fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
             else:
                 print "model vx doesn't exist"
         elif enf_cont and vz_cont:
             if model_vz_exists:
-                update = lastmodel_vz + vz_scale * eps * i * update_vz
+                update = lastmodel_vz - vz_scale * eps * i * update_vz
                 fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
             else:
                 print "model vz doesn't exist"
         elif not enf_cont:
             if model_vx_exists:
                 
-                update = lastmodel_vx + vx_scale*eps * i * update_vx
+                update = lastmodel_vx - vx_scale*eps * i * update_vx
                 fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
             else: print "model vx doesn't exist"
             if model_vz_exists:
-                update = lastmodel_vz + vz_scale*eps * i * update_vz
+                update = lastmodel_vz - vz_scale*eps * i * update_vz
                 fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
             else: print "model vz doesn't exist"
 
