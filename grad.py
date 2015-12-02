@@ -121,7 +121,9 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 ########################################################################
 
-eps = 1e-3
+if len(sys.argv)>1:
+    eps = float(sys.argv[1])
+else: eps=1e-3
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
