@@ -121,7 +121,7 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 ########################################################################
 
-eps = 1e-7
+eps = 1e-1
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
@@ -450,9 +450,11 @@ def main(eps):
 
     if enf_cont and psi_cont:
         psimax = abs(update_psi).max()
-        update_psi = update_psi/psimax 
+        if psimax !=0:
+            update_psi = update_psi/psimax 
         if model_c_exists:
-            update_c = update_c/psimax
+            if psimax!=0:
+                update_c = update_c/psimax
         psi_scale=rms(lastmodel_psi)
         
     elif enf_cont and vx_cont:
@@ -486,28 +488,28 @@ def main(eps):
             update = lastmodel_c
             fitswrite(updatedir('test_c_'+str(i)+'.fits'), update)
         if enf_cont and psi_cont:
-            update = lastmodel_psi + eps * i * psi_scale * update_psi
+            update = lastmodel_psi - eps * i * psi_scale * update_psi
             fitswrite(updatedir('test_psi_'+str(i)+'.fits'), update)
         elif enf_cont and vx_cont:
             if model_vx_exists:
-                update = lastmodel_vx - vx_scale * eps * i * update_vx
+                update = lastmodel_vx + vx_scale * eps * i * update_vx
                 fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
             else:
                 print "model vx doesn't exist"
         elif enf_cont and vz_cont:
             if model_vz_exists:
-                update = lastmodel_vz - vz_scale * eps * i * update_vz
+                update = lastmodel_vz + vz_scale * eps * i * update_vz
                 fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
             else:
                 print "model vz doesn't exist"
         elif not enf_cont:
             if model_vx_exists:
                 
-                update = lastmodel_vx - vx_scale*eps * i * update_vx
+                update = lastmodel_vx + vx_scale*eps * i * update_vx
                 fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
             else: print "model vx doesn't exist"
             if model_vz_exists:
-                update = lastmodel_vz - vz_scale*eps * i * update_vz
+                update = lastmodel_vz + vz_scale*eps * i * update_vz
                 fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
             else: print "model vz doesn't exist"
 
