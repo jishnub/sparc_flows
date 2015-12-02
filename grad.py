@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
-import os,fnmatch
+import os,fnmatch,sys
 import pyfits
 import warnings
 import read_params
