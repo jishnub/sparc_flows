@@ -10,7 +10,7 @@ def fitsread(f): return np.squeeze(pyfits.getdata(f))
 datadir = read_params.get_directory()
 
 
-src=1
+src=2
 
 data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
 vzcc=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','vz_cc.fits'))
@@ -61,7 +61,7 @@ elif coord=='pixel':
         print "Using default pixel"
 
 modes={'params.0':'fmode'}
-for i in xrange(6): modes['params.'+str(i)]='p'+str(i)+'mode'
+for i in xrange(1,6): modes['params.'+str(i)]='p'+str(i)+'mode'
 params=fnmatch.filter(os.listdir(datadir),'params.[0-9]')
 ridges=[]
 for p in params: ridges.append(modes[p])
