@@ -2,9 +2,10 @@ from __future__ import division
 import numpy as np
 import plotc
 import pyfits as pf
-import os,re
+import os,re,sys
 import matplotlib.patches as patches
 import read_params
+plt=plotc.plt
 
 def fitsread(fitsfile): return np.squeeze(pf.getdata(fitsfile))
 
@@ -14,7 +15,8 @@ masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 
 dt=0.5
-src=3
+src=next(int(f) for f in sys.argv if f.isdigit())
+if not src: src=1
 if src>len(masterpixels): src=len(masterpixels)
 
 src=str(src).zfill(2)
@@ -209,8 +211,8 @@ if plot_travel_time_misfit:
             
     #~ The actual plotting stuff
     
-    splayout=plotc.layout_subplots(len(ridge_filters))
-    tdfig,tdiffaxes=plotc.plt.subplots(*splayout)
+    subplot_layout=plotc.layout_subplots(len(ridge_filters))[:2]
+    tdfig,tdiffaxes=plotc.plt.subplots(*subplot_layout)
     tdiffaxes=np.array(list([tdiffaxes])).flatten()
     
     c=['olivedrab','burlywood','skyblue','dimgray','red','sienna','black','tomato','grey','teal']
@@ -230,8 +232,9 @@ if plot_travel_time_misfit:
             #~ Points to the left
             ax=plotc.plot1D(td[left,1],x=xcoords_left,ax=tdiffaxes[modeno],color=c[color_index],
                         label="iter "+str(iter_index),marker='o',linestyle='-',
-                        axes_properties=dict(locator_properties_x=dict(nbins=4),title=spaced(modes[mode]))
+                        axes_properties=dict(locator_properties_x=dict(nbins=4))
                         )
+            plt.title(spaced(modes[mode]),dict(fontsize=20))
                         
             #~ Points to the right
             ax=plotc.plot1D(td[right,1],x=xcoords_right,ax=tdiffaxes[modeno],color=c[color_index],
@@ -241,6 +244,9 @@ if plot_travel_time_misfit:
             ax,_=plotc.draw_hlines(y=[0],ax=ax,ls='--')
             #~ Source location line
             ax,_=plotc.draw_vlines(x=[srcloc],ax=ax)
+            
+            plt.xlabel("x (Mm)",fontsize=20)
+            plt.ylabel("Travel Time Difference (sec)",fontsize=20)
         
        
     for ax in tdiffaxes[:len(ridge_filters)]: 

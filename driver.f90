@@ -44,7 +44,7 @@ Program driver
     integer i,j, init, ierr, t, k, index(1000,2), randinit(2), aind, nsteps_given,reclmax, loc
     real*8 start_time,end_time,tempf,t1,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
     real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz
-    real*8 bes(0:1), Lregular,signt
+    real*8 bes(0:2), Lregular,signt
     logical saved, iteration, init_variables, tempbool
     character*1 ci
     character*5 tempc
@@ -78,7 +78,8 @@ Program driver
 
         if (FLOWS) then
             Rchar = 15. *10.**8/diml
-            con= (xlength/diml)/Rchar
+!~             Rchar = 10. *10.**8/diml
+            con= (xlength/diml)/Rchar * 2
             kay = 2.*pi/(2.*Rchar)
             z0 = 1.-2.3*10**8./diml
             sigmaz = 0.912*10.**8./diml
@@ -89,16 +90,17 @@ Program driver
                     signt = 1.0
                     if (x(i) .lt. 0.5) signt = -1.0
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                    bes(0) = cos(rand1)/3.
-!~                     call bessel(0,rand1,bes(0))
-                    bes(1) = sin(rand1)/3.
-!~                     call bessel(1,rand1,bes(1))
-                    v0_z(i,1,k)  = rand2*(bes(0)*kay - bes(1)/Rchar) * &
-                     exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2.*sigmaz**2.))  
+!                    bes(0) = cos(rand1)
+                     call bessel(0,rand1,bes(0))
+!                    bes(1) = sin(rand1)
+                     call bessel(1,rand1,bes(1))
+                     call bessel(2,rand1,bes(2))
+                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -bes(1)/Rchar) * &
+                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
 
                     v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
                              gradrho0_z(i,1,k)/rho0(i,1,k)) * &
-                             exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2.*sigmaz**2.))  
+                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
                     !    v0_x(i,1,k) = 10.0**4/dimc * 1./(1.+exp((z(k)-0.9995)/0.0002)) * &
                     !          1./(1.+exp((z(20) - z(k))/0.002)) * abs(z(k)-z(15))/(z(nz)-z(1))
                     
@@ -110,8 +112,8 @@ Program driver
             do k=1,nz
                 do i=1,nx
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
-!~                     call bessel(1,rand1,bes(1))
-                    bes(1) = sin(rand1)/3.
+                    call bessel(1,rand1,bes(1))
+!~                     bes(1) = sin(rand1)
                     signt = 1.0
                     if (x(i) .lt. 0.5) signt = -1.0
                     psivar(i,1,k) = bes(1) * rand2 * exp(-abs(x(i)-0.5)*con &
@@ -248,7 +250,7 @@ Program driver
             endif
         endif
     endif
-    
+!~     stop
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS 
 
 
