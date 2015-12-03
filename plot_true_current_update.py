@@ -40,22 +40,25 @@ if enf_cont and (contvar == 'psi'):
     
     _,_,gl=plotc.layout_subplots(3)
     
-    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True psi",
+    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+    plt.ylabel("Depth (Mm)",fontsize=20)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"True $\psi$",fontsize=20,y=1.01)
     
-    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current psi",
+    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"Current $\psi$",fontsize=20,y=1.01)
     
-    ax3=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update psi",
+    ax3=plotc.colorplot(-update/update.max(),sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"Update $\psi$",fontsize=20,y=1.01)
     
-    plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
+    #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
     
 elif enf_cont and (contvar == 'vx'):
     true_model = fitsread(os.path.join(codedir,'true_vx.fits'))
