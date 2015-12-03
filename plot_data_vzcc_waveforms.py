@@ -9,8 +9,9 @@ import plotc
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
 datadir = read_params.get_directory()
 
-
-src=2
+try:
+    src=next(int(f) for f in sys.argv if f.isdigit())
+except StopIteration: src=1
 
 data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
 vzcc=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','vz_cc.fits'))

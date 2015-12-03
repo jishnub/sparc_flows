@@ -15,8 +15,10 @@ masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 
 dt=0.5
-src=next(int(f) for f in sys.argv if f.isdigit())
-if not src: src=1
+try:
+    src=next(int(f) for f in sys.argv if f.isdigit())
+except StopIteration:
+    src=1
 if src>len(masterpixels): src=len(masterpixels)
 
 src=str(src).zfill(2)
@@ -251,7 +253,7 @@ if plot_travel_time_misfit:
        
     for ax in tdiffaxes[:len(ridge_filters)]: 
         plotc.draw_vlines(x=[vlimleft,vlimright],ax=ax,ls='dotted')
-        plotc.draw_rectangle(x=[vlimleft,vlimright],ax=ax,alpha=0.1)
+        plotc.draw_rectangle(x=[vlimleft,vlimright],ax=ax,color='paleturquoise')
         ax.legend(loc='best')
 
 
