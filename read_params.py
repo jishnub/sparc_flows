@@ -89,6 +89,15 @@ def get_excitedepth():
             if ("parameter" in line.lower()) and ("excitdep" in line.lower()):
                 return float(line.split("=")[-1].strip(")").replace(" ",""))
 
+def get_obs_depth():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("obsheight" in line.lower()):
+                return float(line.split("=")[-1].strip(")").replace(" ",""))
 
 def get_enforced_continuity():
     codedir=os.path.dirname(os.path.abspath(__file__))

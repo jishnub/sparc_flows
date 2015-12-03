@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
-import os,fnmatch
+import os,fnmatch,sys
 import pyfits
 import warnings
 import read_params
@@ -123,7 +123,9 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 if len(sys.argv)>1:
     eps = float(sys.argv[1])
-else: eps=1e-3
+else: 
+    print "step size not specified, arbitrarily assuming 1e-3"
+    eps=1e-3
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
@@ -520,12 +522,11 @@ def main(eps):
         epslist=np.load('epslist.npz')['epslist']
         iterind=np.where(epslist[:,0]==iterno)[0]
         if len(iterind)==0:
-            np.append(epslist,[[iterno,eps]],axis=0)
+            epslist=np.append(epslist,[[iterno,eps]],axis=0)
         else:
             epslist[iterind,1]=eps
     except IOError:
         epslist=[[iterno,eps]]
-
     np.savez('epslist.npz',epslist=epslist)
 
 
