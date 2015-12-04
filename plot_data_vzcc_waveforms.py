@@ -15,8 +15,13 @@ try:
     src=int(src.split("=")[-1])
 except StopIteration: src=1
 
+try:
+    ls=next(f for f in sys.argv if (f.startswith("ls=") or f.startswith("linesearch=")))
+    ls=int(src.split("=")[-1])
+except StopIteration: ls=0
+
 data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
-vzcc=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','vz_cc.fits'))
+vzcc=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls'+str(ls).zfill(2),'vz_cc.fits'))
 
 srcloc=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)[src-1]
 

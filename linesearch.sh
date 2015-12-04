@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -N  ls_f_to_p5
-#PBS -l nodes=2:ppn=20
+#PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
 #PBS -l walltime=12:00:00

@@ -1984,7 +1984,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     iwls_misfit_factor=(prevtau**2 +iwls_eps)**(iwls_pow/2.0-1)
                    
                     misfit = misfit + tau**2. * iwls_misfit_factor
-                    tau = 1.0
+!~                     tau = 1.0
 !!!!!!!!!!!!! REMOVE THE LINE tau = 1.0 !!!!!!!!!!!!!!!!!!!!
  
                     nmeasurements = nmeasurements + 1

@@ -492,7 +492,7 @@ def main(eps):
             update = lastmodel_c
             fitswrite(updatedir('test_c_'+str(i)+'.fits'), update)
         if enf_cont and psi_cont:
-            update = lastmodel_psi - eps * i * psi_scale * update_psi
+            update = lastmodel_psi + eps * i * psi_scale * update_psi
             fitswrite(updatedir('test_psi_'+str(i)+'.fits'), update)
         elif enf_cont and vx_cont:
             if model_vx_exists:

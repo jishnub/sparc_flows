@@ -68,7 +68,14 @@ def compute_forward_adjoint_kernel(src):
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     
     if not os.path.exists(os.path.join(datadir,"tt","iter"+iterno2dig)):
-        os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig))
+        try:
+            os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig))
+        except OSError: pass
+        
+    if not os.path.exists(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src)):
+        try:
+            os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
+        except OSError: pass
         
     
             
@@ -91,6 +98,10 @@ def compute_forward_adjoint_kernel(src):
         safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                         os.path.join(datadir,"tt","iter"+iterno2dig,
                         "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
+                        
+    windows_files = glob.glob(os.path.join(datadir,forward,"windows.*"))
+    for w in windows_files:
+        safecopy(w,os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src,os.path.basename(w)))
 
     
     ####################################################################
