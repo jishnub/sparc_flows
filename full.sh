@@ -40,8 +40,8 @@ find $directory/status -name "kernel*" -delete
 
 [[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
 [[ -e $directory/model_c_ls00.fits ]] && cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
-[[ -e $directory/model_vx_ls00.fits ]] && cp $directory/model_vx_ls00.fits $directory/update/model_vx_"$itername".fits
-[[ -e $directory/model_vz_ls00.fits ]] && cp $directory/model_vz_ls00.fits $directory/update/model_vz_"$itername".fits
+[[ -e vx_00.fits ]] && cp vx_00.fits "$directory"/update/vx_"$itername".fits
+[[ -e vz_00.fits ]] && cp vz_00.fits "$directory"/update/vz_"$itername".fits
 
 find . -name "core.*" -delete
 find . -name "fort.*" -delete

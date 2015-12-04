@@ -26,6 +26,12 @@ if procno>=nmasterpixels:
 
 src=str(procno+1).zfill(2)
 
+def safecopy(a,b):
+    try: shutil.copyfile(a,b)
+    except IOError as e:
+        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
+        sys.stderr.flush()
+
 def compute_data(src):
 
     forward="forward_src"+src+"_ls00"
@@ -54,8 +60,8 @@ def compute_data(src):
     
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
         shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
-        shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
-        shutil.copyfile(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
+        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
+        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
         
     if os.path.exists(Instruction): os.remove(Instruction)
 

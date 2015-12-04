@@ -29,13 +29,19 @@ print "Running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno
 ls_no=str(linesearch_no).zfill(2)
 src=str(src_no).zfill(2)
 
+def safecopy(a,b):
+    try: shutil.copyfile(a,b)
+    except IOError as e:
+        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
+        sys.stderr.flush()
+
 def compute_forward(linesearch_no,src):
     
     Spectral=os.path.join(codedir,"Spectral")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls"+linesearch_no)
     forward = os.path.join(datadir,"forward_src"+src+"_ls"+linesearch_no)
     
-    shutil.copyfile(Spectral,Instruction)
+    safecopy(Spectral,Instruction)
     
     mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" "+linesearch_no
@@ -46,10 +52,7 @@ def compute_forward(linesearch_no,src):
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     t1=time.time()
     
-    
-    try:
-        shutil.copyfile(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_"+str(linesearch_no)+".fits"))
-    except IOError: pass
+    safecopy(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_"+str(linesearch_no)+".fits"))
     
     partialfiles=glob.glob(os.path.join(forward,"*partial*"))
     for f in partialfiles: os.remove(f)
@@ -60,4 +63,5 @@ def compute_forward(linesearch_no,src):
     return t1-t0
     
 evaltime=compute_forward(ls_no,src)
-print "Finished running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno+1,"node no",nodeno+1,"in",evaltime,"seconds"
+evaltime=divmod(evaltime,60)
+print "Finished running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno,"in",evaltime[0],"mins",evaltime[1],"secs"

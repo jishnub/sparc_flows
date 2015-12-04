@@ -1,4 +1,4 @@
-import os,shutil,glob,re,subprocess,datetime,time,read_params,sys
+import os,shutil,glob,subprocess,datetime,time,read_params,sys,fnmatch
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
@@ -7,7 +7,11 @@ HOME=os.environ["HOME"]
 
 datadir=read_params.get_directory()
 
-iterno=len([f for f in os.listdir(os.path.join(datadir,'update')) if re.match(r'misfit_[0-9]{2}$',f)])
+def get_iter_no():
+    updatedir=os.path.join(datadir,"update")
+    # Count the number of misfit_xx files
+    return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
+iterno=get_iter_no()
 iterno2dig=str(iterno).zfill(2)
 
 with open(os.path.join(datadir,'master.pixels'),'r') as mp:
@@ -23,11 +27,17 @@ if procno>=nmasterpixels:
 src=str(procno+1).zfill(2)
 
 def safecopy(a,b):
-        try:
-            shutil.copyfile(a,b)
-        except IOError as e:
-            sys.stderr.write("Could not copy "+a+" to "+b+" "+e.args(1)+"\n")
-            sys.stderr.flush()
+    try: shutil.copyfile(a,b)
+    except IOError as e:
+        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
+        sys.stderr.flush()
+        
+def safemkdir(a):
+    if not os.path.exists(a):
+        try: os.makedirs(a)
+        except OSError:
+            if e.errno == 17: pass
+            else: print e
 
 def compute_forward_adjoint_kernel(src):
 
@@ -44,16 +54,14 @@ def compute_forward_adjoint_kernel(src):
     
     ridge_filters_driver=read_params.get_ridge_filter()
     
-    paramsfiles=[os.path.splitext(f)[1][1:] for f in os.listdir(os.path.join(datadir)) if re.match(r'params.[0-9]$',f)]
+    paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]
     
     ridge_filters=[ridge for ridge in ridge_filters_driver if ridge in paramsfiles]
     
-    
-    
     for ridge_filter in ridge_filters:
         if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
-            shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                                os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
+            safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
+                    os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
     
     mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
@@ -67,33 +75,12 @@ def compute_forward_adjoint_kernel(src):
     with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     
-    if not os.path.exists(os.path.join(datadir,"tt","iter"+iterno2dig)):
-        try:
-            os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig))
-        except OSError: pass
-        
-    if not os.path.exists(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src)):
-        try:
-            os.makedirs(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
-        except OSError: pass
-        
-    
-            
+    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
+    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
+
     safecopy(os.path.join(datadir,forward,"vz_cc.fits"),
-                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))
-                    
-    safecopy(os.path.join(datadir,forward,"vz_cc.fits"),
-                    os.path.join(datadir,forward,"vz_cc_00.fits"))
-    
-    if procno==0:
-        safecopy(os.path.join(codedir,"vz_00.fits"),
-                        os.path.join(datadir,"update","vz_"+iterno2dig+".fits"))
-                        
-        safecopy(os.path.join(codedir,"vx_00.fits"),
-                        os.path.join(datadir,"update","vx_"+iterno2dig+".fits"))
-                    
-    
-    
+                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))                    
+
     for ridge_filter in ridge_filters:
         safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                         os.path.join(datadir,"tt","iter"+iterno2dig,
@@ -121,7 +108,10 @@ def compute_forward_adjoint_kernel(src):
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
-print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-
+timestart=datetime.datetime.now()
+print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')
 compute_forward_adjoint_kernel(src)
-print "Finishing on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
+timefin= datetime.datetime.now()
+elapsedTime = timefin - timestart
+runtime=divmod(elapsedTime.total_seconds(), 60)
+print "Finished on proc no",procno,"for source",src,"in",runtime[0],"mins",round(runtime[1]),"secs"

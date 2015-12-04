@@ -1961,7 +1961,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
 !~                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
                
-!                         print *,lef,rig,tau,pord,i
 138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
                
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
@@ -1984,8 +1983,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     iwls_misfit_factor=(prevtau**2 +iwls_eps)**(iwls_pow/2.0-1)
                    
                     misfit = misfit + tau**2. * iwls_misfit_factor
-!~                     tau = 1.0
-!!!!!!!!!!!!! REMOVE THE LINE tau = 1.0 !!!!!!!!!!!!!!!!!!!!
  
                     nmeasurements = nmeasurements + 1
                     con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) * iwls_misfit_factor !* sign(1.0,signed(i))

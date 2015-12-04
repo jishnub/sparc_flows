@@ -21,12 +21,12 @@ if len(misfitfiles)==0:
     quit()
 
 if len(misfitfiles)>len(lsfiles):
-    print "Forward computation for iteration",misfitfiles[-1]+1,"done"
+    print "Forward computation for iteration",misfitfiles[-1],"done"
     print "python grad.py && qsub linesearch.sh"
     quit()
 
 if len(misfitfiles)==len(lsfiles):
-    print lsfiles[-1]+1,"iterations complete"
+    print lsfiles[-1],"iterations complete"
     print "python lsmisfit.py"
     quit()
 
