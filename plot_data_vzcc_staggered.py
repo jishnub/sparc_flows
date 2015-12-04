@@ -220,7 +220,7 @@ if plot_travel_time_misfit:
     c=['olivedrab','burlywood','skyblue','dimgray','red','sienna','black','tomato','grey','teal']
 
     for modeno,mode in enumerate(ridge_filters):
-        for color_index,iter_index in enumerate(ttdiff_ridges[mode]["iter_no"][::3]):
+        for color_index,iter_index in enumerate(ttdiff_ridges[mode]["iter_no"][::1]):
             
             td=ttdiff_ridges[mode]["misfits"][ttdiff_ridges[mode]["iter_no"].index(iter_index)]
             #~ print "iteration",iter_index,modes[mode],"sum diff^2",sum((td[:,1]/60)**2)

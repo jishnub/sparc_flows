@@ -1,8 +1,8 @@
 import os,glob,read_params,shutil
 
 datadir=read_params.get_directory()
-lsfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in f])
-misfitfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in f])
+lsfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in os.path.basename(f)])
+misfitfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in os.path.basename(f)])
 
 last_ls_no=str(lsfiles[-1]).zfill(2)
 last_misfit_no=str(misfitfiles[-1]).zfill(2)

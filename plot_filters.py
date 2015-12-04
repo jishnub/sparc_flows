@@ -15,7 +15,11 @@ def fitswrite(filename,array):
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
 
-src=1
+try:
+    src=next(f for f in sys.argv if (f.startswith("src=") or f.startswith("source=")))
+    src=int(src.split("=")[-1])
+except StopIteration: src=1
+
 srcloc=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)[src-1]
 
 data=pyfits.getdata(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
@@ -87,10 +91,10 @@ if modes['fmode']:
     full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
     powmax = full_powerspectrum.max()
 
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.5,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.5,
     xr=[0,None],yr=[0,8],axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -106,12 +110,12 @@ if modes['fmode']:
     
     if savefilter: fitswrite('fmode_powspec.fits',filtered_powerspectrum)      
     
-    ax2,_=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    ax2=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[f_low,8],sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
     title="f mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    subplot_properties={'sharey':ax1,'sharex':ax1})
+    subplot_properties={'sharey':ax1,'sharex':ax1})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
 
@@ -166,10 +170,10 @@ if modes['p1mode']:
                 
     full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
     
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency (mHz)",fontsize=14)
@@ -185,12 +189,12 @@ if modes['p1mode']:
     
     if savefilter: fitswrite('p1mode_powspec.fits',filtered_powerspectrum)
     
-    ax2,_=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    ax2=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,1450],yr=[f_low,8],sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
     title="p1 mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    subplot_properties={'sharey':ax1,'sharex':ax1})
+    subplot_properties={'sharey':ax1,'sharex':ax1})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
 
@@ -243,10 +247,10 @@ if modes['p2mode']:
                 
     full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
     
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -262,12 +266,12 @@ if modes['p2mode']:
     
     if savefilter: fitswrite('p2mode_powspec.fits',filtered_powerspectrum)
     
-    ax2,_=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    ax2=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
     title="p2 mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    subplot_properties={'sharey':ax1,'sharex':ax1})
+    subplot_properties={'sharey':ax1,'sharex':ax1})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
 
@@ -320,10 +324,10 @@ if modes['p3mode']:
     full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
     powmax=full_powerspectrum.max()     
     
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.5,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.5,
     xr=[0,None],yr=[0,8],axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -339,12 +343,12 @@ if modes['p3mode']:
     
     if savefilter: fitswrite('p3mode_powspec.fits',filtered_powerspectrum)
     
-    ax2,_=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    ax2=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
     title="p3 mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    subplot_properties={'sharex':ax1,'sharey':ax1})
+    subplot_properties={'sharex':ax1,'sharey':ax1})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     
@@ -402,10 +406,10 @@ if modes['p4mode']:
     
     plot_freq_range=[2,6]
     
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.2,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.2,
     xr=[0,None],yr=plot_freq_range,axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -481,10 +485,10 @@ if modes['p5mode']:
     
     plot_freq_range=[2,6]
                 
-    ax1,_=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.1,
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.1,
     xr=[0,None],yr=plot_freq_range,axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -555,10 +559,10 @@ if modes['high_pmodes']:
            
     plt.figure()
                 
-    ax1,_=plotc.spectrumplot(abs(np.fft.fft2(np.squeeze(data)))**2,x=k*Rsun,y=nu,
+    ax1=plotc.spectrumplot(abs(np.fft.fft2(np.squeeze(data)))**2,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],axes_properties=dict(xscilimits=(-4,4)),sp=121,
     title="Power spectrum",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
@@ -573,11 +577,11 @@ if modes['high_pmodes']:
     filtered_powerspectrum=abs(np.fft.fft2(np.squeeze(data))*np.squeeze(high_pmodes))**2
     if savefilter: fitswrite('p5mode_powspec.fits',filtered_powerspectrum)
             
-    ax1,_=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    ax1=plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=[0,8],sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
     title="high p modes",colorbar=True,
-    colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     
     plt.xlabel("$k R_\odot$",fontsize=14)
 

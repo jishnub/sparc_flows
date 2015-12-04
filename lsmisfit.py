@@ -9,7 +9,7 @@ datadir=read_params.get_directory()
 if len(sys.argv)>1:
     iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
 else:
-    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in f]
+    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in os.path.basename(f)]
     nfiles=len(lsfiles)
     if nfiles==0:
         print "No linesearch files found"

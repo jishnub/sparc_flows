@@ -18,9 +18,9 @@ Nsources=len(master_pixels)
 
 wavespeed=np.zeros((Nsources,6))
 
-fmode=False
+fmode=True
 p1mode=False
-p2mode=True
+p2mode=False
 p3mode=False
 p4mode=False
 p5mode=False
@@ -33,7 +33,6 @@ for sourceno in xrange(Nsources):
     Nt,Nx=vzcc.shape
     sourcepix=int(np.floor(sourceloc/Lx*Nx)+Nx/2-1)
     
-    
     if fmode:
         ####################################################################
         #~ f-mode
@@ -43,43 +42,44 @@ for sourceno in xrange(Nsources):
             fmode_filter=np.squeeze(pf.getdata(fmode_filter_path))
         else:
             fmode_filter=np.asfortranarray(np.zeros((Nx,1,Nt),dtype=float))
-            modefilters.fmode_filter(fmode_filter)
+            modefilters.fmode_filter(Nt,dt,Nx,Lx,fmode_filter)
             fmode_filter=np.squeeze(fmode_filter).T
 
-        vzcc_f=np.real(np.fft.ifft2(np.fft.fft2(vzcc)*fmode_filter))
-        vzcc_f/=abs(vzcc_f).max()
-        #~ plotc.colorplot(vzcc_f)
-        #~ datacursor(display='multiple',draggable='True')
+        vzcc_f=np.fft.ifft2(np.fft.fft2(vzcc)*fmode_filter).real
+        plotc.colorplot(vzcc_f)
+        datacursor(display='multiple',draggable='True')
 
 
         Npoints=4
         xpix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
         xpoints=(xpix-Nx//2+1)/Nx*Lx
 
-        #~ plotc.draw_vlines(xpix)
+        plotc.draw_vlines(xpix)
 
         t_cutoff=np.zeros((Npoints,3))
 
         #~ Line fit to bottom of wavepacket
         def bot_time(x):
-            return (332-65.7)/(210-258)*(x-sourcepix)+20
+            x1=64;y1=209;
+            x2=108;y2=94.3;
+            source_bot=10
+            return (y2-y1)/(x2-x1)*(x-sourcepix)+source_bot
 
         #~ Line fit to top of wavepacket
         def top_time(x):
-            return (362-268)/(228-241)*(x-sourcepix)+60
+            x1=48.8;y1=266;
+            x2=105;y2=66.6;
+            source_top=66
+            return (y1-y2)/(x1-x2)*(x-sourcepix)+source_top
 
 
         t_cutoff[:,0]=bot_time(xpix)
         t_cutoff[:,1]=top_time(xpix)
         
-        y= (-0.465*(xpix-sourcepix)/dt+240)
-        #y=-5*(t-240)+230
-        
 
-        #~ plotc.plt.plot(xpix,t_cutoff[:,0],'b-')
-        #~ plotc.plt.plot(xpix,t_cutoff[:,1],'g-')
-        #~ plotc.plt.plot(xpix,y,'r-') 
-        #~ plotc.plt.show()
+        plotc.plt.plot(xpix,t_cutoff[:,0],'b-')
+        plotc.plt.plot(xpix,t_cutoff[:,1],'g-')
+
         
         xdat=vzcc_f[:,xpix].T
 
@@ -99,7 +99,7 @@ for sourceno in xrange(Nsources):
             tp=tp[np.where(np.logical_and(tp<t_cutoff[xind,1],tp>t_cutoff[xind,0]))[0]]
             yp=tseries[tp]    
             
-            #plotc.plt.plot([xpix[xind]]*len(tp),tp,'o',color='orange')
+            plotc.plt.plot([xpix[xind]]*len(tp),tp,'o',color='orange')
 
             popt,_ = curve_fit(gaus,tp,yp,p0=[yp[len(yp)//2],tp[len(tp)//2],(tp[-1]-tp[0])*0.4])
             
@@ -126,7 +126,7 @@ for sourceno in xrange(Nsources):
             #print gfit
             #~ plotc.plt.plot(tp,gfit)
             
-        #~ plotc.plt.show()
+        plotc.plt.show()
         
         
         wavespeed[sourceno,0]=abs(v)

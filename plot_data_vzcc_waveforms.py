@@ -10,7 +10,8 @@ def fitsread(f): return np.squeeze(pyfits.getdata(f))
 datadir = read_params.get_directory()
 
 try:
-    src=next(int(f) for f in sys.argv if f.isdigit())
+    src=next(f for f in sys.argv if (f.startswith("src=") or f.startswith("source=")))
+    src=int(src.split("=")[-1])
 except StopIteration: src=1
 
 data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))

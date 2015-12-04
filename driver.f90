@@ -1918,7 +1918,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             con = 2.0*pi
 
-            vel(0) = 0.4720
+            vel(0) = 0.41
             vel(1) = 0.60
             vel(2) = 0.75
             vel(3) = 0.95
