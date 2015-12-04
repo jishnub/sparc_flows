@@ -30,33 +30,42 @@ z=np.loadtxt(os.path.join(codedir,read_params.get_solarmodel()),usecols=[0])
 z=(z-1)*Rsun
 
 if enf_cont and (contvar == 'psi'):
-    true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
-    current_model = fitsread(os.path.join(datadir,'model_psi_ls00.fits'))
-    try:
-        update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
-    except IOError:
-        update=np.zeros_like(current_model)
-        print "Could not load update psi"
+    true_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
+    true_vz = fitsread(os.path.join(codedir,'true_vz.fits'))
+    current_vx = fitsread(os.path.join(datadir,'update','vx_'+iterm1+'.fits'))
+    current_vz = fitsread(os.path.join(datadir,'update','vz_'+iterm1+'.fits'))
     
-    _,_,gl=plotc.layout_subplots(3)
+    gl=plotc.layout_subplots(4)[2]
     
-    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
+    ax1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    centerzero=True)[0]
+    
     plt.ylabel("Depth (Mm)",fontsize=20)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"True $\psi$",fontsize=20,y=1.01)
+    #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"True vx",fontsize=20,y=1.01)
     
-    ax2=plotc.colorplot(current_model-current_model[0,0],sp=next(gl),x=x,y=z,
+    ax2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Current $\psi$",fontsize=20,y=1.01)
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
     
-    ax3=plotc.colorplot(-update/update.max(),sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+    #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"Current vx",fontsize=20,y=1.01)
+    
+    ax3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8,'pad':0.3},
+    centerzero=True)[0]
+    
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Update $\psi$",fontsize=20,y=1.01)
+    plt.ylabel("Depth (Mm)",fontsize=20)
+    plt.title(r"True vz",fontsize=20,y=1.01)
+    
+    ax4=plotc.colorplot(current_vz,sp=next(gl),x=x,y=z,
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8,'pad':0.3},
+    axes_properties={'sharey':ax3,'hide_yticklabels':True},centerzero=True)[0]
+    
+    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.title(r"Current vz",fontsize=20,y=1.01)
     
     #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
     
