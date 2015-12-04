@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_model'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/p1/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/f_p1_to_p5_psi/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -152,7 +152,7 @@ parameter( excitdep = - 15000000.0)
 ! CONTINUITY
 logical enf_cont, psi_cont, vx_cont, vz_cont
 parameter ( enf_cont = .TRUE. )
-parameter ( psi_cont = .FALSE. )
-parameter ( vx_cont = .TRUE. )
+parameter ( psi_cont = .TRUE. )
+parameter ( vx_cont = .FALSE. )
 parameter ( vz_cont = .FALSE. )
 

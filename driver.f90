@@ -47,10 +47,7 @@ Program driver
     real*8 bes(0:2), Lregular,signt
     logical saved, iteration, init_variables, tempbool
     character*1 ci
-    character*5 tempc
     real*8 tau,dt
-!~     logical nancheck
-!~     real*8 intv(nx,1,nz),derv(nx,1,nz)
     
 20  format(8f12.4)
 
@@ -58,21 +55,7 @@ Program driver
     ! Initializing the computation
     ! --------------------------------------------
 
-    call Initialize_all
-    
-!~     intv=0.0
-!~     derv=0.0
-!~     
-!~     do k=1,nz
-!~     derv(:,1,k)=2*pi*sin(2*pi*x)+0.5
-!~     end do
-!~     
-!~     call ddx(intv,derv,1)
-!~     intv = integrate_x(derv) 
-!~     call writefits_3d("intxtest.fits",intv*stretchx,nz)
-!~     stop
-
-    
+    call Initialize_all    
 
     if (COMPUTE_DATA) then
 
@@ -1683,6 +1666,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     integer i, nt, indexnum, pord, timesmax, halftime, bounce,timefin, idiff,dumm(0:5)
     integer loc, leng, lef, rig, j, nmeasurements, nmeas, ierr,timest, filenum
     character*1 ord
+    character*2 contribmatch
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
     real*8 ampquiet, ampmag
     real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
@@ -1699,7 +1683,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
     real*8 ign1,ign2
     real*8 prevtau,iwls_pow,iwls_misfit_factor,iwls_eps
-    logical iwls,prev_iter_exist,sgd
+    logical iwls,prev_iter_exist,sgd,ws_exist
     
 
     UNKNOWN = 1.0/0.55
@@ -1876,7 +1860,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     tempdat = filtdat
 
 
-    !RIDGE FILTERS, f, p1, p2
+    !RIDGE FILTERS, f, p1, p2, p3, p4, p5
     do pord=0,5
         taus = 0.0
         call convert_to_string(pord, ord, 1)
@@ -1919,11 +1903,27 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             con = 2.0*pi
 
             vel(0) = 0.41
-            vel(1) = 0.60
+            vel(1) = 0.62
             vel(2) = 0.75
-            vel(3) = 0.95
-            vel(4) = 1.35
-            vel(5) = 1.5
+            vel(3) = 0.9
+            vel(4) = 1.0
+            vel(5) = 1.3
+            
+            inquire(file='wavespeed',exist=ws_exist) 
+            if (ws_exist) then
+                open(3378,file="wavespeed",action="read")
+                    do i=1,nmasters
+                    call convert_to_string(i, contribmatch, 2)
+                    if (contribmatch == contrib) then
+                    read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),vel(5) 
+                    else
+                        read(3378,*)
+                    end if
+                    end do
+                close(3378)
+            end if
+            
+            if (pord==0) print *,"Using mode velocities",vel
          
             do i=1,nt
                 filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
@@ -1941,8 +1941,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
-                        timest = floor(distances(i)/vel(pord) * 1./dt)
-                        timefin = timest + 40
+                        timest = floor(distances(i)/vel(pord) * 1./dt)-20
+                        timefin = timest + 60
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
                         lef = loc - halftime
                         rig = loc + halftime

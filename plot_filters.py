@@ -135,7 +135,6 @@ if modes['fmode']:
 #~ p1 mode
 
 if modes['p1mode']:
-
     p1mode=modefilters.pmode_filter(nt,dt,nx,Lx)
     p1mode=p1mode.transpose(2,1,0)
     
