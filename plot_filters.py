@@ -457,8 +457,9 @@ if modes['p5mode']:
     savefilter=False
     if savefilter: fitswrite('p5modefiltertest.fits',p5mode)
 
-    f_mode_const=0
+    #~ f_mode_const=0
     Poly=np.zeros(3)
+    Polylow=np.zeros(3)
     f_low=0
 
     with open('modefilters.f90','r') as mf:
@@ -469,8 +470,11 @@ if modes['p5mode']:
             if 'end subroutine p5mode_filter' in line.lower(): 
                 is_p5_mode=False
                 break
-            if line.lower().strip().startswith('f_mode_const') and is_p5_mode:
-                f_mode_const=float(line.strip().split("=")[1])
+            #~ if line.lower().strip().startswith('f_mode_const') and is_p5_mode:
+                #~ f_mode_const=float(line.strip().split("=")[1])
+            for poly_coeff in xrange(len(Polylow)):
+                if line.strip().startswith('Polylow('+str(poly_coeff)+')') and is_p5_mode:
+                    Polylow[poly_coeff]=float(line.strip().split("=")[1])
             for poly_coeff in xrange(len(Poly)):
                 if line.strip().startswith('Poly('+str(poly_coeff)+')') and is_p5_mode:
                     Poly[poly_coeff]=float(line.strip().split("=")[1])
@@ -492,8 +496,9 @@ if modes['p5mode']:
     plt.xlabel("$k R_\odot$",fontsize=14)
     plt.ylabel("Frequency ($mHz$)",fontsize=14)
 
-    f0=f_mode_const*abs(k)**0.5
-    f1=Poly[0] + Poly[1]*abs(k) +Poly[2]*k**2.
+    #~ f0=f_mode_const*abs(k)**0.5
+    f0=sum(p_i*k**i for i,p_i in enumerate(Polylow))
+    f1=sum(p_i*k**i for i,p_i in enumerate(Poly))
 
     plt.plot(k[:len(k)/2]*Rsun,f0[:len(k)/2],color='orangered')
     plt.plot(k[:len(k)/2]*Rsun,f1[:len(k)/2],color='orangered')

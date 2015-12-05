@@ -15,44 +15,36 @@ masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 
 dt=0.5
-try:
-    src=next(int(f) for f in sys.argv if f.isdigit())
-except StopIteration:
-    src=1
-if src>len(masterpixels): src=len(masterpixels)
 
+temp=filter(lambda x: x.startswith("src=") or x.startswith("source="),sys.argv)
+if temp: src=int(temp[0].split("=")[-1])
+else: src=1
+
+if src>len(masterpixels): src=len(masterpixels)
 src=str(src).zfill(2)
 
+
+Nx=read_params.get_nx()
+Lx=read_params.get_xlength()
+x=np.linspace(-Lx/2,Lx/2,Nx,endpoint=False)
 
 #~ Read in velocity and compute length scales
 
 vxfile=os.path.join(codedir,'true_vx.fits')
-vzfile=os.path.join(codedir,'true_vz.fits')
-
 vx=fitsread(vxfile)
-vz=fitsread(vzfile)
-v_surface=np.sqrt(vx[-1]**2+vz[-1]**2)
-vx=None;vz=None
-
-vmax=v_surface.max()
-bhigh=np.where(v_surface>vmax/2)[0]
-v_high_left,v_high_right=bhigh[[0,-1]]
-vfwhm=v_high_right-v_high_left
-vfwhm=20
-vhwhm=vfwhm//2
-v_surface=None
-
+vx_max_row_index,vx_max_col_index = divmod(vx.argmax(),Nx)
+vx_max_row = vx[vx_max_row_index]
+vx=None
+vxmax=vx_max_row.max()
+vx_hwhm=np.where(vx_max_row>vxmax/2)[0][-1]-Nx//2
+vlimleft,vlimright=x[Nx//2-vx_hwhm],x[Nx//2+vx_hwhm]
 
 datafile=os.path.join(datadir,'forward_src'+src+'_ls00','data.fits')
 data=fitsread(datafile)
-Nt,Nx=data.shape
+Nt=data.shape[0]
+time=np.arange(Nt)*dt
 
-Lx=read_params.get_xlength()
 
-x=np.linspace(-Lx/2,Lx/2,Nx,endpoint=False)
-time=np.arange(data.shape[0])*dt
-
-vlimleft,vlimright=x[Nx//2-vhwhm],x[Nx//2+vhwhm]
 
 modes={'0':'fmode'}
 for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
@@ -220,40 +212,50 @@ if plot_travel_time_misfit:
     c=['olivedrab','burlywood','skyblue','dimgray','red','sienna','black','tomato','grey','teal']
 
     for modeno,mode in enumerate(ridge_filters):
-        for color_index,iter_index in enumerate(ttdiff_ridges[mode]["iter_no"][::1]):
+        num_iterations=len(ttdiff_ridges[mode]["iter_no"])
+        plot_every=1
+        if num_iterations > 4: plot_every = int(np.ceil(np.sqrt(num_iterations)))
+        for color_index,iter_index in enumerate(ttdiff_ridges[mode]["iter_no"][::plot_every]):
             
-            td=ttdiff_ridges[mode]["misfits"][ttdiff_ridges[mode]["iter_no"].index(iter_index)]
-            #~ print "iteration",iter_index,modes[mode],"sum diff^2",sum((td[:,1]/60)**2)
+            index_of_iteration=ttdiff_ridges[mode]["iter_no"].index(iter_index)
+            td=ttdiff_ridges[mode]["misfits"][index_of_iteration]
+            td[:,0]-=1 # fortran index starts from 1, change to python zero based index
             
-            left=np.where(td[:,0]<srcloc_ind)[0]
-            xcoords_left=np.take(x,td[left,0].astype(int))
-            
-            right=np.where(td[:,0]>srcloc_ind)[0]
-            xcoords_right=np.take(x,td[right,0].astype(int))
+            left_pix=np.where(td[:,0]<srcloc_ind)[0]
+            xcoords_left=np.take(x,td[left_pix,0].astype(int))
+            right_pix=np.where(td[:,0]>srcloc_ind)[0]
+            xcoords_right=np.take(x,td[right_pix,0].astype(int))            
             
             #~ Points to the left
-            ax=plotc.plot1D(td[left,1],x=xcoords_left,ax=tdiffaxes[modeno],color=c[color_index],
+            plotc.plot1D(td[left_pix,1],x=xcoords_left,ax=tdiffaxes[modeno],color=c[color_index],
                         label="iter "+str(iter_index),marker='o',linestyle='-',
-                        axes_properties=dict(locator_properties_x=dict(nbins=4))
+                        axes_properties=dict(locator_properties_x=dict(nbins=4)),
+                        title=spaced(modes[mode]),title_properties={'fontsize':20}
                         )
-            plt.title(spaced(modes[mode]),dict(fontsize=20))
-                        
+
             #~ Points to the right
-            ax=plotc.plot1D(td[right,1],x=xcoords_right,ax=tdiffaxes[modeno],color=c[color_index],
+            plotc.plot1D(td[right_pix,1],x=xcoords_right,ax=tdiffaxes[modeno],color=c[color_index],
                             marker='o',linestyle='-')
 
             #~ Zero misfit line
-            ax,_=plotc.draw_hlines(y=[0],ax=ax,ls='--')
-            #~ Source location line
-            ax,_=plotc.draw_vlines(x=[srcloc],ax=ax)
+            plotc.draw_hlines(y=[0],ax=tdiffaxes[modeno],ls='--')
             
-            plt.xlabel("x (Mm)",fontsize=20)
-            plt.ylabel("Travel Time Difference (sec)",fontsize=20)
+            
+    for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
+        tdiffaxes[ax_no].set_ylabel(r"$\Delta \tau$ (sec)",fontsize=20)
+    
+    for ax_no in xrange(subplot_layout[1],len(tdiffaxes)):    
+        tdiffaxes[ax_no].set_xlabel("x (Mm)",fontsize=20)
         
        
-    for ax in tdiffaxes[:len(ridge_filters)]: 
-        plotc.draw_vlines(x=[vlimleft,vlimright],ax=ax,ls='dotted')
-        plotc.draw_rectangle(x=[vlimleft,vlimright],ax=ax,color='paleturquoise')
+    for ax in tdiffaxes:
+        ylim_curr=ax.get_ylim()
+        #~ Source location line
+        plotc.draw_vlines(x=[srcloc],ymin=-1e3,ymax=1e3,ax=ax)
+        #~ Rectangle with border
+        plotc.draw_vlines(x=[vlimleft,vlimright],ymin=-1e3,ymax=1e3,ax=ax,ls='dotted')
+        plotc.draw_rectangle(x=[vlimleft,vlimright],y=[-1e3,1e3],ax=ax,color='paleturquoise')
+        ax.set_ylim(ylim_curr)
         ax.legend(loc='best')
 
 
