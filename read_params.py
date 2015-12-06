@@ -1,4 +1,4 @@
-import os
+import os,fnmatch
 
 def get_directory():
     codedir=os.path.dirname(os.path.abspath(__file__))
@@ -125,3 +125,10 @@ def get_continuity_variable():
             if ("parameter" in line.lower()) and ("vz_cont" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'vz'
     return "unknown"
+
+def get_modes_used():
+    ridge_filters_driver=get_ridge_filter()
+    datadir = get_directory()
+    paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]    
+    ridge_filters=[ridge for ridge in ridge_filters_driver if ridge in paramsfiles]
+    return ridge_filters

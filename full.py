@@ -52,11 +52,7 @@ def compute_forward_adjoint_kernel(src):
     modes={'0':'fmode'}
     for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
     
-    ridge_filters_driver=read_params.get_ridge_filter()
-    
-    paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]
-    
-    ridge_filters=[ridge for ridge in ridge_filters_driver if ridge in paramsfiles]
+    ridge_filters = read_params.get_modes_used()
     
     for ridge_filter in ridge_filters:
         if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):

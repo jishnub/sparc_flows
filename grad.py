@@ -216,7 +216,7 @@ def main(eps):
     kern = totkern_psi/hess
     filterx(kern)
     antisymmetrize(kern)
-    filterz(kern,algo='gaussian',sp=1.0)
+    filterz(kern,algo='gaussian',sp=2.0)
     totkern_psi=kern
     
     #~ Velocity kernels

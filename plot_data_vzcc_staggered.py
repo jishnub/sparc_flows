@@ -48,9 +48,7 @@ time=np.arange(Nt)*dt
 
 modes={'0':'fmode'}
 for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
-ridge_filters_driver=read_params.get_ridge_filter()
-paramsfiles=[os.path.splitext(f)[1][1:] for f in os.listdir(os.path.join(datadir)) if re.match(r'params.[0-9]$',f)]
-ridge_filters=sorted([ridge for ridge in ridge_filters_driver if ridge in paramsfiles])
+ridge_filters=sorted(read_params.get_modes_used())
 
 def spaced(a): return a[:-4]+" "+a[-4:]
 

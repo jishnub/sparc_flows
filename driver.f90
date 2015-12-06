@@ -1946,8 +1946,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
-                        timest = floor(distances(i)/vel(pord) * 1./dt)-20
-                        timefin = timest + 60
+                        timest = floor(distances(i)/vel(pord) * 1./dt)
+                        timefin = timest + 40
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
                         lef = loc - halftime
                         rig = loc + halftime
@@ -2157,6 +2157,8 @@ END SUBROUTINE ADJOINT_SOURCE_FILT
  end subroutine bessel
 
 !================================================================================
+
+
 
 SUBROUTINE MISFIT_ALL(nt)
     use initialize
