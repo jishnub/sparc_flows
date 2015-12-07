@@ -8,8 +8,7 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
-[[ ! -e full_complete ]] && exit
-rm full_complete
+[[ -e running_full ]] && exit
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 

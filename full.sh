@@ -8,6 +8,8 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
+[[ ! -e running_full ]] && touch running_full
+
 echo "Starting at "`date`
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
@@ -48,5 +50,5 @@ find $directory/status -name "kernel*" -delete
 find . -name "core.*" -delete
 find . -name "fort.*" -delete
 
-touch full_complete
+rm running_full
 echo "Finished at "`date`
