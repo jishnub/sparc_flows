@@ -108,6 +108,6 @@ timestart=datetime.datetime.now()
 print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')
 compute_forward_adjoint_kernel(src)
 timefin= datetime.datetime.now()
-elapsedTime = timefin - timestart
-runtime=divmod(elapsedTime.total_seconds(), 60)
-print "Finished on proc no",procno,"for source",src,"in",runtime[0],"mins",round(runtime[1]),"secs"
+#~ elapsedTime = timefin - timestart
+#~ runtime=divmod(elapsedTime.total_seconds(), 60)
+print "Finished on proc no",procno,"for source",src,"at",datetime.datetime.strftime(timefin, '%Y-%m-%d %H:%M:%S')
