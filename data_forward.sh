@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  data_f_to_p5
+#PBS -N  data_f_to_p5_3hr
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-data_forward
 #PBS -e  error-data_forward

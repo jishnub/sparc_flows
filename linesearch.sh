@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  ls_f_to_p5
+#PBS -N  ls_f_to_p5_3hr
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
@@ -7,6 +7,9 @@
 cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
+
+[[ ! -e full_complete ]] && exit
+rm full_complete
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  full_f_to_p5
+#PBS -N  full_f_to_p5_3hr
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full
@@ -12,7 +12,9 @@ echo "Starting at "`date`
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
-find . -name "linesearch" -delete
+#~ find . -name "linesearch" -delete
+[[ -e linesearch ]] && echo "Linesearch running, quitting. Remove the 'linesearch' file if it's not"\
+ && exit
 find . -name "compute_data" -delete
 find . -name "compute_synth" -delete
 
@@ -46,4 +48,5 @@ find $directory/status -name "kernel*" -delete
 find . -name "core.*" -delete
 find . -name "fort.*" -delete
 
+touch full_complete
 echo "Finished at "`date`

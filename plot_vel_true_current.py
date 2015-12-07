@@ -48,7 +48,7 @@ if enf_cont and (contvar == 'psi'):
     ax2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
-    
+
     #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Current vx",fontsize=20,y=1.01)
     
