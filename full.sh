@@ -8,15 +8,17 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
+#~ find . -name "linesearch" -delete
+[[ -e linesearch ]] && echo "Linesearch running, quitting. Remove the 'linesearch' file if it's not"\
+ && exit
+
 [[ ! -e running_full ]] && touch running_full
 
 echo "Starting at "`date`
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
-#~ find . -name "linesearch" -delete
-[[ -e linesearch ]] && echo "Linesearch running, quitting. Remove the 'linesearch' file if it's not"\
- && exit
+
 find . -name "compute_data" -delete
 find . -name "compute_synth" -delete
 
