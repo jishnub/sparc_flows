@@ -8,11 +8,12 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
-#~ find . -name "linesearch" -delete
 [[ -e linesearch ]] && echo "Linesearch running, quitting. Remove the 'linesearch' file if it's not"\
  && exit
 
-[[ ! -e running_full ]] && touch running_full
+[[ -e running_full ]] && echo "Full already running, quitting" && exit
+
+touch running_full
 
 echo "Starting at "`date`
 

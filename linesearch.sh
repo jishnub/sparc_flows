@@ -8,7 +8,9 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
-[[ -e running_full ]] && exit
+[[ -e running_full ]] && echo "Full running, quitting" && exit
+[[ -e linesearch ]] && echo "Linesearch already running, quitting" && exit
+
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
