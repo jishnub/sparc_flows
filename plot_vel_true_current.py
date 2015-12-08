@@ -50,7 +50,7 @@ if enf_cont and (contvar == 'psi'):
     axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
 
     #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Current vx",fontsize=20,y=1.01)
+    plt.title(r"Iterated vx",fontsize=20,y=1.01)
     
     ax3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8,'pad':0.3},
@@ -65,7 +65,9 @@ if enf_cont and (contvar == 'psi'):
     axes_properties={'sharey':ax3,'hide_yticklabels':True},centerzero=True)[0]
     
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Current vz",fontsize=20,y=1.01)
+    plt.title(r"Iterated vz",fontsize=20,y=1.01)
+    
+    plt.tight_layout()
     
     #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
     

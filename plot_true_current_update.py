@@ -32,13 +32,14 @@ z=(z-1)*Rsun
 if enf_cont and (contvar == 'psi'):
     true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
     current_model = fitsread(os.path.join(datadir,'model_psi_ls00.fits'))
+    current_model = current_model-current_model[0,0]
     try:
         update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
     except IOError:
         update=np.zeros_like(current_model)
         print "Could not load update psi"
     
-    _,_,gl=plotc.layout_subplots(3)
+    gl=plotc.layout_subplots(3)[2]
     
     ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
@@ -46,19 +47,45 @@ if enf_cont and (contvar == 'psi'):
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\psi$",fontsize=20,y=1.01)
     
-    ax2=plotc.colorplot(current_model-current_model[0,0],sp=next(gl),x=x,y=z,
+    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Current $\psi$",fontsize=20,y=1.01)
+    plt.title(r"Iterated $\psi$",fontsize=20,y=1.01)
     
-    ax3=plotc.colorplot(-update/update.max(),sp=next(gl),x=x,y=z,
+    ax3=plotc.colorplot(update/update.max(),sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Update $\psi$",fontsize=20,y=1.01)
+    plt.title(r"Next update",fontsize=20,y=1.01)
     
-    #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
+    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
+    
+    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
+    
+    plt.figure()
+    
+    psi_max_row_index,psi_max_col_index = divmod(true_model.argmax(),nx)
+    curpsi_max_row_index,curpsi_max_col_index = divmod(current_model.argmax(),nx)
+    Lregular = read_params.get_Lregular()/1e8 # cm to Mm
+    plt.subplot(121)
+    plt.plot(x,true_model[curpsi_max_row_index,:],label="True model")
+    plt.plot(x,current_model[curpsi_max_row_index,:],label="Iterated model",
+    linestyle='dashed',linewidth=2)
+    plt.xlabel("x (Mm)",fontsize=20)
+    plt.ylabel("Scaled Stream Function",fontsize=20)
+    plt.title("Horizontal cut",fontsize=20)
+    plt.legend(loc='best')
+    plt.subplot(122)
+    plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
+    plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
+    linestyle='dashed',linewidth=2)
+    plt.xlim(-10,2.5)
+    plt.xlabel("Depth (Mm)",fontsize=20)
+    plt.title("Vertical Cut",fontsize=20)
+    plt.legend(loc='best')
+    plt.tight_layout()
+    
     
 elif enf_cont and (contvar == 'vx'):
     true_model = fitsread(os.path.join(codedir,'true_vx.fits'))
@@ -89,6 +116,8 @@ elif enf_cont and (contvar == 'vx'):
     
     plt.suptitle("Continuity: Compute vz from vx",fontsize=16)
     
+    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
+    
 elif enf_cont and (contvar == 'vz'):
     true_model = fitsread(os.path.join(codedir,'true_vz.fits'))
     current_model = fitsread(os.path.join(datadir,'model_vz_ls00.fits'))
@@ -117,6 +146,8 @@ elif enf_cont and (contvar == 'vz'):
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
     plt.suptitle("Continuity: Compute vx from vz",fontsize=16)
+    
+    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
     
 elif not enf_cont:    
     true_model_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
@@ -172,7 +203,7 @@ elif not enf_cont:
     plt.tight_layout()
 
 
-plt.subplots_adjust(wspace=0)
+
 plt.show()
     
     

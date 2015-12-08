@@ -155,7 +155,7 @@ Program driver
                 ! These logical variables are defined in params.i
                 if (psi_cont .and. enf_cont) then
                 
-                    Lregular = 30.0*10.0**8/diml
+                    Lregular = 30.0E8/diml
                     allocate(psivar(nx,dim2(rank),nz))
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
                     

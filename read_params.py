@@ -132,3 +132,18 @@ def get_modes_used():
     paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]    
     ridge_filters=[ridge for ridge in ridge_filters_driver if ridge in paramsfiles]
     return ridge_filters
+
+def get_Lregular():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    driverfile = os.path.join(codedir,'driver.f90')
+    with open(driverfile,'r') as driverfile:
+        psi_cont_check=False
+        for line in driverfile:
+            if "if (psi_cont .and. enf_cont) then" in line.lower(): psi_cont_check=True
+            if psi_cont_check and "Lregular" in line:
+                if "Lregular" != line.strip().split()[0]: continue
+                return float(line.strip().split("=")[-1].rstrip("/diml"))
+            if "elseif (enf_cont .and. (vx_cont)) then" in line.lower(): 
+                psi_cont_check=False
+                break
+    
