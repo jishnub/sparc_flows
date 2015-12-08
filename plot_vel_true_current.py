@@ -68,6 +68,34 @@ if enf_cont and (contvar == 'psi'):
     plt.title(r"Iterated vz",fontsize=20,y=1.01)
     
     plt.tight_layout()
+    plt.subplots_adjust(wspace=0)
+    
+    plt.figure()
+    vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
+    vz_max_row_index,vz_max_col_index = divmod(true_vz.argmax(),nx)
+    
+    plt.subplot(121)
+    plt.plot(z,true_vx[:,vx_max_col_index],label="True vx")
+    plt.plot(z,current_vx[:,vx_max_col_index],label="Iterated vx",
+    linestyle='dashed',linewidth=2)
+    plt.xlabel("Depth (Mm)",fontsize=20)
+    plt.ylabel("vx (m/s)",fontsize=20)
+    plt.legend(loc='best')
+    plt.xlim(-10,2)
+    plt.subplot(122)
+    plt.plot(z,true_vz[:,vz_max_col_index],label="True vz")
+    plt.plot(z,current_vz[:,vz_max_col_index],label="Iterated vz",
+    linestyle='dashed',linewidth=2)
+    plt.xlabel("Depth (Mm)",fontsize=20)
+    plt.ylabel("vz (m/s)",fontsize=20)
+    plt.legend(loc='best')
+    plt.xlim(-10,2)
+    
+    plt.tight_layout()
+    
+    
+    
+    
     
     #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
     
@@ -99,6 +127,7 @@ elif enf_cont and (contvar == 'vx'):
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
     plt.suptitle("Continuity: Compute vz from vx",fontsize=16)
+    plt.subplots_adjust(wspace=0)
     
 elif enf_cont and (contvar == 'vz'):
     true_model = fitsread(os.path.join(codedir,'true_vz.fits'))
@@ -128,6 +157,7 @@ elif enf_cont and (contvar == 'vz'):
     plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
     
     plt.suptitle("Continuity: Compute vx from vz",fontsize=16)
+    plt.subplots_adjust(wspace=0)
     
 elif not enf_cont:    
     true_model_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
@@ -181,9 +211,10 @@ elif not enf_cont:
     plt.suptitle("No continuity, vx and vz unconstrained",fontsize=16)
     
     plt.tight_layout()
+    plt.subplots_adjust(wspace=0)
 
 
-plt.subplots_adjust(wspace=0)
+
 plt.show()
     
     
