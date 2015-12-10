@@ -1,5 +1,6 @@
 from __future__ import division
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import pyfits
 import read_params
 import os,sys,fnmatch
@@ -21,7 +22,6 @@ try:
 except StopIteration: ls=0
 
 data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
-vzcc=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls'+str(ls).zfill(2),'vz_cc.fits'))
 
 srcloc=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)[src-1]
 
@@ -78,6 +78,8 @@ iterno=0
 if filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv): 
     iterno=int(filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv)[0].split("=")[-1])
     assert iterno>=0,"Iteration number must be greater than zero"
+    
+vzcc=fitsread(os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),'vz_cc_src'+str(src).zfill(2)+'.fits'))
 
 wavespeed = np.loadtxt('wavespeed')[src-1]
 
@@ -112,6 +114,8 @@ for ridge in ridges:
     plt.xlim(-70,70)
     plt.ylabel("Time (min)",fontsize=20)
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
 
     plt.subplot(122)
     
@@ -127,6 +131,8 @@ for ridge in ridges:
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     ax.yaxis.tick_right()
     ax.yaxis.set_label_position("right")
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
 
     plt.legend(loc='upper left')
     

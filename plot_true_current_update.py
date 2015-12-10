@@ -1,6 +1,7 @@
 from __future__ import division
 import plotc
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 import read_params
 import pyfits
@@ -33,31 +34,42 @@ if enf_cont and (contvar == 'psi'):
     true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
     current_model = fitsread(os.path.join(datadir,'model_psi_ls00.fits'))
     current_model = current_model-current_model[0,0]
-    try:
-        update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
-    except IOError:
-        update=np.zeros_like(current_model)
-        print "Could not load update psi"
-    
-    gl=plotc.layout_subplots(3)[2]
+    plot_update=False
+    if plot_update:
+        try:
+            update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
+        except IOError:
+            update=np.zeros_like(current_model)
+            print "Could not load update psi"
+        gl=plotc.layout_subplots(3)[2]
+    else:
+        gl=plotc.layout_subplots(2)[2]
+  
     
     ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
     plt.ylabel("Depth (Mm)",fontsize=20)
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\psi$",fontsize=20,y=1.01)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
     plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated $\psi$",fontsize=20,y=1.01)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    ax3=plotc.colorplot(update/update.max(),sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Next update",fontsize=20,y=1.01)
+    if plot_update:
+        ax3=plotc.colorplot(update/update.max(),sp=next(gl),x=x,y=z,
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+        plt.title(r"Next update",fontsize=20,y=1.01)
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
     
@@ -68,6 +80,7 @@ if enf_cont and (contvar == 'psi'):
     psi_max_row_index,psi_max_col_index = divmod(true_model.argmax(),nx)
     curpsi_max_row_index,curpsi_max_col_index = divmod(current_model.argmax(),nx)
     Lregular = read_params.get_Lregular()/1e8 # cm to Mm
+    
     plt.subplot(121)
     plt.plot(x,true_model[curpsi_max_row_index,:],label="True model")
     plt.plot(x,current_model[curpsi_max_row_index,:],label="Iterated model",
@@ -75,7 +88,10 @@ if enf_cont and (contvar == 'psi'):
     plt.xlabel("x (Mm)",fontsize=20)
     plt.ylabel("Scaled Stream Function",fontsize=20)
     plt.title("Horizontal cut",fontsize=20)
+    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+    plt.tick_params(axis='both', which='major', labelsize=14)
     plt.legend(loc='best')
+    
     plt.subplot(122)
     plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
     plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
@@ -83,6 +99,8 @@ if enf_cont and (contvar == 'psi'):
     plt.xlim(-10,2.5)
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.title("Vertical Cut",fontsize=20)
+    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+    plt.tick_params(axis='both', which='major', labelsize=14)
     plt.legend(loc='best')
     plt.tight_layout()
     
