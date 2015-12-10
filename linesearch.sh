@@ -17,7 +17,7 @@ directory=`python -c 'import read_params; print read_params.get_directory()'`
 find $directory -name "compute_data" -exec rm -f {} \; 
 find $directory -name "compute_synth" -exec rm -f {} \; 
 
-iter=`find $directory/update -name 'linesearch_[0-9][0-9]'|wc -l`
+iter=`find $directory/update -maxdepth 1 -name 'linesearch_[0-9][0-9]'|wc -l`
 itername=`printf "%02d" $iter`
 
 touch linesearch

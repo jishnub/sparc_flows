@@ -17,7 +17,8 @@ def get_iter_no():
     # Count the number of misfit_xx files
     return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
 iterno=get_iter_no()
-iterm1=str(iterno-1).zfill(2)
+
+def iterm(i): return str(iterno-i).zfill(2)
 
 enf_cont = read_params.get_enforced_continuity()
 contvar=read_params.get_continuity_variable()
@@ -33,8 +34,12 @@ z=(z-1)*Rsun
 if enf_cont and (contvar == 'psi'):
     true_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
     true_vz = fitsread(os.path.join(codedir,'true_vz.fits'))
-    current_vx = fitsread(os.path.join(datadir,'update','vx_'+iterm1+'.fits'))
-    current_vz = fitsread(os.path.join(datadir,'update','vz_'+iterm1+'.fits'))
+    current_vx = fitsread(os.path.join(datadir,'update','vx_'+iterm(1)+'.fits'))
+    current_vz = fitsread(os.path.join(datadir,'update','vz_'+iterm(1)+'.fits'))
+    prev1_vx = fitsread(os.path.join(datadir,'update','vx_'+iterm(2)+'.fits'))
+    prev1_vz = fitsread(os.path.join(datadir,'update','vz_'+iterm(2)+'.fits'))
+    prev2_vx = fitsread(os.path.join(datadir,'update','vx_'+iterm(3)+'.fits'))
+    prev2_vz = fitsread(os.path.join(datadir,'update','vz_'+iterm(3)+'.fits'))
     
     gl=plotc.layout_subplots(4)[2]
     
@@ -80,6 +85,10 @@ if enf_cont and (contvar == 'psi'):
     plt.plot(z,true_vx[:,vx_max_col_index],label="True vx")
     plt.plot(z,current_vx[:,vx_max_col_index],label="Iterated vx",
     linestyle='dashed',linewidth=2)
+    plt.plot(z,prev1_vx[:,vx_max_col_index],label="Previous iter",
+    linestyle='dotted',linewidth=2)
+    plt.plot(z,prev2_vx[:,vx_max_col_index],label="2 iter ago",
+    linestyle='dotted',linewidth=2)
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.ylabel("vx (m/s)",fontsize=20)
     plt.legend(loc='best')
@@ -91,6 +100,10 @@ if enf_cont and (contvar == 'psi'):
     plt.plot(z,true_vz[:,vz_max_col_index],label="True vz")
     plt.plot(z,current_vz[:,vz_max_col_index],label="Iterated vz",
     linestyle='dashed',linewidth=2)
+    plt.plot(z,prev1_vz[:,vz_max_col_index],label="Previous iter",
+    linestyle='dotted',linewidth=2)
+    plt.plot(z,prev2_vz[:,vz_max_col_index],label="2 iter ago",
+    linestyle='dotted',linewidth=2)
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.ylabel("vz (m/s)",fontsize=20)
     plt.legend(loc='best')
