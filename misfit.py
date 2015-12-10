@@ -30,8 +30,6 @@ except StopIteration:
         iterno=str(nfiles-1).zfill(2)
 
 
-if '--iterno' in sys.argv:
-    print "iteration",int(iterno)
 
 warnings.filterwarnings('error')
 

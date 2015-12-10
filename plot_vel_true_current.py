@@ -1,6 +1,7 @@
 from __future__ import division
 import plotc
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 import read_params
 import pyfits
@@ -48,6 +49,7 @@ if enf_cont and (contvar == 'psi'):
     ax2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+    
 
     #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated vx",fontsize=20,y=1.01)
@@ -82,6 +84,9 @@ if enf_cont and (contvar == 'psi'):
     plt.ylabel("vx (m/s)",fontsize=20)
     plt.legend(loc='best')
     plt.xlim(-10,2)
+    plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    
     plt.subplot(122)
     plt.plot(z,true_vz[:,vz_max_col_index],label="True vz")
     plt.plot(z,current_vz[:,vz_max_col_index],label="Iterated vz",
@@ -90,6 +95,8 @@ if enf_cont and (contvar == 'psi'):
     plt.ylabel("vz (m/s)",fontsize=20)
     plt.legend(loc='best')
     plt.xlim(-10,2)
+    plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    plt.tick_params(axis='both', which='major', labelsize=14)
     
     plt.tight_layout()
     

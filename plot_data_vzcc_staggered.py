@@ -4,6 +4,7 @@ import plotc
 import pyfits as pf
 import os,re,sys
 import matplotlib.patches as patches
+from matplotlib.ticker import MaxNLocator
 import read_params
 plt=plotc.plt
 
@@ -213,6 +214,7 @@ if plot_travel_time_misfit:
         num_iterations=len(ttdiff_ridges[mode]["iter_no"])
         plot_every=1
         if num_iterations > 4: plot_every = int(np.ceil(np.sqrt(num_iterations)))
+        if num_iterations > 10: plot_every = int(num_iterations//3)
         for color_index,iter_index in enumerate(ttdiff_ridges[mode]["iter_no"][::plot_every]):
             
             index_of_iteration=ttdiff_ridges[mode]["iter_no"].index(iter_index)
@@ -255,6 +257,10 @@ if plot_travel_time_misfit:
         plotc.draw_rectangle(x=[vlimleft,vlimright],y=[-1e3,1e3],ax=ax,color='paleturquoise')
         ax.set_ylim(ylim_curr)
         ax.legend(loc='best')
+        ax.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        plt.sca(ax)
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
 
 #~ tdfig.tight_layout()
