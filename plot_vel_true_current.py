@@ -83,7 +83,7 @@ if enf_cont and (contvar == 'psi'):
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.ylabel("vx (m/s)",fontsize=20)
     plt.legend(loc='best')
-    plt.xlim(-10,2)
+    plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
     plt.tick_params(axis='both', which='major', labelsize=14)
     
@@ -94,7 +94,7 @@ if enf_cont and (contvar == 'psi'):
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.ylabel("vz (m/s)",fontsize=20)
     plt.legend(loc='best')
-    plt.xlim(-10,2)
+    plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
     plt.tick_params(axis='both', which='major', labelsize=14)
     

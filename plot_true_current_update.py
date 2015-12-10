@@ -71,7 +71,7 @@ if enf_cont and (contvar == 'psi'):
         plt.tick_params(axis='both', which='major', labelsize=14)
         plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
+#    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
     
     plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
     
