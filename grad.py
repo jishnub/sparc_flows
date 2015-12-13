@@ -522,11 +522,12 @@ def main(eps):
         epslist=np.load('epslist.npz')['epslist']
         iterind=np.where(epslist[:,0]==iterno)[0]
         if len(iterind)==0:
-            epslist=np.append(epslist,[[iterno,eps]],axis=0)
+            epslist=np.append(epslist,[[iterno,eps,0]],axis=0)
         else:
+            epslist[iterind,2]=epslist[iterind,1]
             epslist[iterind,1]=eps
     except IOError:
-        epslist=[[iterno,eps]]
+        epslist=[[iterno,eps,0]]
     np.savez('epslist.npz',epslist=epslist)
 
 
