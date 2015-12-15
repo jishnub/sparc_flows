@@ -1,5 +1,4 @@
-#!/bin/bash
-#PBS -N  ls_f_to_p5_3hr
+#PBS -N  ls_master
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
@@ -10,7 +9,6 @@ export TERM=xterm
 
 [[ -e running_full ]] && echo "Full running, quitting" && exit
 [[ -e linesearch ]] && echo "Linesearch already running, quitting" && exit
-
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
@@ -23,7 +21,13 @@ itername=`printf "%02d" $iter`
 touch linesearch
 echo "Starting iterations at "`date`
 
-for lin in `seq 1 5`
+numls=`find $directory/update -maxdepth 1 -regex "$directory/update/test_c_[0-9]+.fits"|wc -l`
+[[ numls -eq 0 ]] && numls=`find $directory/update -maxdepth 1 -regex "$directory/update/test_psi_[0-9]+.fits"|wc -l`
+[[ numls -eq 0 ]] && numls=`find $directory/update -maxdepth 1 -regex "$directory/update/test_vx_[0-9]+.fits"|wc -l`
+[[ numls -eq 0 ]] && numls=`find $directory/update -maxdepth 1 -regex "$directory/update/test_vz_[0-9]+.fits"|wc -l`
+echo "Number of linesearches: "$numls
+
+for lin in `seq 1 $numls`
 do
     linzpd=`printf "%02d" $lin`
     [[ -e $directory/update/test_c_"$lin".fits ]] && cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
@@ -36,12 +40,12 @@ done
 #~ Main computation
 ########################################################################
 
-/usr/local/bin/pbsdsh python $PBS_O_WORKDIR/linesearch.py
+/usr/local/bin/pbsdsh python $PBS_O_WORKDIR/linesearch.py $numls
 
 ########################################################################
 
 nmasterpixels=`wc -l < $directory/master.pixels`
-for lin in `seq -f "%02g" 1 5`
+for lin in `seq -f "%02g" 1 $numls`
 do
     for src in `seq -f "%02g" 1 $((nmasterpixels))`
     do

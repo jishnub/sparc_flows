@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  data_f_to_p5_3hr
+#PBS -N  data_master
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-data_forward
 #PBS -e  error-data_forward
@@ -7,7 +7,7 @@
 echo $PBS_JOBID
 export TERM=xterm
 cd $PBS_O_WORKDIR
-python $PBS_O_WORKDIR/setup.py
+python $PBS_O_WORKDIR/setup.py $1
 export MPI_TYPE_MAX=1280280
 echo "Starting at "`date`
 find . -name "linesearch" -delete

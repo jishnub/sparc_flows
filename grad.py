@@ -121,17 +121,11 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 ########################################################################
 
-if len(sys.argv)>1:
-    eps = float(sys.argv[1])
-else: 
-    print "step size not specified, arbitrarily assuming 1e-3"
-    eps=1e-3
-
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
 iterno=get_iter_no()
 
-def main(eps):
+def main():
 
 
     Rsun=695.9895 # Mm
@@ -216,7 +210,7 @@ def main(eps):
     kern = totkern_psi/hess
     filterx(kern)
     antisymmetrize(kern)
-    filterz(kern,algo='gaussian',sp=2.0)
+    filterz(kern,algo='gaussian',sp=10.0)
     totkern_psi=kern
     
     #~ Velocity kernels
@@ -487,51 +481,68 @@ def main(eps):
         if model_c_exists:
             update_c = update_c/vx_max
     
-    for i in xrange(1,6):
+    
+    if len(sys.argv)>1:
+        eps = np.array([float(i) for i in sys.argv[1:]])
+    else: 
+        print "step size not specified, arbitrarily assuming 1e-2"
+        eps=np.array([1e-2*i for i in xrange(6)])
+        
+    for i,eps_i in enumerate(eps):
         if model_c_exists:
             update = lastmodel_c
-            fitswrite(updatedir('test_c_'+str(i)+'.fits'), update)
+            fitswrite(updatedir('test_c_'+str(i+1)+'.fits'), update)
         if enf_cont and psi_cont:
-            update = lastmodel_psi + eps * i * psi_scale * update_psi
-            fitswrite(updatedir('test_psi_'+str(i)+'.fits'), update)
+            update = lastmodel_psi + eps_i * psi_scale * update_psi
+            fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), update)
         elif enf_cont and vx_cont:
             if model_vx_exists:
-                update = lastmodel_vx - vx_scale * eps * i * update_vx
-                fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
+                update = lastmodel_vx - vx_scale * eps_i * update_vx
+                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), update)
             else:
                 print "model vx doesn't exist"
         elif enf_cont and vz_cont:
             if model_vz_exists:
-                update = lastmodel_vz - vz_scale * eps * i * update_vz
-                fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
+                update = lastmodel_vz - vz_scale * eps_i * update_vz
+                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), update)
             else:
                 print "model vz doesn't exist"
         elif not enf_cont:
             if model_vx_exists:
-                
-                update = lastmodel_vx - vx_scale*eps * i * update_vx
-                fitswrite(updatedir('test_vx_'+str(i)+'.fits'), update)
+                update = lastmodel_vx - vx_scale*eps_i * update_vx
+                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), update)
             else: print "model vx doesn't exist"
             if model_vz_exists:
-                update = lastmodel_vz - vz_scale*eps * i * update_vz
-                fitswrite(updatedir('test_vz_'+str(i)+'.fits'), update)
+                update = lastmodel_vz - vz_scale*eps_i * update_vz
+                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), update)
             else: print "model vz doesn't exist"
 
 
     try:
-        epslist=np.load('epslist.npz')['epslist']
-        iterind=np.where(epslist[:,0]==iterno)[0]
-        if len(iterind)==0:
-            epslist=np.append(epslist,[[iterno,eps,0]],axis=0)
+        epslist=np.load('epslist.npz')
+        iter_done_list = epslist.files
+        if str(iterno) in iter_done_list:
+            ls_iter = epslist[str(iterno)]
+            ls_iter[2] = ls_iter[0]
+            ls_iter[3] = ls_iter[1]
+            ls_iter[0] = eps
+            ls_iter[1] = 0
+            epslist = {i:epslist[i] for i in iter_done_list}
+            epslist.update({str(iterno):ls_iter})
         else:
-            epslist[iterind,2]=epslist[iterind,1]
-            epslist[iterind,1]=eps
+            arr = np.zeros((4,6))
+            arr[0] = eps
+            epslist = {i:epslist[i] for i in iter_done_list}
+            epslist[str(iterno)] = arr
+            
     except IOError:
-        epslist=[[iterno,eps,0]]
-    np.savez('epslist.npz',epslist=epslist)
+        arr = np.zeros((4,6))
+        arr[0] = eps
+        epslist = {str(iterno):arr}
+    np.savez('epslist.npz',**epslist)
 
 
 ########################################################################
 
 if __name__ == "__main__":
-    main(eps)
+    main()

@@ -1,4 +1,4 @@
-import os,read_params
+import os,read_params,sys
 
 
 codedir=os.path.dirname(os.path.abspath(__file__))
@@ -12,7 +12,7 @@ except IOError:
     print "No master.pixels file found"
     quit()
 
-nlinesearch=5
+nlinesearch=int(sys.argv[1])
 
 def create_if_not_there(path):
     if not os.path.exists(path):

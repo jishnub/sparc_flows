@@ -3,7 +3,7 @@ import os,sys,shutil,glob,time,re,subprocess,read_params
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
 codedir=os.path.dirname(os.path.abspath(__file__))
-HOME=os.environ["HOME"]
+HOME=env["HOME"]
 
 datadir=read_params.get_directory()
 
@@ -14,7 +14,7 @@ nodeno=int(env["PBS_NODENUM"])
 with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
     nmasterpixels=sum(1 for _ in mpixfile)
 
-total_no_of_linesearches=5
+total_no_of_linesearches=int(sys.argv[1])
 total_no_of_jobs=nmasterpixels*total_no_of_linesearches
 
 if procno>=total_no_of_jobs: 

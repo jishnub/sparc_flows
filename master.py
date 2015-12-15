@@ -2,14 +2,19 @@ from __future__ import division
 import subprocess ,time, os, shutil,read_params,glob
 import numpy as np
 
-np.set_printoptions(precision=3)
+np.set_printoptions(precision=5)
 
 datadir=read_params.get_directory()
 
-data_command = "qsub data_forward.sh"
+num_linesearches = 6
+
+data_command = "qsub data_forward.sh "+str(num_linesearches)
 full_command = "qsub full.sh"
 ls_command = "qsub linesearch.sh"
-def grad_command(eps): return "python grad.py "+str(eps)
+def grad_command(eps):
+    eps = [str(i) for i in eps]
+    eps_str = ' '.join(eps)
+    return "python grad.py "+str(eps_str)
 
 id_text = "master"
 
@@ -37,6 +42,17 @@ if os.path.exists('running_full'):
     os.remove('running_full')
     
 bisection = False
+
+def get_eps_around_minimum(prev1_eps,prev1_misfits,prev2_eps=None,prev2_misfits=None):
+    p=np.polyfit(prev1_eps,prev1_misfits,2)
+    step = 1e-2
+    if p[0]!=0:
+        step = - p[1]/(2*p[0])
+    elif p[0]==0:
+        step = -p[2]/p[1]
+    assert step>0,"ls minimum predicted at less than zero step"
+    eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
+    return eps
 
 for query in xrange(100000):
 
@@ -80,96 +96,87 @@ for query in xrange(100000):
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
         try: 
-            epslist=np.load("epslist.npz")['epslist']
+            epslist=np.load("epslist.npz")
+            iters_list = epslist.files
             #~ print epslist
-            if iterno in epslist[:,0]:
+            if str(iterno) in iters_list:
                 #~ If it exists, this means linesearch files were removed
                 #~ This probably means that the linesearch misfits were monotonic
                 #~ Start with a value smaller or larger than the previous attempt
-                matchindex=np.where(epslist[:,0]==iterno)[0][0]
-                if ls_strict_increase:
-                    print "Linesearch strictly increasing"
-                    #~ Since the linesearch is increasing, decrease the step size
-                    #~ Let's get to a regime where the linesearch is decreasing
-                    if epslist[matchindex,2]==0:
-                        #~ This means that there has been only one iteration
-                        #~ We don't have any idea about the appropriate step size
-                        #~ Decrease it by large amounts
-                        print "No clue about step size, just decrease the previous step a lot"
-                        eps=epslist[matchindex,1]/5
+                ls_details = epslist[str(iterno)]
+                
+                prev1_done = ls_details[1].all()
+                prev2_done = ls_details[3].all()
+                two_iters_done = prev1_done and prev2_done
+                    
+                full_misfit = sum(np.loadtxt(misfitfiles[-1],usecols=[2]))
+                
+                if prev1_done and (not prev2_done):
+                    #~ This means that there has been only one iteration
+                    #~ Check the linesearch misfits from that iteration, 
+                    #~ and try to guess a good value for the next iteration
+                    
+                    eps_prev = ls_details[0]
+                    lsmisfit_prev =  ls_details[1]
+                    eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
+                    
+                elif prev1_done and prev2_done:
+                    #~ This means that there have been at least two attempts at this iterations
+                    #~ It's possible that both the iterations resulted in an increase
+                    #~ Or it's possible that the first iteration was a decrease
+                    #~ and the latest attempt resulted in an increase
+                    
+                    if bisection:
+                        eps_prev = ls_details[0]
+                        lsmisfit_prev =  ls_details[1]
+                        eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
                     else:
-                        #~ This means that there have been at least two attempts at this iterations
-                        #~ It's possible that both the iterations resulted in an increase
-                        #~ Or it's possible that the first iteration was a decrease
-                        #~ and the latest attempt resulted in an increase
-                        if epslist[matchindex,1]<epslist[matchindex,2]:
-                            #~ Both iterations are increasing, decrease it further
-                            #~ This might be a step in bisection, or it might be a step in the dark
-                            #~ In case it's a step in the dark, we can keep decreasing the step by large amounts
-                            #~ If it's bisection, we should decrease it by small amounts
-                            if bisection:
-                                print "Bisection on, but strict increase noted"
-                                eps=epslist[matchindex,1]/1.5
-                            else:
-                                print "Strict increase, but no idea about correct step"
-                                eps=epslist[matchindex,1]/3
-                        else:
-                            #~ One iterations resulted in decrease, but the latest was increasing
-                            #~ In this case, try an intermediate value (bisection method)
-                            #~ This will decrease the step size
-                            bisection = True
-                            print "Starting bisection"
-                            eps = (epslist[matchindex,1]+epslist[matchindex,2])/2
-                elif ls_strict_decrease:
-                    print "Linesearch strictly decreasing"
-                    #~ Since linesearch is decreasing, increase the step size till we get an increase
-                    if epslist[matchindex,2]==0:
-                        #~ There's only been one iteration, so just increase the step size by a lot
-                        print "No clue about step size, just increase the previous step a lot"
-                        eps = epslist[matchindex,1]*5
+                        #~ One iterations resulted in decrease, but the latest was increasing
+                        #~ In this case, try an intermediate value (bisection method)
+                        #~ This will decrease the step size
+                        bisection = True
+                        eps = (ls_details[0]+ls_details[2])/2
+                
+                elif not(prev1_done) and prev2_done:
+                    eps_prev = ls_details[2]
+                    lsmisfit_prev =  ls_details[3]
+                    eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
+                            
+                    
+                elif (not prev1_done) and (not prev2_done):
+                    #~ Probably interrupted, restart with one set of values
+                    if ls_details[0].any():
+                        eps = ls_details[0]
+                    elif ls_details[2].any():
+                        eps = ls_details[0]
                     else:
-                        #~ This means that there has been at least two iterations
-                        #~ The first iteration might have been decreasng or increasing
-                        if epslist[matchindex,1]>epslist[matchindex,2]:
-                            #~ This means that the linesearch is decreasing, so increase the step
-                            #~ In case it's a step in the dark, we can keep increasing the step by large amounts
-                            #~ If it's bisection, we should increase it by small amounts
-                            if bisection:
-                                print "Bisection on, but strict decrease noted"
-                                eps = epslist[matchindex,1]*1.5
-                            else:
-                                print "Strict decrease, but no idea about correct step"
-                                eps = epslist[matchindex,1]*3
-                        else:
-                            #~ One iteration resulted in increase, but the latest was decreasing
-                            #~ In this case try an intermediate value (bisection method)
-                            #~ This will increase the step size
-                            bisection = True
-                            print "Starting bisection"
-                            eps = (epslist[matchindex,1]+epslist[matchindex,2])/2
-                    eps = epslist[matchindex,1]*2
-                else:
-                    print "Redoing iteration",iterno
-                    eps = epslist[matchindex,1]
+                        prev_iternos= np.array([int(i) for i in iters_list if i!=str(iterno)])
+                        closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
+                        eps=epslist[closest_iter][0]
+
             else:
+                print "Linesearch for this iteration not done yet, choosing step size from nearest iteration"
                 #~ Iteration not yet done
                 #~ Choose the value corresponding to the closest iteration
-                eps=epslist[abs(epslist[:,0]-iterno).argmin(),1]
+                prev_iternos= np.array([int(i) for i in iters_list])
+                closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
+                eps=epslist[closest_iter][0]
+                
                 
         except IOError: 
             #~ If the file doesn't exist, no linesearches have been carried out
             #~ Assign arbitrary small value
-            eps=1e-2
-        
+            eps=np.array([1e-2*i for i in xrange(1,7)])
         #~ Run grad
         print "Running grad with eps",eps
         gradcmd = grad_command(eps)
-        subprocess.call(gradcmd.split())
-        time.sleep(5)
+        status=subprocess.call(gradcmd.split())
+        assert status==0,"Error in running grad"
         
         #~ Run linesearch
         print "Running linesearch"
-        subprocess.call(ls_command.split())
+        status=subprocess.call(ls_command.split())
+        assert status==0,"Error in running linesearch"
         time.sleep(30)
         continue
         
@@ -185,21 +192,36 @@ for query in xrange(100000):
         print "Linesearch misfits"
         print misfit
         #~ Check for misfit minimum
-        
         misfit_diff = np.diff(misfit)
-        misfit_diff_changes_sign = np.where(np.diff(np.sign(misfit_diff)))[0]
+        misfit_diff_sign_change_locs = np.where(np.diff(np.sign(misfit_diff)))[0]
+        misfit_diff_changes_sign = len(misfit_diff_sign_change_locs)>0
+        
+        #~ Update epslist
+        epslist=np.load('epslist.npz')
+        if str(iterno) in epslist.files:
+            ls_details = epslist[str(iterno)]
+            ls_details[1] = misfit
+        else:
+            ls_details = np.zeros_like(epslist[epslist.files[0]])
+        epslist = {i:epslist[i] for i in epslist.files}
+        epslist.update({str(iterno):ls_details})
+        np.savez('epslist.npz',**epslist)
+
+        #~ Copy best linesearch, or remove prev linesearch file
         if misfit_diff_changes_sign:
             #~ Get index of minimum. Add two ones to the minimum of the diff array
             #~ One because the sign change occurs at the index before the minimum
             #~ The other because the test model counting starts from 1 instead of 0
-            min_ls_index = misfit_diff_changes_sign[0]+1+1
+            min_ls_index = misfit_diff_sign_change_locs[0]+1+1
+            print "Misfit sign change detected"
             print "model #"+str(min_ls_index)+" has minimum misfit"
             copy_updated_model(min_ls_index)
             bisection = False
             
             #~ Run full.sh
             print "Running full"
-            subprocess.call(full_command.split())
+            status=subprocess.call(full_command.split())
+            assert status==0,"Error in running full"
             time.sleep(30)
         else:
             if misfit_diff[0]>0:
@@ -213,7 +235,10 @@ for query in xrange(100000):
             
             #~ Monotonic linesearches don't count, remove previous linesearch file
             print "Removing linesearch file"
-            os.remove(ls_files[-1])
-            os.remove(ls_all_files[-1])
+            last_ls_no=str(iterno-1).zfill(2)
+            ls_file_new=os.path.join(datadir,"update","ls_"+last_ls_no+".rnm")
+            ls_all_file_new=os.path.join(datadir,"update","ls_all_"+last_ls_no+".rnm")
+            os.rename(ls_files[-1],ls_file_new)
+            os.rename(ls_all_files[-1],ls_all_file_new)
         
         continue
