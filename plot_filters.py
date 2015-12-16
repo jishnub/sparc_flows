@@ -34,13 +34,8 @@ nu=np.fft.fftfreq(nt,dt)*1e3
 k=np.fft.fftfreq(nx,Lx/nx)*2*np.pi
 Rsun=695.8
 
-modes=dict(fmode=False,
-p1mode=False,
-p2mode=False,
-p3mode=False,
-p4mode=False,
-p5mode=False,
-high_pmodes=False)
+modes=dict(fmode=False,high_pmodes=False)
+for i in xrange(10): modes.update({'p'+str(i)+'mode':False})
 
 if len(sys.argv)>1: 
     for m in sys.argv[1:]:
@@ -524,6 +519,169 @@ if modes['p5mode']:
         plt.figure()
         p5_td=np.fft.ifft2(np.fft.fft2(np.squeeze(data))*np.squeeze(p5mode)).real
         plotc.colorplot(p5_td/p5_td.max(),x=x-srcloc,y=t/60,title="p5 mode time distance diagram",
+            vmax=0.5,centerzero=True,axes_properties=dict(scilimits=(-5,5)),
+            xr=[-Lx/2-srcloc,Lx/2-srcloc],yr=[5,t.max()/60*0.85])
+        plt.xlabel("Horizontal Distance ($\mathrm{Mm}$)",fontsize=14)
+        plt.ylabel("Time (min)",fontsize=14)
+
+#########################################################################################
+
+#~ p6 mode
+
+if modes['p6mode']:
+    
+    p6mode=modefilters.p6mode_filter(nt,dt,nx,Lx)
+    p6mode=p6mode.transpose(2,1,0)
+    
+    savefilter=False
+    if savefilter: fitswrite('p6modefiltertest.fits',p6mode)
+
+    Poly=np.zeros(3)
+    Polylow=np.zeros(3)
+    f_low=0
+
+    with open('modefilters.f90','r') as mf:
+        is_p6_mode=False
+        for line in mf.readlines():
+            if 'subroutine p6mode_filter' in line.lower(): is_p6_mode=True
+            if not is_p6_mode: continue
+            if 'end subroutine p6mode_filter' in line.lower(): 
+                is_p6_mode=False
+                break
+            for poly_coeff in xrange(len(Polylow)):
+                if line.strip().startswith('Polylow('+str(poly_coeff)+')') and is_p6_mode:
+                    Polylow[poly_coeff]=float(line.strip().split("=")[1])
+            for poly_coeff in xrange(len(Poly)):
+                if line.strip().startswith('Poly('+str(poly_coeff)+')') and is_p6_mode:
+                    Poly[poly_coeff]=float(line.strip().split("=")[1])
+            if line.lower().strip().startswith('f_low') and is_p6_mode:
+                f_low=float(line.strip().split("=")[1])
+           
+    plt.figure()
+                
+    full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
+    powmax = full_powerspectrum.max()
+    
+    plot_freq_range=[2,6]
+    plot_k_range=[0,None]
+                
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.1,
+    xr=plot_k_range,yr=plot_freq_range,axes_properties=dict(xscilimits=(-4,4)),sp=121,
+    title="Power spectrum",colorbar=True,
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
+    
+    plt.xlabel("$k R_\odot$",fontsize=14)
+    plt.ylabel("Frequency ($mHz$)",fontsize=14)
+
+    f0=sum(p_i*k**i for i,p_i in enumerate(Polylow))
+    f1=sum(p_i*k**i for i,p_i in enumerate(Poly))
+
+    plt.plot(k[:len(k)/2]*Rsun,f0[:len(k)/2],color='orangered')
+    plt.plot(k[:len(k)/2]*Rsun,f1[:len(k)/2],color='orangered')
+    plt.plot(k[:len(k)/2]*Rsun,[f_low]*(len(k)//2),color='orangered',linestyle='dashed')
+            
+    filtered_powerspectrum=abs(np.fft.fft2(np.squeeze(data))*np.squeeze(p6mode))**2
+    
+    
+    if savefilter: fitswrite('p6mode_powspec.fits',filtered_powerspectrum)
+    
+    plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    xr=plot_k_range,yr=plot_freq_range,sp=122,
+    axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
+    title="p5 mode",colorbar=True,
+    colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    subplot_properties={'sharey':ax1,'sharex':ax1})
+    
+    plt.xlabel("$k R_\odot$",fontsize=14)
+
+    plt.subplots_adjust(wspace=0)
+    
+    if plot_time_distance:
+        plt.figure()
+        p6_td=np.fft.ifft2(np.fft.fft2(np.squeeze(data))*np.squeeze(p6mode)).real
+        plotc.colorplot(p6_td/p6_td.max(),x=x-srcloc,y=t/60,title="p6 mode time distance diagram",
+            vmax=0.5,centerzero=True,axes_properties=dict(scilimits=(-5,5)),
+            xr=[-Lx/2-srcloc,Lx/2-srcloc],yr=[5,t.max()/60*0.85])
+        plt.xlabel("Horizontal Distance ($\mathrm{Mm}$)",fontsize=14)
+        plt.ylabel("Time (min)",fontsize=14)
+
+#########################################################################################
+
+#~ p7 mode
+
+if modes['p7mode']:
+    
+    p7mode=modefilters.p7mode_filter(nt,dt,nx,Lx)
+    p7mode=p7mode.transpose(2,1,0)
+    
+    savefilter=False
+    if savefilter: fitswrite('p7modefiltertest.fits',p7mode)
+
+    #~ f_mode_const=0
+    Poly=np.zeros(3)
+    Polylow=np.zeros(3)
+    f_low=0
+
+    with open('modefilters.f90','r') as mf:
+        is_p7_mode=False
+        for line in mf.readlines():
+            if 'subroutine p7mode_filter' in line.lower(): is_p7_mode=True
+            if not is_p7_mode: continue
+            if 'end subroutine p7mode_filter' in line.lower(): 
+                is_p7_mode=False
+                break
+            for poly_coeff in xrange(len(Polylow)):
+                if line.strip().startswith('Polylow('+str(poly_coeff)+')') and is_p7_mode:
+                    Polylow[poly_coeff]=float(line.strip().split("=")[1])
+            for poly_coeff in xrange(len(Poly)):
+                if line.strip().startswith('Poly('+str(poly_coeff)+')') and is_p7_mode:
+                    Poly[poly_coeff]=float(line.strip().split("=")[1])
+            if line.lower().strip().startswith('f_low') and is_p7_mode:
+                f_low=float(line.strip().split("=")[1])
+           
+    plt.figure()
+                
+    full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
+    powmax = full_powerspectrum.max()
+    
+    plot_freq_range=[4,6]
+    plot_k_range=[0,900]
+                
+    ax1=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.1,
+    xr=plot_k_range,yr=plot_freq_range,axes_properties=dict(xscilimits=(-4,4)),sp=121,
+    title="Power spectrum",colorbar=True,
+    colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
+    
+    plt.xlabel("$k R_\odot$",fontsize=14)
+    plt.ylabel("Frequency ($mHz$)",fontsize=14)
+
+    f0=sum(p_i*k**i for i,p_i in enumerate(Polylow))
+    f1=sum(p_i*k**i for i,p_i in enumerate(Poly))
+
+    plt.plot(k[:len(k)/2]*Rsun,f0[:len(k)/2],color='orangered')
+    plt.plot(k[:len(k)/2]*Rsun,f1[:len(k)/2],color='orangered')
+    plt.plot(k[:len(k)/2]*Rsun,[f_low]*(len(k)//2),color='orangered',linestyle='dashed')
+            
+    filtered_powerspectrum=abs(np.fft.fft2(np.squeeze(data))*np.squeeze(p7mode))**2
+    
+    
+    if savefilter: fitswrite('p7mode_powspec.fits',filtered_powerspectrum)
+    
+    plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
+    xr=plot_k_range,yr=plot_freq_range,sp=122,
+    axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
+    title="p5 mode",colorbar=True,
+    colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    subplot_properties={'sharey':ax1,'sharex':ax1})
+    
+    plt.xlabel("$k R_\odot$",fontsize=14)
+
+    plt.subplots_adjust(wspace=0)
+    
+    if plot_time_distance:
+        plt.figure()
+        p7_td=np.fft.ifft2(np.fft.fft2(np.squeeze(data))*np.squeeze(p7mode)).real
+        plotc.colorplot(p7_td/p7_td.max(),x=x-srcloc,y=t/60,title="p7 mode time distance diagram",
             vmax=0.5,centerzero=True,axes_properties=dict(scilimits=(-5,5)),
             xr=[-Lx/2-srcloc,Lx/2-srcloc],yr=[5,t.max()/60*0.85])
         plt.xlabel("Horizontal Distance ($\mathrm{Mm}$)",fontsize=14)

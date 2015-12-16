@@ -29,7 +29,17 @@ def get_dt():
             if line.startswith("!"): continue
             if ("parameter" in line.lower()) and ("outputcad" in line.lower()):
                 return float(line.split()[3].split(")")[0]) # seconds
-    
+
+def get_solartime():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile.readlines():
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("solartime" in line.lower()):
+                return float(line.split()[2].split(")")[0]) # hours
+
 def get_ridge_filter():
     codedir=os.path.dirname(os.path.abspath(__file__))
     driverfile = os.path.join(codedir,'driver.f90')

@@ -1623,6 +1623,124 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
 END SUBROUTINE P5MODE_FILTER
 !================================================================================
 
+SUBROUTINE P6MODE_FILTER(nt, pmode)
+
+  use initialize
+  use all_modules
+  implicit none
+  integer i,j,nt,nrow
+  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+
+  open (unit=32,file="filter.txt",action="write",status="replace")
+  dt = outputcad
+  
+!~   f_mode_const=4.1004
+
+!~   f_mode_const=5.8
+
+    Poly(0)=2.65
+    Poly(1)=5.7
+    Poly(2)=-1.2
+
+    Polylow(0)=2.4
+    Polylow(1)=5.4
+    Polylow(2)=-1.3
+
+    f_low = 1.6
+    df = 0.5 
+  
+  call distmat(nx,1,k) 
+  call distmat(nt,1,w) 
+  k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
+  w = abs(w) * 2.*pi/(nt*dt)
+  
+!~   f0=f_mode_const*abs(k)**0.5
+  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f = w/(2.*pi)*1e3
+  
+  pmode = 0.0
+  do i=1,nx
+   delta = (f1(i) - f0(i))
+    do j=1,nt
+     d = f(j) - f0(i)
+     if ((d .lt. delta) .and. (d .gt. 0)) then
+        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+     end if   
+    enddo
+   enddo 
+   
+   do j=1,nt
+    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low+df) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+   enddo
+   
+   close(32)
+
+END SUBROUTINE P6MODE_FILTER
+!================================================================================
+
+SUBROUTINE P7MODE_FILTER(nt, pmode)
+
+  use initialize
+  use all_modules
+  implicit none
+  integer i,j,nt,nrow
+  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+
+  open (unit=32,file="filter.txt",action="write",status="replace")
+  dt = outputcad
+  
+!~   f_mode_const=4.1004
+
+!~   f_mode_const=5.8
+
+    Poly(0)=2.9
+    Poly(1)=5.9
+    Poly(2)=-1.3
+
+    Polylow(0)=2.65
+    Polylow(1)=5.7
+    Polylow(2)=-1.2
+
+    f_low = 1.6
+    df = 0.5 
+  
+  call distmat(nx,1,k) 
+  call distmat(nt,1,w) 
+  k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
+  w = abs(w) * 2.*pi/(nt*dt)
+  
+!~   f0=f_mode_const*abs(k)**0.5
+  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f = w/(2.*pi)*1e3
+  
+  pmode = 0.0
+  do i=1,nx
+   delta = (f1(i) - f0(i))
+    do j=1,nt
+     d = f(j) - f0(i)
+     if ((d .lt. delta) .and. (d .gt. 0)) then
+        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+     end if   
+    enddo
+   enddo 
+   
+   do j=1,nt
+    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low+df) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+   enddo
+   
+   close(32)
+
+END SUBROUTINE P7MODE_FILTER
+!================================================================================
+
 SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
   use initialize
   implicit none
@@ -1667,7 +1785,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     implicit none
     integer *8 fwdplantemp, invplantemp, invplantemp2!, fwdquiet, invquiet
     integer*8  invplantemp3, fwdplandata, invplandata, onedplan
-    logical lexist, lexist0, lexist1, lexist2,lexist3,lexist4,lexist5 
+    logical lexist, lexist0, lexist1, lexist2,lexist3,lexist4,lexist5 ,lexist6,lexist7 
     integer i, nt, indexnum, pord, timesmax, halftime, bounce,timefin, idiff,dumm(0:5)
     integer loc, leng, lef, rig, j, nmeasurements, nmeas, ierr,timest, filenum
     character*1 ord
@@ -1675,8 +1793,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
     real*8 ampquiet, ampmag
     real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      highpmode,p3mode,p4mode,p5mode
-    real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:5)
+                                      highpmode,p3mode,p4mode,p5mode,p6mode,p7mode
+    real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat,& !, filtquiet, tempquiet, &
                                  filtdat, filtex, filtemp,dat,acc,ccdot!, quiet, quietfilt 
@@ -1736,6 +1854,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         open(599,file=directory//'forward_src'//contrib//'_ls00/windows.3',action='write',status='replace')
         open(600,file=directory//'forward_src'//contrib//'_ls00/windows.4',action='write',status='replace')
         open(601,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='write',status='replace')
+        open(602,file=directory//'forward_src'//contrib//'_ls00/windows.6',action='write',status='replace')
+        open(603,file=directory//'forward_src'//contrib//'_ls00/windows.7',action='write',status='replace')
     elseif(rank==0 .and. (linesearch)) then
 
 
@@ -1762,6 +1882,14 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         inquire(file=directory//'forward_src'//contrib//'_ls00/windows.5',exist=lexist5)
         if (lexist5) &
             open(601,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
+        
+        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.6',exist=lexist6)
+        if (lexist6) &
+            open(602,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
+        
+        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.7',exist=lexist7)
+        if (lexist7) &
+            open(603,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
     endif
 
     adj = 0.0
@@ -1797,6 +1925,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     call p3mode_filter(nt, p3mode)
     call p4mode_filter(nt, p4mode)
     call p5mode_filter(nt, p5mode)
+    call p6mode_filter(nt, p6mode)
+    call p7mode_filter(nt, p7mode)
     call highpmode_filter(nt, highpmode)
     all_else = 1. - fmode - pmode               !  ??
     
@@ -1865,8 +1995,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     tempdat = filtdat
 
 
-    !RIDGE FILTERS, f, p1, p2, p3, p4, p5
-    do pord=0,5
+    !RIDGE FILTERS, f, p1, ...
+    do pord=0,7
         taus = 0.0
         call convert_to_string(pord, ord, 1)
         inquire(file=directory//'params.'//ord, exist=lexist) 
@@ -1899,6 +2029,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             if (pord==3) filter = p3mode
             if (pord==4) filter = p4mode
             if (pord==5) filter = p5mode
+            if (pord==6) filter = p6mode
+            if (pord==7) filter = p7mode
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
 
@@ -1907,26 +2039,29 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             con = 2.0*pi
 
-            vel(0) = 0.41
-            vel(1) = 0.62
+            vel(0) = 0.44
+            vel(1) = 0.60
             vel(2) = 0.75
             vel(3) = 0.9
             vel(4) = 1.0
-            vel(5) = 1.3
+            vel(5) = 1.4
+            vel(6) = 1.6
+            vel(7) = 1.7
             
-            inquire(file='wavespeed',exist=ws_exist) 
-            if (ws_exist) then
-                open(3378,file="wavespeed",action="read")
-                    do i=1,nmasters
-                    call convert_to_string(i, contribmatch, 2)
-                    if (contribmatch == contrib) then
-                    read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),vel(5) 
-                    else
-                        read(3378,*)
-                    end if
-                    end do
-                close(3378)
-            end if
+!~             inquire(file='wavespeed',exist=ws_exist) 
+!~             if (ws_exist) then
+!~                 open(3378,file="wavespeed",action="read")
+!~                     do i=1,nmasters
+!~                     call convert_to_string(i, contribmatch, 2)
+!~                     if (contribmatch == contrib) then
+!~                     read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),&
+!~                     vel(5),vel(6),vel(7) ,vel(8), vel(9),vel(10)
+!~                     else
+!~                         read(3378,*)
+!~                     end if
+!~                     end do
+!~                 close(3378)
+!~             end if
             
             if (pord==0) print *,"Using mode velocities",vel
          
@@ -1961,6 +2096,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                         if (lexist3 .and. pord==3) read(filenum,*) lef, rig
                         if (lexist4 .and. pord==4) read(filenum,*) lef, rig
                         if (lexist5 .and. pord==5) read(filenum,*) lef, rig
+                        if (lexist5 .and. pord==6) read(filenum,*) lef, rig
+                        if (lexist5 .and. pord==7) read(filenum,*) lef, rig
                     endif
                     
                     call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
@@ -2128,9 +2265,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         write(88,*) indexnum, nmeas, misfit_tot
         close(88)
 
-!~         if (lexist0) close(596)
-!~         if (lexist1) close(597)
-!~         if (lexist2) close(598)
     endif
 
     call dfftw_destroy_plan(fwdplantemp)
@@ -2168,13 +2302,13 @@ SUBROUTINE MISFIT_ALL(nt)
     integer*8  invplantemp3, fwdplandata, invplandata, onedplan
     logical lexist
     integer i, nt, indexnum, pord, timesmax, halftime, bounce, freqfilts,timest
-    integer loc, leng, lef, rig, j, nmeasurements(0:5), nmeas(0:5), ierr,timefin,inde
+    integer loc, leng, lef, rig, j, nmeasurements(0:10), nmeas(0:10), ierr,timefin,inde
     character*1 ord,ffstr
-    real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:5)
+    real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:10)
     real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      highpmode,p3mode,p4mode,p5mode
+                                      highpmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx)
-    real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:5),misfit_tot(0:5)
+    real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:10),misfit_tot(0:10)
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat, &
                                  filtdat, filtex, filtemp,dat,acc,ccdot
     complex*16, dimension(nx) :: eyekh
@@ -2183,6 +2317,7 @@ SUBROUTINE MISFIT_ALL(nt)
     real*8 speed, var, param(6), offset
     real*8 ign1,ign2
     character*2 fnum
+    character*1 frqnum
 
     UNKNOWN = 1.0/0.55
     filtout = 1.0
@@ -2253,22 +2388,33 @@ SUBROUTINE MISFIT_ALL(nt)
     tempout = filtout
     tempdat = filtdat
    
-    vel(0) = 0.4720
+    vel = 0
+    vel(0) = 0.44
     vel(1) = 0.60
     vel(2) = 0.75
-    vel(3) = 0.95
-    vel(4) = 1.35
-    vel(5) = 1.5
+    vel(3) = 0.9
+    vel(4) = 1.2
+    vel(5) = 1.4
+    vel(6) = 1.7
+    vel(7) = 1.9
 
     if (rank==0 .and. (.not. linesearch)) then
-        do i=0,14
+        do i=0,7
+            do j=1,3
             call convert_to_string(i, fnum, 2)
-            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//'/windows.all.'//fnum,action='write',status='replace')
+            call convert_to_string(j, frqnum, 1)
+            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//&
+            '/windows.all.'//fnum//'.'//frqnum,action='write',status='replace')
+            end do
         enddo
     elseif(rank==0 .and. linesearch) then
         do i=0,14
+            do j=1,3
             call convert_to_string(i, fnum, 2)
-            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//'/windows.all.'//fnum,action='read',status='old')
+            call convert_to_string(j, frqnum, 1)
+            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//&
+            '/windows.all.'//fnum//'.'//frqnum,action='read',status='old')
+            end do
         enddo
     endif
 
@@ -2294,6 +2440,8 @@ SUBROUTINE MISFIT_ALL(nt)
         call p3mode_filter(nt, p3mode)
         call p4mode_filter(nt, p4mode)
         call p5mode_filter(nt, p5mode)
+        call p6mode_filter(nt, p6mode)
+        call p7mode_filter(nt, p7mode)
         call highpmode_filter(nt, highpmode)
         all_else = 1. - fmode - pmode          ! ???
         highpmode = 1.0
@@ -2305,6 +2453,8 @@ SUBROUTINE MISFIT_ALL(nt)
             p3mode(:,1,i) = p3mode(:,1,i) * filt(i)!* UNKNOWN
             p4mode(:,1,i) = p4mode(:,1,i) * filt(i)!* UNKNOWN
             p5mode(:,1,i) = p5mode(:,1,i) * filt(i)!* UNKNOWN
+            p6mode(:,1,i) = p6mode(:,1,i) * filt(i)!* UNKNOWN
+            p7mode(:,1,i) = p7mode(:,1,i) * filt(i)!* UNKNOWN
             highpmode(:,1,i) = highpmode(:,1,i) * filt(i) !* UNKNOWN
         enddo
 
@@ -2313,8 +2463,8 @@ SUBROUTINE MISFIT_ALL(nt)
         misfit_tot =0.0
         nmeas=0
 
-        !RIDGE FILTERS, f, p1, p2,p3,p4,p5
-        do pord=0,5
+        !RIDGE FILTERS, f, p1, ...
+        do pord=0,7
             call convert_to_string(pord, ord, 1)
             inquire(file=directory//'params.'//ord, exist=lexist) 
             if (lexist) then
@@ -2333,6 +2483,8 @@ SUBROUTINE MISFIT_ALL(nt)
                 if (pord==3) filter = p3mode
                 if (pord==4) filter = p4mode
                 if (pord==5) filter = p5mode
+                if (pord==6) filter = p6mode
+                if (pord==7) filter = p7mode
                 filtout = tempout * cmplx(filter)
                 filtdat = tempdat * cmplx(filter)
 
