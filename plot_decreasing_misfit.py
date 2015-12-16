@@ -52,16 +52,16 @@ if mistype == "data":
             subplot_index = (subplot_layout+(plotno+1,))
 
             plt.subplot(*subplot_index)
-            plt.plot(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
-            plt.plot(range(nfiles),[0]*nfiles,ls='dashed')
+            plt.semilogy(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
+            plt.semilogy(range(nfiles),[0]*nfiles,ls='dashed')
 
             plt.title(modes[ridge],fontsize=16,loc='right')
             
             
 
-            plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
+            #plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
             plt.tick_params(axis='both', which='major', labelsize=14)
-            plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            #plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
             plt.xlim(-0.5,nfiles+0.5)
             #~ plt.legend()
