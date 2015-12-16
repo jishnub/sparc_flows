@@ -2039,14 +2039,15 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             con = 2.0*pi
 
+            vel = 0
             vel(0) = 0.44
             vel(1) = 0.60
             vel(2) = 0.75
             vel(3) = 0.9
-            vel(4) = 1.0
+            vel(4) = 1.2
             vel(5) = 1.4
-            vel(6) = 1.6
-            vel(7) = 1.7
+            vel(6) = 1.7
+            vel(7) = 1.9
             
 !~             inquire(file='wavespeed',exist=ws_exist) 
 !~             if (ws_exist) then
