@@ -28,7 +28,7 @@ nsrc = len(srclocs)
 
 ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
-for i in xrange(1,6): modes[str(i)]='p'+str(i)+'mode'
+for i in xrange(1,10): modes[str(i)]='p'+str(i)+'mode'
 
 if mistype == "data":
 
@@ -44,24 +44,27 @@ if mistype == "data":
             
                 ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
                             'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
-                tt=np.loadtxt(ttfile)
-                npix = tt.shape[0]
-                modemisfit[plotno,iterno,src-1] = sum((tt[:,1]/60)**2)/npix
+                try:
+                    tt=np.loadtxt(ttfile)
+                    npix = tt.shape[0]
+                    modemisfit[plotno,iterno,src-1] = sum((tt[:,1]/60)**2)/npix
+                except IOError:
+                    modemisfit[plotno,iterno,src-1] = np.nan
                 
         
             subplot_index = (subplot_layout+(plotno+1,))
 
             plt.subplot(*subplot_index)
-            plt.plot(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
-            plt.plot(range(nfiles),[0]*nfiles,ls='dashed')
+            plt.semilogy(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
+            plt.semilogy(range(nfiles),[0]*nfiles,ls='dashed')
 
             plt.title(modes[ridge],fontsize=16,loc='right')
             
             
 
-            plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
+            #~ plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
             plt.tick_params(axis='both', which='major', labelsize=14)
-            plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+            #~ plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
             plt.xlim(-0.5,nfiles+0.5)
             #~ plt.legend()
@@ -103,7 +106,7 @@ elif mistype == "model":
     
     plt.plot(range(nfiles),modelmisfit_list,'o-',label="vx")
     plt.xlim(-0.5,nfiles+0.5)
-    plt.ylim(0.6,1.05)
+    plt.ylim(0.4,1.05)
     plt.xlabel("Iteration number",fontsize=20)
     plt.ylabel("Normalized model misfit",fontsize=20)
     
