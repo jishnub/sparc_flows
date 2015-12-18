@@ -8,7 +8,7 @@ datadir=read_params.get_directory()
 
 num_linesearches = 6
 
-data_command = "qsub data_forward.sh "+str(num_linesearches)
+data_command = "qsub data_forward.sh"
 full_command = "qsub full.sh"
 ls_command = "qsub linesearch.sh"
 def grad_command(eps):
@@ -16,7 +16,7 @@ def grad_command(eps):
     eps_str = ' '.join(eps)
     return "python grad.py "+str(eps_str)
 
-id_text = "master"
+id_text = "frequent"
 
 ls_strict_increase=False
 ls_strict_decrease=False
@@ -42,6 +42,8 @@ if os.path.exists('running_full'):
     os.remove('running_full')
     
 bisection = False
+running_ls = False
+running_full = False
 
 def get_eps_around_minimum(prev1_eps,prev1_misfits,prev2_eps=None,prev2_misfits=None):
     p=np.polyfit(prev1_eps,prev1_misfits,2)
@@ -62,8 +64,8 @@ for query in xrange(100000):
     something_running = False
     for part in qstat:
         if part.endswith(id_text):
-            print "Query at",time.strftime(" %d %b, %X", time.localtime()),":",\
-                    part,"running, moving on without doing anything"
+            #~ print "Query at",time.strftime(" %d %b, %X", time.localtime()),":",\
+                    #~ part,"running, moving on without doing anything"
             something_running = True
             break
             
@@ -74,7 +76,8 @@ for query in xrange(100000):
     if not os.path.exists(os.path.join(datadir,"forward_src01_ls00","data.fits")):
         #~ no iterations done
         print "Running data_forward"
-        subprocess.call(data_command.split())
+        status=subprocess.call(data_command.split())
+        assert status==0,"Error in running data forward"
         time.sleep(30)
         continue
         
@@ -88,11 +91,16 @@ for query in xrange(100000):
     if len(misfitfiles)==0:
         #~ Start of iterations
         print "Running full"
-        subprocess.call(full_command.split())
+        status=subprocess.call(full_command.split())
+        assert status==0,"Error in running full"
         time.sleep(30)
         continue
         
     elif len(misfitfiles)>len(ls_files):
+        running_full = False
+        if running_ls:
+            print "It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly"
+            exit()
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
         try: 
@@ -177,13 +185,22 @@ for query in xrange(100000):
         print "Running linesearch"
         status=subprocess.call(ls_command.split())
         assert status==0,"Error in running linesearch"
+        running_ls = True
         time.sleep(30)
         continue
         
     elif len(misfitfiles)>0 and len(misfitfiles)==len(ls_files):
+        running_ls = False
+        if running_full:
+            print "It seems the full misfit was not generated. Check if the previous full.sh finished without errors"
+            exit()
         #~ check linesearch misfits
-        ls_latest = ls_files[-1]
-        lsdata = np.loadtxt(ls_latest)
+        ls_latest = os.path.join(datadir,"update","linesearch_"+str(iterno-1).zfill(2))
+        try:
+            lsdata = np.loadtxt(ls_latest)
+        except IOError:
+            print "Could not load",ls_latest , "check if file exists"
+            exit()
         
         no_of_linesearches = len(np.where(lsdata[:,0]==1)[0])
         nmasterpixels = lsdata.shape[0]//no_of_linesearches
@@ -222,6 +239,7 @@ for query in xrange(100000):
             print "Running full"
             status=subprocess.call(full_command.split())
             assert status==0,"Error in running full"
+            running_full=True
             time.sleep(30)
         else:
             if misfit_diff[0]>0:

@@ -22,9 +22,9 @@
 ! A timestep of 2 seconds is generally pretty solid. Too large and the sim
 ! will explode. Too small and the expense is large.
 integer nx, ny, nz
-parameter (nx = 256, ny = 1, nz = 300)
+parameter (nx = 512, ny = 1, nz = 300)
 real*8 xlength, ylength, timestep
-parameter (xlength = 200.0 * 10**(8), ylength = xlength, timestep = 2.0)
+parameter (xlength = 400.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
 ! DIRECTORY INFORMATION 
@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_model'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/f_3hr_smooth/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/f_to_p5_3hr_frequent/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'

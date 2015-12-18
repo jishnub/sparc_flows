@@ -1885,11 +1885,11 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         
         inquire(file=directory//'forward_src'//contrib//'_ls00/windows.6',exist=lexist6)
         if (lexist6) &
-            open(602,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
+            open(602,file=directory//'forward_src'//contrib//'_ls00/windows.6',action='read',status='old')
         
         inquire(file=directory//'forward_src'//contrib//'_ls00/windows.7',exist=lexist7)
         if (lexist7) &
-            open(603,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
+            open(603,file=directory//'forward_src'//contrib//'_ls00/windows.7',action='read',status='old')
     endif
 
     adj = 0.0
@@ -1989,6 +1989,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         call writefits_3d('p3mode_filter.fits',p3mode,nt)
         call writefits_3d('p4mode_filter.fits',p4mode,nt)
         call writefits_3d('p5mode_filter.fits',p5mode,nt)
+        call writefits_3d('p6mode_filter.fits',p5mode,nt)
+        call writefits_3d('p7mode_filter.fits',p5mode,nt)
     endif
 
     tempout = filtout

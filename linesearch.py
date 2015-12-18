@@ -50,6 +50,8 @@ def compute_forward(linesearch_no,src):
     t0=time.time()
     with open(os.path.join(datadir,forward,"out_linesearch_"+linesearch_no),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        
+    assert fwd==0,"Error in running linesearch for lsno "+str(linesearch_no)
     t1=time.time()
     
     safecopy(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_"+str(linesearch_no)+".fits"))
