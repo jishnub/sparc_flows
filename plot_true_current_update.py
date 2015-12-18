@@ -88,7 +88,7 @@ if enf_cont and (contvar == 'psi'):
     plt.xlabel("x (Mm)",fontsize=20)
     plt.ylabel("Scaled Stream Function",fontsize=20)
     plt.title("Horizontal cut",fontsize=20)
-    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.legend(loc='best')
     
@@ -99,7 +99,7 @@ if enf_cont and (contvar == 'psi'):
     plt.xlim(-10,2.5)
     plt.xlabel("Depth (Mm)",fontsize=20)
     plt.title("Vertical Cut",fontsize=20)
-    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.legend(loc='best')
     plt.tight_layout()

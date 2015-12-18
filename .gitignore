@@ -14,3 +14,4 @@ plots/
 useless/
 *~
 code_python/
+*.txt
