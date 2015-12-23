@@ -50,7 +50,8 @@ def compute_forward_adjoint_kernel(src):
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
     modes={'0':'fmode'}
-    for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+    for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+    modes['8']='large_dist_pmode'
     
     ridge_filters = read_params.get_modes_used()
     

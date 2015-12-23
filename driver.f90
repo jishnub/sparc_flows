@@ -1741,6 +1741,65 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
 END SUBROUTINE P7MODE_FILTER
 !================================================================================
 
+SUBROUTINE LARGE_DIST_PMODE_FILTER(nt, pmode)
+
+  use initialize
+  use all_modules
+  implicit none
+  integer i,j,nt,nrow
+  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+
+  open (unit=32,file="filter.txt",action="write",status="replace")
+  dt = outputcad
+  
+!~   f_mode_const=4.1004
+
+!~   f_mode_const=5.8
+
+    Polylow(0)=1.1
+    Polylow(1)=2.4
+    Polylow(2)=-0.3
+
+    Poly(0)=3.5
+    Poly(1)=6.5
+    Poly(2)=-1.3
+
+    f_low = 1.6
+    df = 0.5 
+  
+  call distmat(nx,1,k) 
+  call distmat(nt,1,w) 
+  k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
+  w = abs(w) * 2.*pi/(nt*dt)
+  
+!~   f0=f_mode_const*abs(k)**0.5
+  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f = w/(2.*pi)*1e3
+  
+  pmode = 1.0
+!~   do i=1,nx
+!~    delta = (f1(i) - f0(i))
+!~     do j=1,nt
+!~      d = f(j) - f0(i)
+!~      if ((d .lt. delta) .and. (d .gt. 0)) then
+!~         pmode(i,1,j) = 1
+!~      end if   
+!~     enddo
+!~    enddo 
+   
+!~    do j=1,nt
+!~     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
+!~     if (f(j) .lt. f_low+df) &
+!~       pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+!~    enddo
+   
+   close(32)
+
+END SUBROUTINE LARGE_DIST_PMODE_FILTER
+!================================================================================
+
 SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
   use initialize
   implicit none
@@ -1785,15 +1844,15 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     implicit none
     integer *8 fwdplantemp, invplantemp, invplantemp2!, fwdquiet, invquiet
     integer*8  invplantemp3, fwdplandata, invplandata, onedplan
-    logical lexist, lexist0, lexist1, lexist2,lexist3,lexist4,lexist5 ,lexist6,lexist7 
+    logical :: lexist,exist_win,file_open
     integer i, nt, indexnum, pord, timesmax, halftime, bounce,timefin, idiff,dumm(0:5)
     integer loc, leng, lef, rig, j, nmeasurements, nmeas, ierr,timest, filenum
     character*1 ord
     character*2 contribmatch
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
     real*8 ampquiet, ampmag
-    real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      highpmode,p3mode,p4mode,p5mode,p6mode,p7mode
+    real*8,dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,all_else,filter,phase,temparr,&
+                                      large_dist_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat,& !, filtquiet, tempquiet, &
@@ -1804,7 +1863,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     integer kxord
     parameter(kxord=3)
     real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
-    real*8 ign1,ign2
+    real*8 ign1,ign2, d_i
     real*8 prevtau,iwls_pow,iwls_misfit_factor,iwls_eps
     logical iwls,prev_iter_exist,sgd,ws_exist
     
@@ -1847,50 +1906,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     t = -t/60.0
     dt = t(2)-t(1)
 
-    if (rank==0 .and. (.not. (linesearch))) then
-        open(596,file=directory//'forward_src'//contrib//'_ls00/windows.0',action='write',status='replace')
-        open(597,file=directory//'forward_src'//contrib//'_ls00/windows.1',action='write',status='replace')
-        open(598,file=directory//'forward_src'//contrib//'_ls00/windows.2',action='write',status='replace')
-        open(599,file=directory//'forward_src'//contrib//'_ls00/windows.3',action='write',status='replace')
-        open(600,file=directory//'forward_src'//contrib//'_ls00/windows.4',action='write',status='replace')
-        open(601,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='write',status='replace')
-        open(602,file=directory//'forward_src'//contrib//'_ls00/windows.6',action='write',status='replace')
-        open(603,file=directory//'forward_src'//contrib//'_ls00/windows.7',action='write',status='replace')
-    elseif(rank==0 .and. (linesearch)) then
-
-
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.0',exist=lexist0)
-        if (lexist0) &
-            open(596,file=directory//'forward_src'//contrib//'_ls00/windows.0',action='read',status='old')
-
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.1',exist=lexist1)
-        if (lexist1) &
-            open(597,file=directory//'forward_src'//contrib//'_ls00/windows.1',action='read',status='old')
-        
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.2',exist=lexist2)
-        if (lexist2) &
-            open(598,file=directory//'forward_src'//contrib//'_ls00/windows.2',action='read',status='old')
-            
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.3',exist=lexist3)
-        if (lexist3) &
-            open(599,file=directory//'forward_src'//contrib//'_ls00/windows.3',action='read',status='old')
-            
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.4',exist=lexist4)
-        if (lexist4) &
-            open(600,file=directory//'forward_src'//contrib//'_ls00/windows.4',action='read',status='old')
-        
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.5',exist=lexist5)
-        if (lexist5) &
-            open(601,file=directory//'forward_src'//contrib//'_ls00/windows.5',action='read',status='old')
-        
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.6',exist=lexist6)
-        if (lexist6) &
-            open(602,file=directory//'forward_src'//contrib//'_ls00/windows.6',action='read',status='old')
-        
-        inquire(file=directory//'forward_src'//contrib//'_ls00/windows.7',exist=lexist7)
-        if (lexist7) &
-            open(603,file=directory//'forward_src'//contrib//'_ls00/windows.7',action='read',status='old')
-    endif
+    
 
     adj = 0.0
     nmeasurements = 0.0
@@ -1920,15 +1936,15 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
     filt = 1.0
     call fmode_filter(nt, fmode)
-    call pmode_filter(nt, pmode)
+    call pmode_filter(nt, p1mode)
     call p2mode_filter(nt, p2mode)
     call p3mode_filter(nt, p3mode)
     call p4mode_filter(nt, p4mode)
     call p5mode_filter(nt, p5mode)
     call p6mode_filter(nt, p6mode)
     call p7mode_filter(nt, p7mode)
-    call highpmode_filter(nt, highpmode)
-    all_else = 1. - fmode - pmode               !  ??
+    call large_dist_pmode_filter(nt, large_dist_pmode)
+!~     all_else = 1. - fmode - p1mode               !  ??
     
     inquire(file=directory//'filter.params.0', exist=lexist)
     if (lexist) then
@@ -1962,7 +1978,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     endif
 
     do i=1,nt
-        pmode(:,1,i) = pmode(:,1,i) * filt(i)!* UNKNOWN
+        p1mode(:,1,i) = p1mode(:,1,i) * filt(i)!* UNKNOWN
     enddo
   
   
@@ -1981,24 +1997,21 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         p2mode(:,1,i) = p2mode(:,1,i) * filt(i)!* UNKNOWN
     enddo
 
-    !~ Write out filters
-    if (.not. linesearch) then
-        call writefits_3d('fmode_filter.fits',fmode,nt)
-        call writefits_3d('p1mode_filter.fits',pmode,nt)
-        call writefits_3d('p2mode_filter.fits',p2mode,nt)
-        call writefits_3d('p3mode_filter.fits',p3mode,nt)
-        call writefits_3d('p4mode_filter.fits',p4mode,nt)
-        call writefits_3d('p5mode_filter.fits',p5mode,nt)
-        call writefits_3d('p6mode_filter.fits',p5mode,nt)
-        call writefits_3d('p7mode_filter.fits',p5mode,nt)
-    endif
-
     tempout = filtout
     tempdat = filtdat
 
+    vel = 0
+    vel(0) = 0.44
+    vel(1) = 0.60
+    vel(2) = 0.75
+    vel(3) = 0.9
+    vel(4) = 1.2
+    vel(5) = 1.4
+    vel(6) = 1.7
+    vel(7) = 1.9
 
-    !RIDGE FILTERS, f, p1, ...
-    do pord=0,7
+    !RIDGE FILTERS
+    do pord=0,8
         taus = 0.0
         call convert_to_string(pord, ord, 1)
         inquire(file=directory//'params.'//ord, exist=lexist) 
@@ -2025,14 +2038,34 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             halftime = nint(window/(2.*dt))
             leng = 2*halftime+1
 
-            if (pord==0) filter = fmode
-            if (pord==1) filter = pmode
-            if (pord==2) filter = p2mode
-            if (pord==3) filter = p3mode
-            if (pord==4) filter = p4mode
-            if (pord==5) filter = p5mode
-            if (pord==6) filter = p6mode
-            if (pord==7) filter = p7mode
+            if (pord==0) then 
+                filter = fmode
+                if (.not. linesearch) call writefits_3d('fmode_filter.fits',fmode,nt)
+            else if (pord==1) then
+                filter = p1mode
+                call writefits_3d('p1mode_filter.fits',p1mode,nt)
+            else if (pord==2) then 
+                call writefits_3d('p2mode_filter.fits',p2mode,nt)
+                filter = p2mode
+            else if (pord==3) then 
+                filter = p3mode
+                call writefits_3d('p3mode_filter.fits',p3mode,nt)
+            else if (pord==4) then 
+                filter = p4mode
+                call writefits_3d('p4mode_filter.fits',p4mode,nt)
+            else if (pord==5) then 
+                filter = p5mode
+                call writefits_3d('p5mode_filter.fits',p5mode,nt)
+            else if (pord==6) then 
+                filter = p6mode
+                call writefits_3d('p6mode_filter.fits',p6mode,nt)
+            else if (pord==7) then 
+                filter = p7mode
+                call writefits_3d('p7mode_filter.fits',p7mode,nt)
+            else if (pord==8) then 
+                filter = large_dist_pmode
+                call writefits_3d('large_dist_pmode_filter.fits',large_dist_pmode,nt)
+            end if
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
 
@@ -2041,15 +2074,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             con = 2.0*pi
 
-            vel = 0
-            vel(0) = 0.44
-            vel(1) = 0.60
-            vel(2) = 0.75
-            vel(3) = 0.9
-            vel(4) = 1.2
-            vel(5) = 1.4
-            vel(6) = 1.7
-            vel(7) = 1.9
+            
             
 !~             inquire(file='wavespeed',exist=ws_exist) 
 !~             if (ws_exist) then
@@ -2066,13 +2091,22 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 !~                 close(3378)
 !~             end if
             
-            if (pord==0) print *,"Using mode velocities",vel
+!~             if (pord==0) print *,"Using mode velocities",vel
          
             do i=1,nt
                 filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
             enddo
 
             call dfftw_execute(invplantemp2)
+            
+            
+            if (rank==0 .and. (.not. (linesearch))) then
+                open(596,file=directory//'forward_src'//contrib//'_ls00/windows.'//ord,action='write',status='replace')
+            elseif(rank==0 .and. (linesearch)) then
+                inquire(file=directory//'forward_src'//contrib//'_ls00/windows.'//ord,exist=exist_win)
+                if (exist_win) &
+                    open(596,file=directory//'forward_src'//contrib//'_ls00/windows.'//ord,action='read',status='old')
+            endif
 
         
             timest = 1
@@ -2084,23 +2118,29 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
-                        timest = floor(distances(i)/vel(pord) * 1./dt)
-                        timefin = timest + 40
+                        if (pord .ne. 8) then
+                            timest = floor(distances(i)/vel(pord) * 1./dt)
+                            timefin = timest + 40
+                        else if (pord .eq. 8) then
+                            d_i = distances(i)
+                            timest = floor((-1.45511095e-04*(d_i)**2 &
+                                    + 2.72140632e-01*d_i + 2.16331969e+01 )* 1./dt)
+                                    
+                            timefin = floor((3.85746516e-08*(d_i)**2 &
+                                    + 2.21324786e-01*d_i + 4.36702155e+01 )* 1./dt)
+                        end if
+                        
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
                         lef = loc - halftime
                         rig = loc + halftime
-                        write(596+pord,*) lef, rig
+                        
+                        inquire(unit=596,opened=file_open)
+                        if (file_open) write(596,*) lef, rig
          
                     elseif (linesearch) then
-                        filenum = 596 + pord
-                        if (lexist0 .and. pord==0) read(filenum,*) lef, rig
-                        if (lexist1 .and. pord==1) read(filenum,*) lef, rig
-                        if (lexist2 .and. pord==2) read(filenum,*) lef, rig
-                        if (lexist3 .and. pord==3) read(filenum,*) lef, rig
-                        if (lexist4 .and. pord==4) read(filenum,*) lef, rig
-                        if (lexist5 .and. pord==5) read(filenum,*) lef, rig
-                        if (lexist5 .and. pord==6) read(filenum,*) lef, rig
-                        if (lexist5 .and. pord==7) read(filenum,*) lef, rig
+!~                       Read in windows
+                        inquire(unit=596,opened=file_open)
+                        if (file_open) read(596,*) lef, rig
                     endif
                     
                     call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
@@ -2138,11 +2178,16 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 endif
             enddo
         
-            close(238)
-            close(237)
+            inquire(unit=238,opened=file_open)
+            if (file_open) close(238)
+            inquire(unit=237,opened=file_open)
+            if (file_open) close(237)
+            
+            inquire(unit=596,opened=file_open)
+            if (file_open) close(596)
         endif
         
-        close(596+pord)
+        
     enddo
 
     pcoef = 0.0
@@ -2162,76 +2207,76 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     pcoef(3,3) = -0.002222
 
 
-    highpmode = 1.0             ! ???
-
-    do i=1,nt
-        highpmode(:,1,i) = highpmode(:,1,i) * filt(i) !* UNKNOWN
-    enddo
+!~     highpmode = 1.0             ! ???
+!~ 
+!~     do i=1,nt
+!~         highpmode(:,1,i) = highpmode(:,1,i) * filt(i) !* UNKNOWN
+!~     enddo
 
     !PHASE-SPEED FILTERS
-    do pord=9,9
-        taus=0.0
-        call convert_to_string(pord, ord, 1)
-        inquire(file=directory//'params.'//ord, exist=lexist) 
-        if (lexist) then
-            open(97, file = directory//'params.'//ord, action = 'read', status='old')
-            read(97,*) mindist
-            read(97,*) maxdist
-            read(97,*) window
-            close(97)
-
-            halftime = nint(window/(2.*dt))
-            leng = 2*halftime+1
-
-            filtout = tempout * cmplx(highpmode) ! * UNKNOWN
-            filtdat = tempdat * cmplx(highpmode) ! * UNKNOWN
-
-            call dfftw_execute(invplantemp)
-            call dfftw_execute(invplandata)
-
-            con = 2.0*pi!/(dble(nt)*dble(nx))
-
-            do i=1,nt
-                filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
-            enddo
-
-            call dfftw_execute(invplantemp2)
-
-            do i=1,nx
-                if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
-
-                    if (distances(i) < 250.0) then
-                        timesmax = nint((pcoef(1,pord-1) - t(1) + pcoef(2,pord-1)*distances(i) + pcoef(3,pord-1)*distances(i)**2. &
-                        + pcoef(4,pord-1)*distances(i)**3. + pcoef(5,pord-1)*distances(i)**4.)/dt) + 1
-
-                        loc = maxloc(real(acc(i,1,(timesmax-6):(timesmax+6))),1) + timesmax - 7
-                    else
-                        loc = maxloc(real(acc(i,1,:)),1) 
-                    endif
-                    lef = loc - halftime
-                    rig = loc + halftime
-                    call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-
-                    windows(:) = 0.0
-                    windows(lef:rig) = 1.0
-                    oned = ccdot(i,1,:) * cmplx(windows)
-                    call dfftw_execute(onedplan)
-                    do j=1,nt
-                        filtemp(:,1,j) = cmplx(highpmode(:,1,j))  * ccdotone(j) * exp(-eyekh*(x(i)))
-                    enddo
-                    call dfftw_execute(invplantemp3)
-
-                    misfit = misfit + tau**2.
-                    nmeasurements = nmeasurements + 1
-
-                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) !* sign(1.0,signed(i))
-                    do j=1,nt
-                        adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
-                    enddo
-                endif !Mindist, maxdist
-            enddo ! end of the do-loop for mindist,maxdist
-        endif ! if params.p# exists
-    enddo ! end of pord loop
+!~     do pord=9,9
+!~         taus=0.0
+!~         call convert_to_string(pord, ord, 1)
+!~         inquire(file=directory//'params.'//ord, exist=lexist) 
+!~         if (lexist) then
+!~             open(97, file = directory//'params.'//ord, action = 'read', status='old')
+!~             read(97,*) mindist
+!~             read(97,*) maxdist
+!~             read(97,*) window
+!~             close(97)
+!~ 
+!~             halftime = nint(window/(2.*dt))
+!~             leng = 2*halftime+1
+!~ 
+!~             filtout = tempout * cmplx(highpmode) ! * UNKNOWN
+!~             filtdat = tempdat * cmplx(highpmode) ! * UNKNOWN
+!~ 
+!~             call dfftw_execute(invplantemp)
+!~             call dfftw_execute(invplandata)
+!~ 
+!~             con = 2.0*pi!/(dble(nt)*dble(nx))
+!~ 
+!~             do i=1,nt
+!~                 filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
+!~             enddo
+!~ 
+!~             call dfftw_execute(invplantemp2)
+!~ 
+!~             do i=1,nx
+!~                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
+!~ 
+!~                     if (distances(i) < 250.0) then
+!~                         timesmax = nint((pcoef(1,pord-1) - t(1) + pcoef(2,pord-1)*distances(i) + pcoef(3,pord-1)*distances(i)**2. &
+!~                         + pcoef(4,pord-1)*distances(i)**3. + pcoef(5,pord-1)*distances(i)**4.)/dt) + 1
+!~ 
+!~                         loc = maxloc(real(acc(i,1,(timesmax-6):(timesmax+6))),1) + timesmax - 7
+!~                     else
+!~                         loc = maxloc(real(acc(i,1,:)),1) 
+!~                     endif
+!~                     lef = loc - halftime
+!~                     rig = loc + halftime
+!~                     call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+!~ 
+!~                     windows(:) = 0.0
+!~                     windows(lef:rig) = 1.0
+!~                     oned = ccdot(i,1,:) * cmplx(windows)
+!~                     call dfftw_execute(onedplan)
+!~                     do j=1,nt
+!~                         filtemp(:,1,j) = cmplx(highpmode(:,1,j))  * ccdotone(j) * exp(-eyekh*(x(i)))
+!~                     enddo
+!~                     call dfftw_execute(invplantemp3)
+!~ 
+!~                     misfit = misfit + tau**2.
+!~                     nmeasurements = nmeasurements + 1
+!~ 
+!~                     con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) !* sign(1.0,signed(i))
+!~                     do j=1,nt
+!~                         adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
+!~                     enddo
+!~                 endif !Mindist, maxdist
+!~             enddo ! end of the do-loop for mindist,maxdist
+!~         endif ! if params.p# exists
+!~     enddo ! end of pord loop
 
     adj = adj *nt / 60. 
 
@@ -2303,13 +2348,13 @@ SUBROUTINE MISFIT_ALL(nt)
     implicit none
     integer*8 fwdplantemp, invplantemp, invplantemp2
     integer*8  invplantemp3, fwdplandata, invplandata, onedplan
-    logical lexist
+    logical lexist,exist_win,file_open
     integer i, nt, indexnum, pord, timesmax, halftime, bounce, freqfilts,timest
-    integer loc, leng, lef, rig, j, nmeasurements(0:10), nmeas(0:10), ierr,timefin,inde
+    integer loc, leng, lef, rig, j, nmeasurements(0:10), nmeas(0:10), ierr,timefin
     character*1 ord,ffstr
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:10)
     real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      highpmode,p3mode,p4mode,p5mode,p6mode,p7mode
+                                      large_dist_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:10),misfit_tot(0:10)
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat, &
@@ -2317,7 +2362,7 @@ SUBROUTINE MISFIT_ALL(nt)
     complex*16, dimension(nx) :: eyekh
     complex*16, dimension(nt) :: oned, ccdotone
     complex*16 UNKNOWN
-    real*8 speed, var, param(6), offset
+    real*8 speed, var, param(6), d_i
     real*8 ign1,ign2
     character*2 fnum
     character*1 frqnum
@@ -2401,27 +2446,8 @@ SUBROUTINE MISFIT_ALL(nt)
     vel(6) = 1.7
     vel(7) = 1.9
 
-    if (rank==0 .and. (.not. linesearch)) then
-        do i=0,7
-            do j=1,3
-            call convert_to_string(i, fnum, 2)
-            call convert_to_string(j, frqnum, 1)
-            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//&
-            '/windows.all.'//fnum//'.'//frqnum,action='write',status='replace')
-            end do
-        enddo
-    elseif(rank==0 .and. linesearch) then
-        do i=0,14
-            do j=1,3
-            call convert_to_string(i, fnum, 2)
-            call convert_to_string(j, frqnum, 1)
-            open(20380+i,file=directory//'forward_src'//contrib//'_ls00'//&
-            '/windows.all.'//fnum//'.'//frqnum,action='read',status='old')
-            end do
-        enddo
-    endif
+    
 
-    inde = 0
     do freqfilts=1,3
        
         if (freqfilts==1) then
@@ -2445,9 +2471,9 @@ SUBROUTINE MISFIT_ALL(nt)
         call p5mode_filter(nt, p5mode)
         call p6mode_filter(nt, p6mode)
         call p7mode_filter(nt, p7mode)
-        call highpmode_filter(nt, highpmode)
-        all_else = 1. - fmode - pmode          ! ???
-        highpmode = 1.0
+        call large_dist_pmode_filter(nt, large_dist_pmode)
+!~         all_else = 1. - fmode - pmode          ! ???
+!~         highpmode = 1.0
 
         do i=1,nt
             fmode(:,1,i) = fmode(:,1,i) * filt(i)!* UNKNOWN
@@ -2458,7 +2484,7 @@ SUBROUTINE MISFIT_ALL(nt)
             p5mode(:,1,i) = p5mode(:,1,i) * filt(i)!* UNKNOWN
             p6mode(:,1,i) = p6mode(:,1,i) * filt(i)!* UNKNOWN
             p7mode(:,1,i) = p7mode(:,1,i) * filt(i)!* UNKNOWN
-            highpmode(:,1,i) = highpmode(:,1,i) * filt(i) !* UNKNOWN
+            large_dist_pmode(:,1,i) = large_dist_pmode(:,1,i) * filt(i) !* UNKNOWN
         enddo
 
         misfit = 0.0
@@ -2467,7 +2493,7 @@ SUBROUTINE MISFIT_ALL(nt)
         nmeas=0
 
         !RIDGE FILTERS, f, p1, ...
-        do pord=0,7
+        do pord=0,8
             call convert_to_string(pord, ord, 1)
             inquire(file=directory//'params.'//ord, exist=lexist) 
             if (lexist) then
@@ -2479,6 +2505,24 @@ SUBROUTINE MISFIT_ALL(nt)
 
                 halftime = nint(window/(2.*dt))
                 leng = 2*halftime+1
+                
+                if (rank==0 .and. (.not. linesearch)) then
+                    call convert_to_string(pord, fnum, 2)
+                    call convert_to_string(freqfilts, frqnum, 1)
+                    open(20380,file=directory//'forward_src'//contrib//'_ls00'//&
+                    '/windows.all.'//fnum//'.'//frqnum,action='write',status='replace')
+                elseif (rank==0 .and. linesearch) then
+
+                    call convert_to_string(pord, fnum, 2)
+                    call convert_to_string(freqfilts, frqnum, 1)
+                    
+                    inquire(file=directory//'forward_src'//contrib//'_ls00'//&
+                    '/windows.all.'//fnum//'.'//frqnum,exist=exist_win)
+                    if (exist_win) &
+                    open(20380,file=directory//'forward_src'//contrib//'_ls00'//&
+                    '/windows.all.'//fnum//'.'//frqnum,action='read',status='old')
+
+                endif
            
                 if (pord==0) filter = fmode
                 if (pord==1) filter = pmode
@@ -2488,6 +2532,7 @@ SUBROUTINE MISFIT_ALL(nt)
                 if (pord==5) filter = p5mode
                 if (pord==6) filter = p6mode
                 if (pord==7) filter = p7mode
+                if (pord==8) filter = large_dist_pmode
                 filtout = tempout * cmplx(filter)
                 filtdat = tempdat * cmplx(filter)
 
@@ -2505,18 +2550,28 @@ SUBROUTINE MISFIT_ALL(nt)
                     if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
                    
                         if (.not. linesearch) then
-                        
+                            if (pord .ne. 8) then
                             timest = floor(distances(i)/vel(pord) * 1./dt)
                             timefin = timest + 40
+                            else
+                            d_i = distances(i)
+                            timest = floor((-1.45511095e-04*(d_i)**2 &
+                                    + 2.72140632e-01*d_i + 2.16331969e+01 )* 1./dt)
+                                    
+                            timefin = floor((3.85746516e-08*(d_i)**2 &
+                                    + 2.21324786e-01*d_i + 4.36702155e+01 )* 1./dt)
+                            end if
 
                             loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
                             lef = loc - halftime
                             rig = loc + halftime
 
-                            write(20380+inde,*) lef, rig
+                            inquire(unit=20380,opened=file_open)
+                            if (file_open) write(20380,*) lef, rig
                             
                         elseif (linesearch) then
-                            read(20380+inde,*) lef, rig
+                            inquire(unit=20380,opened=file_open)
+                            if (file_open) read(20380,*) lef, rig
                         endif
                    
                         call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
@@ -2526,7 +2581,12 @@ SUBROUTINE MISFIT_ALL(nt)
 
                     endif
                 enddo
-                inde = inde+1
+            
+                if (rank==0) then
+                    inquire(unit=20380,opened=file_open)
+                    if (file_open) close(20380)
+                    
+                end if 
             endif
 
             call MPI_REDUCE(misfit(pord), misfit_tot(pord), 1, MPI_DOUBLE_PRECISION, &
@@ -2538,100 +2598,95 @@ SUBROUTINE MISFIT_ALL(nt)
         enddo
 
 
-        pcoef = 0.0
-
-        pcoef(1,1) =  22.5000
-        pcoef(2,1) =   0.235317
-        pcoef(3,1) =   0.00134167
-        pcoef(4,1) = -1.32222e-05
-        pcoef(5,1) = 3.00000e-08
-
-        pcoef(1,2) = 22.6889
-        pcoef(2,2) = 0.83
-        pcoef(3,2) = -0.0032222
-
-        pcoef(1,3) = 25.0
-        pcoef(2,3) = 0.9
-        pcoef(3,3) = -0.002222
-
-
-        do pord=9,9
-            call convert_to_string(pord, ord, 1)
-            inquire(file=directory//'params.'//ord, exist=lexist) 
-            if (lexist) then
-                open(97, file = directory//'params.'//ord, action = 'read', status='old')
-                read(97,*) mindist
-                read(97,*) maxdist
-                read(97,*) window
-                close(97)
-
-                halftime = nint(window/(2.*dt))
-                leng = 2*halftime+1
-
-                filtout = tempout * cmplx(highpmode) ! * UNKNOWN
-                filtdat = tempdat * cmplx(highpmode) ! * UNKNOWN
-
-                call dfftw_execute(invplantemp)
-                call dfftw_execute(invplandata)
-
-                con = 2.0*pi!/(dble(nt)*dble(nx))
-
-                do i=1,nt
-                    filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
-                enddo
-
-                call dfftw_execute(invplantemp2)
-
-                do i=1,nx
-                    if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
-
-                        if (distances(i) < 250.0) then
-                            timesmax = nint((pcoef(1,pord-1) - t(1) + &
-                             pcoef(2,pord-1)*distances(i) + &
-                             pcoef(3,pord-1)*distances(i)**2. &
-                            + pcoef(4,pord-1)*distances(i)**3. + &
-                            pcoef(5,pord-1)*distances(i)**4.)/dt) + 1
-
-                            loc = maxloc(real(acc(i,1,(timesmax-6):(timesmax+6))),1) &
-                            + timesmax - 7
-                        else
-                            loc = maxloc(real(acc(i,1,:)),1) 
-                        endif
-                        lef = loc - halftime
-                        rig = loc + halftime
-
-                        call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+!~         pcoef = 0.0
+!~ 
+!~         pcoef(1,1) =  22.5000
+!~         pcoef(2,1) =   0.235317
+!~         pcoef(3,1) =   0.00134167
+!~         pcoef(4,1) = -1.32222e-05
+!~         pcoef(5,1) = 3.00000e-08
+!~ 
+!~         pcoef(1,2) = 22.6889
+!~         pcoef(2,2) = 0.83
+!~         pcoef(3,2) = -0.0032222
+!~ 
+!~         pcoef(1,3) = 25.0
+!~         pcoef(2,3) = 0.9
+!~         pcoef(3,3) = -0.002222
 
 
-                        misfit(pord) = misfit(pord) + tau**2.
-                        nmeasurements(pord) = nmeasurements(pord) + 1
-
-                    endif !Mindist, maxdist
-                enddo ! end of the do-loop for mindist,maxdist
-            endif ! if params.p# exists
-
-            call MPI_REDUCE(misfit(pord), misfit_tot(pord), 1, MPI_DOUBLE_PRECISION, &
-                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-
-            call MPI_REDUCE(nmeasurements(pord), nmeas(pord), 1, MPI_INTEGER, &
-                        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
-
-        enddo ! end of pord loop
+!~         do pord=9,9
+!~             call convert_to_string(pord, ord, 1)
+!~             inquire(file=directory//'params.'//ord, exist=lexist) 
+!~             if (lexist) then
+!~                 open(97, file = directory//'params.'//ord, action = 'read', status='old')
+!~                 read(97,*) mindist
+!~                 read(97,*) maxdist
+!~                 read(97,*) window
+!~                 close(97)
+!~ 
+!~                 halftime = nint(window/(2.*dt))
+!~                 leng = 2*halftime+1
+!~ 
+!~                 filtout = tempout * cmplx(highpmode) ! * UNKNOWN
+!~                 filtdat = tempdat * cmplx(highpmode) ! * UNKNOWN
+!~ 
+!~                 call dfftw_execute(invplantemp)
+!~                 call dfftw_execute(invplandata)
+!~ 
+!~                 con = 2.0*pi!/(dble(nt)*dble(nx))
+!~ 
+!~                 do i=1,nt
+!~                     filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
+!~                 enddo
+!~ 
+!~                 call dfftw_execute(invplantemp2)
+!~ 
+!~                 do i=1,nx
+!~                     if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
+!~ 
+!~                         if (distances(i) < 250.0) then
+!~                             timesmax = nint((pcoef(1,pord-1) - t(1) + &
+!~                              pcoef(2,pord-1)*distances(i) + &
+!~                              pcoef(3,pord-1)*distances(i)**2. &
+!~                             + pcoef(4,pord-1)*distances(i)**3. + &
+!~                             pcoef(5,pord-1)*distances(i)**4.)/dt) + 1
+!~ 
+!~                             loc = maxloc(real(acc(i,1,(timesmax-6):(timesmax+6))),1) &
+!~                             + timesmax - 7
+!~                         else
+!~                             loc = maxloc(real(acc(i,1,:)),1) 
+!~                         endif
+!~                         lef = loc - halftime
+!~                         rig = loc + halftime
+!~ 
+!~                         call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+!~ 
+!~ 
+!~                         misfit(pord) = misfit(pord) + tau**2.
+!~                         nmeasurements(pord) = nmeasurements(pord) + 1
+!~ 
+!~                     endif !Mindist, maxdist
+!~                 enddo ! end of the do-loop for mindist,maxdist
+!~             endif ! if params.p# exists
+!~ 
+!~             call MPI_REDUCE(misfit(pord), misfit_tot(pord), 1, MPI_DOUBLE_PRECISION, &
+!~                         MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+!~ 
+!~             call MPI_REDUCE(nmeasurements(pord), nmeas(pord), 1, MPI_INTEGER, &
+!~                         MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+!~ 
+!~         enddo ! end of pord loop
 
         if (rank==0) then
             write(543,*) "#",indexnum,leftcorner, rightcorner
             write(543,*) "#",nmeas
             write(543,*) misfit_tot*0.5
             print *,misfit_tot*0.5
+            
         endif
-
     enddo ! END OF FREQFILTS LOOP
 
-    if (rank==0) then
-        do i=0,14
-        close(20380+i)
-        enddo
-    endif
 
 
     call dfftw_destroy_plan(invplantemp3)

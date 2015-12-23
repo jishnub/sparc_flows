@@ -31,6 +31,10 @@ Rsun=695.8
 z=np.loadtxt(os.path.join(codedir,read_params.get_solarmodel()),usecols=[0])
 z=(z-1)*Rsun
 
+def forceAspect(ax,aspect=1):
+    extent =  ax.get_xlim()+ax.get_ylim()
+    ax.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/aspect)
+
 if enf_cont and (contvar == 'psi'):
     true_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
     true_vz = fitsread(os.path.join(codedir,'true_vz.fits'))
@@ -50,38 +54,46 @@ if enf_cont and (contvar == 'psi'):
     gl=plotc.layout_subplots(4)[2]
     
     ax1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    centerzero=True)[0]
+    yr=[-5,None],colorbar=False,
+    centerzero=True,
+    vmax=max(abs(current_vx.max()),abs(current_vx.min()),abs(true_vx.max()),abs(true_vx.min())))[0]
     
-    plt.ylabel("Depth (Mm)",fontsize=20)
-    #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    ax1.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    
+    forceAspect(ax1)
+    
     plt.title(r"True vx",fontsize=20,y=1.01)
     
     ax2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+    yr=[-5,None],axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
+    vmax=max(abs(current_vx.max()),abs(current_vx.min()),abs(true_vx.max()),abs(true_vx.min())))[0]
     
-
-    #~ plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    ax2.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    forceAspect(ax2)
     plt.title(r"Iterated vx",fontsize=20,y=1.01)
     
     ax3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8,'pad':0.3},
-    centerzero=True)[0]
+    yr=[-5,None],colorbar=False,centerzero=True,
+    vmax=max(abs(current_vz.max()),abs(current_vz.min()),abs(true_vz.max()),abs(true_vz.min())))[0]
     
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
-    plt.ylabel("Depth (Mm)",fontsize=20)
+    ax3.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    forceAspect(ax3)
+    
     plt.title(r"True vz",fontsize=20,y=1.01)
     
     ax4=plotc.colorplot(current_vz,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8,'pad':0.3},
-    axes_properties={'sharey':ax3,'hide_yticklabels':True},centerzero=True)[0]
+    yr=[-5,None],axes_properties={'sharey':ax3,'hide_yticklabels':True},centerzero=True,
+    vmax=max(abs(current_vz.max()),abs(current_vz.min()),abs(true_vz.max()),abs(true_vz.min())))[0]
     
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    ax4.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    
     plt.title(r"Iterated vz",fontsize=20,y=1.01)
+    forceAspect(ax4)
     
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0)
+    plt.gcf().text(0.5, 0.01,"Horizontal Distance (Mm)",fontsize=20,ha='center')
+    plt.gcf().text(0.1, 0.5,"Depth (Mm)",fontsize=20,va='center',rotation='vertical')
+    
+    plt.subplots_adjust(wspace=0,hspace=0.3)
     
     plt.figure()
     vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
@@ -127,7 +139,6 @@ if enf_cont and (contvar == 'psi'):
     
     
     
-    #~ plt.suptitle(r"Continuity: Compute vx and vz from $\psi$",fontsize=16)
     
 elif enf_cont and (contvar == 'vx'):
     true_model = fitsread(os.path.join(codedir,'true_vx.fits'))
