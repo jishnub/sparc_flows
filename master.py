@@ -16,7 +16,27 @@ def grad_command(eps):
     eps_str = ' '.join(eps)
     return "python grad.py "+str(eps_str)
 
-id_text = "frequent"
+id_text = "bigbox"
+
+def update_id_in_file(filename):
+    with open(filename,'r') as f:
+        code=f.readlines()
+    
+    for lineno,line in enumerate(code):
+        if "PBS" in line and "-N" in line:
+            current_id = '_'.join(line.split()[-1].split('_')[1:])
+            if current_id!=id_text:
+                print "Current identifier in ",filename,"is",current_id
+                print "Changing to ",id_text
+                line=line.replace(current_id,id_text)
+                code[lineno]=line
+                
+    with open(filename,'w') as f:
+        f.writelines(code)
+                
+update_id_in_file('data_forward.sh')
+update_id_in_file('full.sh')
+update_id_in_file('linesearch.sh')
 
 ls_strict_increase=False
 ls_strict_decrease=False

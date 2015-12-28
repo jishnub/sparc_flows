@@ -24,20 +24,20 @@
 integer nx, ny, nz
 parameter (nx = 512, ny = 1, nz = 300)
 real*8 xlength, ylength, timestep
-parameter (xlength = 400.0 * 10**(8), ylength = xlength, timestep = 2.0)
+parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
 ! DIRECTORY INFORMATION 
 !
 ! ENTER THE LOCATION OF THE BACKGROUND MODEL (i.e. the quiet Sun model)
-character (LEN = *), PARAMETER :: file_data = 'solar_model'
+character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 !'solar_model'
 
 ! IF THE MODEL REQUIRES STABILIZING
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/f_to_p5_3hr_frequent/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/bigbox/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -126,7 +126,7 @@ parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
 real*8 solartime
-parameter(solartime = 3.0)
+parameter(solartime = 4.0)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well

@@ -72,6 +72,8 @@ def compute_forward_adjoint_kernel(src):
     with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     
+    assert fwd==0,"Error in running forward"
+    
     safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
     safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
 
@@ -97,6 +99,7 @@ def compute_forward_adjoint_kernel(src):
     with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
         adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
+    assert adj==0,"Error in running adjoint"
             
     ####################################################################
     #~ Kernel
@@ -104,6 +107,8 @@ def compute_forward_adjoint_kernel(src):
 
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
+    assert kern==0,"Error in computing kernel"
 
 timestart=datetime.datetime.now()
 print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')

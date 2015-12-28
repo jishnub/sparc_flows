@@ -48,7 +48,7 @@ time=np.arange(Nt)*dt
 
 
 modes={'0':'fmode'}
-for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
 ridge_filters=sorted(read_params.get_modes_used())
 
 def spaced(a): return a[:-4]+" "+a[-4:]
@@ -193,7 +193,7 @@ if plot_travel_time_misfit:
     
     ttdiff_ridges={}
     for mode in modes: ttdiff_ridges.update({mode:{"iter_no":[],"misfits":[]}})
-    for iteration_no in xrange(0,20):
+    for iteration_no in xrange(0,100):
         ttpath=os.path.join(datadir,'tt','iter'+str(iteration_no).zfill(2))
         if os.path.exists(ttpath):
             for modeno,mode in enumerate(ridge_filters):
@@ -201,7 +201,7 @@ if plot_travel_time_misfit:
                 if os.path.exists(ttfile):
                     ttdiff_ridges[mode]["iter_no"].append(iteration_no)
                     ttdiff_ridges[mode]["misfits"].append(np.loadtxt(ttfile))
-            
+
     #~ The actual plotting stuff
     
     subplot_layout=plotc.layout_subplots(len(ridge_filters))[:2]
@@ -230,7 +230,7 @@ if plot_travel_time_misfit:
             plotc.plot1D(td[left_pix,1],x=xcoords_left,ax=tdiffaxes[modeno],color=c[color_index],
                         label="iter "+str(iter_index),marker='o',linestyle='-',
                         axes_properties=dict(locator_properties_x=dict(nbins=4)),
-                        title=spaced(modes[mode]),title_properties={'fontsize':20}
+                        title=spaced(modes[mode]),title_properties={'fontsize':15,'loc':'right'}
                         )
 
             #~ Points to the right
@@ -244,24 +244,23 @@ if plot_travel_time_misfit:
     for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
         tdiffaxes[ax_no].set_ylabel(r"$\Delta \tau$ (sec)",fontsize=20)
     
-    for ax_no in xrange(subplot_layout[1],len(tdiffaxes)):    
+    for ax_no in xrange(subplot_layout[1]*(subplot_layout[0]-1),len(tdiffaxes)):    
         tdiffaxes[ax_no].set_xlabel("x (Mm)",fontsize=20)
         
        
-    for ax in tdiffaxes:
-        ylim_curr=ax.get_ylim()
+    for ax_ind,ax in enumerate(tdiffaxes):
+        if ax_ind>= len(ridge_filters): 
+            ax.axis('off')
+            continue
         #~ Source location line
-        plotc.draw_vlines(x=[srcloc],ymin=-1e3,ymax=1e3,ax=ax)
+        ax.axvline(x=srcloc,color='black')
         #~ Rectangle with border
-        plotc.draw_vlines(x=[vlimleft,vlimright],ymin=-1e3,ymax=1e3,ax=ax,ls='dotted')
-        plotc.draw_rectangle(x=[vlimleft,vlimright],y=[-1e3,1e3],ax=ax,color='paleturquoise')
-        ax.set_ylim(ylim_curr)
+        ax.axvline(x=vlimleft,ls='dotted',color='black')
+        ax.axvline(x=vlimright,ls='dotted',color='black')
+        ax.axvspan(vlimleft,vlimright,color='paleturquoise')
         ax.legend(loc='best')
         ax.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
-        plt.sca(ax)
-        plt.tick_params(axis='both', which='major', labelsize=14)
-        plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
 
 
-#~ tdfig.tight_layout()
+    tdfig.tight_layout()
 plotc.plt.show()

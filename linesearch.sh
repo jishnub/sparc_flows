@@ -1,4 +1,4 @@
-#PBS -N  ls_frequent
+#PBS -N  ls_bigbox
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch

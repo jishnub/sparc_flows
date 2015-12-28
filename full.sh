@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  full_f_to_p5_3hr
+#PBS -N  full_bigbox
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full

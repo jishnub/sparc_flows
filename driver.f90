@@ -2687,7 +2687,10 @@ SUBROUTINE MISFIT_ALL(nt)
         endif
     enddo ! END OF FREQFILTS LOOP
 
-
+    if (rank==0) then
+        inquire(unit=543,opened=file_open)
+        if (file_open) close(543)
+    end if 
 
     call dfftw_destroy_plan(invplantemp3)
     call dfftw_destroy_plan(invplantemp2)
