@@ -504,10 +504,8 @@ SUBROUTINE PRODUCE_KERNELS
 
   Lregular = 30.*10.**8/diml
   temp2= 0.0
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!! HERE
-!  kernelv(:,:,:,3) = 0.0
 
-!~   !!!!!!!!!!!!!!!!!!!!!!!!!!
+
   if (enf_cont .and. psi_cont) then
   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
   kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &

@@ -180,8 +180,8 @@ Program driver
                         v0_z = v0_z/rho0 
                     endif
                 
-                    v0_x(:,:,260:nz)=0
-                    v0_x(:,:,1:30) = 0
+!~                     v0_x(:,:,260:nz)=0
+!~                     v0_x(:,:,1:30) = 0
 !~                     v0_z(:,:,260:nz)=0
 !~                     v0_z(:,:,1:30) = 0
                 elseif (enf_cont .and. (vx_cont)) then

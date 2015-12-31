@@ -6,6 +6,7 @@ import numpy as np
 import read_params
 import pyfits
 import os,fnmatch
+import warnings
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
     
@@ -52,6 +53,8 @@ if enf_cont and (contvar == 'psi'):
         prev2_vz=None
     
     gl=plotc.layout_subplots(4)[2]
+    
+    warnings.filterwarnings("ignore", message="Unicode equal comparison failed")
     
     ax1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar=False,

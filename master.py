@@ -1,6 +1,7 @@
 from __future__ import division
-import subprocess ,time, os, shutil,read_params,glob
+import subprocess ,time, os, shutil,read_params,glob,fnmatch
 import numpy as np
+import matplotlib.pyplot as plt
 
 np.set_printoptions(precision=5)
 
@@ -11,10 +12,10 @@ num_linesearches = 6
 data_command = "qsub data_forward.sh"
 full_command = "qsub full.sh"
 ls_command = "qsub linesearch.sh"
-def grad_command(eps):
+def grad_command(algo="cg",eps=[0.1*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
-    return "python grad.py "+str(eps_str)
+    return "python grad.py algo="+algo+" "+str(eps_str)
 
 id_text = "bigbox"
 
@@ -38,8 +39,6 @@ update_id_in_file('data_forward.sh')
 update_id_in_file('full.sh')
 update_id_in_file('linesearch.sh')
 
-ls_strict_increase=False
-ls_strict_decrease=False
 
 def safecopy(a,b):
     try: shutil.copyfile(a,b)
@@ -61,7 +60,6 @@ if os.path.exists('linesearch'):
 if os.path.exists('running_full'):
     os.remove('running_full')
     
-bisection = False
 running_ls = False
 running_full = False
 
@@ -74,7 +72,31 @@ def get_eps_around_minimum(prev1_eps,prev1_misfits,prev2_eps=None,prev2_misfits=
         step = -p[2]/p[1]
     assert step>0,"ls minimum predicted at less than zero step"
     eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
+    pred_misfit = np.polyval(p,eps)
+    
+    print "Estimated step size",eps
+    print "Predicted misfit",pred_misfit
+    
+    epsfine = np.linspace(min(eps[0],prev1_eps[0]),max(eps[-1],prev1_eps[-1]),num=2000)
+    misfitfine = np.polyval(p,epsfine)
+    
+    plt.plot(epsfine,misfitfine,'g-')
+    plt.plot(prev1_eps,prev1_misfits,'bo')
+    plt.plot(eps,pred_misfit,'ro')
+    plt.xlabel("Step size",fontsize=20)
+    plt.ylabel(r"misfit",fontsize=20)
+    plt.savefig('step_size_selection.eps')
+    plt.clf()
+    
     return eps
+
+def get_iter_status():
+    ls_files=sorted(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'linesearch_[0-9][0-9]'))
+    misfit_files=sorted(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'misfit_[0-9][0-9]'))
+    ls_all_files=sorted(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'linesearch_all_[0-9][0-9]'))
+    misfit_all_files=sorted(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'misfit_all_[0-9][0-9]'))
+    iterno = len(misfit_files)-1
+    return misfit_files,misfit_all_files,ls_files,ls_all_files,iterno
 
 for query in xrange(100000):
 
@@ -101,22 +123,19 @@ for query in xrange(100000):
         time.sleep(30)
         continue
         
-    ls_files=sorted([f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in os.path.basename(f)])
-    misfitfiles=sorted([f for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in os.path.basename(f)])
-    ls_all_files=sorted([f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" in os.path.basename(f)])
-    misfit_all_files=sorted([f for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" in os.path.basename(f)])
-    iterno = int(len(misfitfiles))
+    misfit_files,misfit_all_files,ls_files,ls_all_files,iterno = get_iter_status()
+    #~ print misfit_files,ls_files
     print "Iteration",iterno
     
-    if len(misfitfiles)==0:
+    if iterno==-1:
         #~ Start of iterations
-        print "Running full"
+        print "Starting with iterations, running full for the first time"
         status=subprocess.call(full_command.split())
         assert status==0,"Error in running full"
         time.sleep(30)
         continue
         
-    elif len(misfitfiles)>len(ls_files):
+    elif len(misfit_files)>len(ls_files):
         running_full = False
         if running_ls:
             print "It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly"
@@ -126,78 +145,68 @@ for query in xrange(100000):
         try: 
             epslist=np.load("epslist.npz")
             iters_list = epslist.files
-            #~ print epslist
+            
             if str(iterno) in iters_list:
                 #~ If it exists, this means linesearch files were removed
                 #~ This probably means that the linesearch misfits were monotonic
-                #~ Start with a value smaller or larger than the previous attempt
+                
                 ls_details = epslist[str(iterno)]
+                
+                #~ print ls_details
                 
                 prev1_done = ls_details[1].all()
                 prev2_done = ls_details[3].all()
-                two_iters_done = prev1_done and prev2_done
                     
-                full_misfit = sum(np.loadtxt(misfitfiles[-1],usecols=[2]))
-                
-                if prev1_done and (not prev2_done):
-                    #~ This means that there has been only one iteration
-                    #~ Check the linesearch misfits from that iteration, 
-                    #~ and try to guess a good value for the next iteration
-                    
+                if prev1_done:
+                    print "Computing step size form previous linesearch"
                     eps_prev = ls_details[0]
                     lsmisfit_prev =  ls_details[1]
                     eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
-                    
-                elif prev1_done and prev2_done:
-                    #~ This means that there have been at least two attempts at this iterations
-                    #~ It's possible that both the iterations resulted in an increase
-                    #~ Or it's possible that the first iteration was a decrease
-                    #~ and the latest attempt resulted in an increase
-                    
-                    if bisection:
-                        eps_prev = ls_details[0]
-                        lsmisfit_prev =  ls_details[1]
-                        eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
-                    else:
-                        #~ One iterations resulted in decrease, but the latest was increasing
-                        #~ In this case, try an intermediate value (bisection method)
-                        #~ This will decrease the step size
-                        bisection = True
-                        eps = (ls_details[0]+ls_details[2])/2
                 
                 elif not(prev1_done) and prev2_done:
+                    print "Computing step size form 2nd last linesearch"
                     eps_prev = ls_details[2]
                     lsmisfit_prev =  ls_details[3]
                     eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
-                            
                     
                 elif (not prev1_done) and (not prev2_done):
-                    #~ Probably interrupted, restart with one set of values
+                    #~ Probably interrupted, so misfits not saved but step sizes might be recorded
+                    #~ Restart with one set of step sizes
                     if ls_details[0].any():
+                        print "Reusing previous step size"
                         eps = ls_details[0]
                     elif ls_details[2].any():
-                        eps = ls_details[0]
+                        print "Reusing step size from 2nd last iteration"
+                        eps = ls_details[2]
                     else:
+                        print "No step size information recorded",
                         prev_iternos= np.array([int(i) for i in iters_list if i!=str(iterno)])
-                        closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
-                        eps=epslist[closest_iter][0]
+                        if len(prev_iternos)!=0:
+                            closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
+                            eps=epslist[closest_iter][0]
+                            print "using step size from iteration",closest_iter
+                        else:
+                            print "using arbitary step sizes"
+                            eps=[1e-2*i for i in xrange(1,num_linesearches+1)]
 
             else:
-                print "Linesearch for this iteration not done yet, choosing step size from nearest iteration"
+                print "Linesearch for this iteration not done yet, choosing step size from iteration",
                 #~ Iteration not yet done
                 #~ Choose the value corresponding to the closest iteration
                 prev_iternos= np.array([int(i) for i in iters_list])
                 closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
+                print closest_iter
                 eps=epslist[closest_iter][0]
                 
                 
         except IOError: 
             #~ If the file doesn't exist, no linesearches have been carried out
             #~ Assign arbitrary small value
-            eps=np.array([1e-2*i for i in xrange(1,7)])
+            print "Using arbitary step sizes"
+            eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
         #~ Run grad
         print "Running grad with eps",eps
-        gradcmd = grad_command(eps)
+        gradcmd = grad_command(algo="cg",eps=eps)
         status=subprocess.call(gradcmd.split())
         assert status==0,"Error in running grad"
         
@@ -209,25 +218,26 @@ for query in xrange(100000):
         time.sleep(30)
         continue
         
-    elif len(misfitfiles)>0 and len(misfitfiles)==len(ls_files):
+    elif iterno>=0 and len(misfit_files)==len(ls_files):
         running_ls = False
         if running_full:
             print "It seems the full misfit was not generated. Check if the previous full.sh finished without errors"
             exit()
         #~ check linesearch misfits
-        ls_latest = os.path.join(datadir,"update","linesearch_"+str(iterno-1).zfill(2))
+        ls_latest = os.path.join(datadir,"update",ls_files[-1])
+        ls_all_latest = os.path.join(datadir,"update",ls_all_files[-1])
+        
         try:
             lsdata = np.loadtxt(ls_latest)
         except IOError:
             print "Could not load",ls_latest , "check if file exists"
             exit()
         
-        no_of_linesearches = len(np.where(lsdata[:,0]==1)[0])
-        nmasterpixels = lsdata.shape[0]//no_of_linesearches
-        misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels,2]) for i in xrange(no_of_linesearches)])
+        assert len(np.where(lsdata[:,0]==1)[0])==num_linesearches,"Not all linesearches finished correctly"
+        nmasterpixels = lsdata.shape[0]//num_linesearches
+        misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels,2]) for i in xrange(num_linesearches)])
         
-        print "Linesearch misfits"
-        print misfit
+        print "Linesearch misfits",misfit
         #~ Check for misfit minimum
         misfit_diff = np.diff(misfit)
         misfit_diff_sign_change_locs = np.where(np.diff(np.sign(misfit_diff)))[0]
@@ -242,6 +252,7 @@ for query in xrange(100000):
             ls_details = np.zeros_like(epslist[epslist.files[0]])
         epslist = {i:epslist[i] for i in epslist.files}
         epslist.update({str(iterno):ls_details})
+        #~ print epslist[str(iterno)]
         np.savez('epslist.npz',**epslist)
 
         #~ Copy best linesearch, or remove prev linesearch file
@@ -253,7 +264,8 @@ for query in xrange(100000):
             print "Misfit sign change detected"
             print "model #"+str(min_ls_index)+" has minimum misfit"
             copy_updated_model(min_ls_index)
-            bisection = False
+            
+            plt.clf() # Refresh the linesearch stepsize-misfit plot
             
             #~ Run full.sh
             print "Running full"
@@ -262,21 +274,16 @@ for query in xrange(100000):
             running_full=True
             time.sleep(30)
         else:
-            if misfit_diff[0]>0:
-                print "Linesearch strictly increasing"
-                ls_strict_increase = True
-                ls_strict_decrease = False
-            elif misfit_diff[0]<0:
-                print "Linesearch strictly decreasing"
-                ls_strict_increase = False
-                ls_strict_decrease = True
+            if misfit_diff[0]>0: print "Linesearch strictly increasing"
+            elif misfit_diff[0]<0: print "Linesearch strictly decreasing"
             
             #~ Monotonic linesearches don't count, remove previous linesearch file
             print "Removing linesearch file"
-            last_ls_no=str(iterno-1).zfill(2)
-            ls_file_new=os.path.join(datadir,"update","ls_"+last_ls_no+".rnm")
-            ls_all_file_new=os.path.join(datadir,"update","ls_all_"+last_ls_no+".rnm")
-            os.rename(ls_files[-1],ls_file_new)
-            os.rename(ls_all_files[-1],ls_all_file_new)
+
+            ls_latest_renamed=ls_latest+".rnm"
+            os.rename(ls_latest,ls_latest_renamed)
+            
+            ls_all_latest_renamed= ls_all_latest+".rnm"
+            os.rename(ls_all_latest,ls_all_latest_renamed)
         
         continue
