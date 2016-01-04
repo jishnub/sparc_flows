@@ -34,7 +34,7 @@ if enf_cont and (contvar == 'psi'):
     true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
     current_model = fitsread(os.path.join(datadir,'model_psi_ls00.fits'))
     current_model = current_model-current_model[0,0]
-    plot_update=False
+    plot_update=True
     if plot_update:
         try:
             update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
@@ -46,34 +46,46 @@ if enf_cont and (contvar == 'psi'):
         gl=plotc.layout_subplots(2)[2]
   
     
-    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})[0]
+    cp=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
+    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    
+    ax1=cp[0]; cb=cp[1]
+    cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+    
     plt.ylabel("Depth (Mm)",fontsize=20)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\psi$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
+    cp=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
     yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+    axes_properties={'sharey':ax1,'hide_yticklabels':True})
+    
+    ax2=cp[0]; cb=cp[1]
+    cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+    
+    plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated $\psi$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     if plot_update:
-        ax3=plotc.colorplot(update/update.max(),sp=next(gl),x=x,y=z,
+        cp=plotc.colorplot(update,sp=next(gl),x=x,y=z,
         yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-        plt.xlabel("Horizontal Distance (Mm)",fontsize=20,labelpad=10)
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})
+        
+        ax3=cp[0]; cb=cp[1]
+        cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+        
+        plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
         plt.title(r"Next update",fontsize=20,y=1.01)
         plt.tick_params(axis='both', which='major', labelsize=14)
-        plt.gca().xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
 #    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
     
-    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
+    plt.subplots_adjust(wspace=0)
     
     plt.figure()
     

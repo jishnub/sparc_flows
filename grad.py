@@ -128,14 +128,13 @@ iterno=get_iter_no()
 def main():
 
     args=sys.argv[1:]
-    algo=filter(lambda x: x.startswith('algo='),args)[0].split("=")[-1]
-    
-    steepest_descent=False
-    conjugate_gradient = False
-    LBFGS = False
-    if algo=='sd' or algo=='steepest descent': steepest_descent=True
-    elif algo=='cg' or algo=='conjugate gradient': conjugate_gradient=True
-    elif algo=='LBFGS': LBFGS=True
+    optimization_algo=filter(lambda x: x.startswith('algo='),args)
+    if len(optimization_algo)>0: optimization_algo = optimization_algo[0].split("=")[-1]
+    else: optimization_algo="conjugate gradient"
+        
+    steepest_descent = optimization_algo=='sd' or optimization_algo=='steepest descent'
+    conjugate_gradient = optimization_algo=='cg' or optimization_algo=='conjugate gradient'
+    LBFGS = optimization_algo=='LBFGS'
     
     def isfloat(value):
         try:
@@ -145,7 +144,7 @@ def main():
             return False
     
     eps = map(float,filter(isfloat,args))
-    
+    if eps==[]: eps=[0.1*i for i in xrange(1,7)]
 
     Rsun=695.9895 # Mm
 
@@ -166,12 +165,12 @@ def main():
     hess=np.zeros(array_shape)
     
     
-    enf_cont=read_params.get_enforced_continuity()
+    continuity_enforced=read_params.get_enforced_continuity()
     cont_var=read_params.get_continuity_variable()
     psi_cont = False
     vx_cont = False
     vz_cont = False
-    if enf_cont:
+    if continuity_enforced:
         if cont_var == 'psi': psi_cont = True 
         elif cont_var == 'vx': vx_cont = True 
         elif cont_var == 'vz': vz_cont = True 
@@ -179,82 +178,92 @@ def main():
             print "Continuity variable unknown, check params.i"
             quit()
 
+    def read_model(var='psi',iterno=iterno):
+        return fitsread(updatedir('model_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        
+    def read_grad(var='psi',iterno=iterno):
+        return fitsread(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+    
+    def read_update(var='psi',iterno=iterno):
+        return fitsread(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        
+    def read_kern(var='psi',src=1):
+        return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
+
     for src in xrange(1,num_src+1):
         
-        kern=fitsread(os.path.join(datadir,'kernel','kernel_c_'+str(src).zfill(2)+'.fits'))
+        kern = read_kern(var='c',src=src)
         totkern_c+=kern
         
-        if enf_cont and psi_cont:
-            kern=fitsread(os.path.join(datadir,'kernel','kernel_psi_'+str(src).zfill(2)+'.fits'))
-            totkern_psi+=kern
+        if continuity_enforced and psi_cont:
+            kern = read_kern(var='psi',src=src)
+            totkern_psi += kern
         
-        elif enf_cont and vx_cont:
-            kern=fitsread(os.path.join(datadir,'kernel','kernel_vx_'+str(src).zfill(2)+'.fits'))
-            totkern_vx+=kern
+        elif continuity_enforced and vx_cont:
+            kern = read_kern(var='vx',src=src)
+            totkern_vx += kern
             
-        elif enf_cont and vz_cont:
-            kern=fitsread(os.path.join(datadir,'kernel','kernel_vz_'+str(src).zfill(2)+'.fits'))
-            totkern_vz+=kern
-        else:
-            kern=fitsread(os.path.join(datadir,'kernel','kernel_vx_'+str(src).zfill(2)+'.fits'))
-            totkern_vx+=kern
-            kern=fitsread(os.path.join(datadir,'kernel','kernel_vz_'+str(src).zfill(2)+'.fits'))
-            totkern_vz+=kern
+        elif continuity_enforced and vz_cont:
+            kern = read_kern(var='vz',src=src)
+            totkern_vz += kern
+            
+        elif not continuity_enforced:
+            kern = read_kern(var='vx',src=src)
+            totkern_vx += kern
+            kern = read_kern(var='vz',src=src)
+            totkern_vz += kern
         
-        kern=fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits'))
-        hess+=abs(kern)
+        hess+=abs(fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits')))
 
     hess=hess*np.atleast_3d(back[:,2]).transpose(0,2,1)
     hess = hess/abs(hess).max()
     hess[hess<5e-3]=5e-3
 
-    #~ Sound speed kernel    
+    #~ Smoothing and symmetrization  
     totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='smooth',z_filt_pix=0.3,sym=None)
-
-    #~ Vector potential/stream function kernel    
     totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=8.,sym='asym')
-    
-    #~ Velocity kernels    
     totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
     totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
     
+    #~ Write out gradients for this iteration
     fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),totkern_c)
-    
-    if enf_cont and psi_cont:
+    if continuity_enforced and psi_cont:
+        print "Writing out gradient"
         fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
-    elif enf_cont and vx_cont:
+    elif continuity_enforced and vx_cont:
         fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-    elif enf_cont and vz_cont:
+    elif continuity_enforced and vz_cont:
         fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-    elif not enf_cont:
+    elif not continuity_enforced:
         fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vz)
         fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
+
+
 
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
         
         def sd_update(var='psi'):
-            update = fitsread(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
-            updatemax = update.max()
-            if updatemax!=0: update/=updatemax
+            grad = read_grad(var=var,iterno=iterno)
+            update = -grad
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
         
         if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
             sd_update(var='c')
         
-        if enf_cont and psi_cont: sd_update(var='psi')
+        if continuity_enforced and psi_cont: sd_update(var='psi')
                 
-        elif enf_cont and vx_cont: sd_update(var='vx')
+        elif continuity_enforced and vx_cont: sd_update(var='vx')
                 
-        elif enf_cont and vz_cont: sd_update(var='vz')
+        elif continuity_enforced and vz_cont: sd_update(var='vz')
 
-        elif not enf_cont:
+        elif not continuity_enforced:
             sd_update(var='vz')
             sd_update(var='vx')
         
         if iterno > 0: print 'Forcing steepest descent'
 
-    elif (conjugate_gradient):
+    elif conjugate_gradient:
         
         def get_beta(grad,lastgrad,lastupdate):
             #~ Choose algo
@@ -265,56 +274,51 @@ def main():
                 print "Conjugate gradient, Polak Ribiere method"
                 beta = np.sum(grad*(grad - lastgrad))
                 beta/= np.sum(lastgrad**2.)
-                
-            
+
             elif hestenes_stiefel:
                 print "Conjugate gradient, Hestenes Stiefel method"
                 beta = np.sum(grad*(grad - lastgrad))
                 beta/= np.sum((grad - lastgrad)*lastupdate)
             
-            #~ beta=max(beta,0)
-                
             print "beta",beta
             if beta==0: print "Conjugate gradient reduces to steepest descent"
+            elif beta<0:
+                print "Stepping away from previous update direction"
                 
             return beta
         
         def cg_update(var='psi'):
-            grad=fitsread(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
-            lastgrad=fitsread(updatedir('gradient_'+var+'_'+str(iterno-1).zfill(2)+'.fits'))
-            lastupdate=fitsread(updatedir('update_'+var+'_'+str(iterno-1).zfill(2)+'.fits'))
+            grad_k = read_grad(var=var,iterno=iterno)
+            grad_km1 = read_grad(var=var,iterno=iterno-1)
+            p_km1 = read_update(var=var,iterno=iterno-1)
             
-            beta = get_beta(grad,lastgrad,lastupdate)
-            update=grad +  beta*lastupdate
-            updatemax = update.max()
-            if updatemax!=0: update/=updatemax
+            beta_k = get_beta(grad_k,grad_km1,p_km1)
+            update=-grad_k +  beta_k*p_km1
+            
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
             
         
-        if enf_cont and psi_cont: cg_update(var='psi')
+        if continuity_enforced and psi_cont: cg_update(var='psi')
             
-        elif enf_cont and vx_cont: cg_update(var='vx')
+        elif continuity_enforced and vx_cont: cg_update(var='vx')
             
-        elif enf_cont and vz_cont: cg_update(var='vz')
+        elif continuity_enforced and vz_cont: cg_update(var='vz')
             
-        elif not enf_cont:
+        elif not continuity_enforced:
             cg_update(var='vz')
             cg_update(var='vx')
         
         try: cg_update(var='c')
         except IOError: pass
             
-            
-        
     elif LBFGS:
         #needs to be corrected
         m=4
         k = iterno
         
-            
         def LBFGS_update(var='psi'):
-            model_k=fitsread(updatedir('model_'+var+'_'+str(k).zfill(2)+'.fits'))
-            grad_k =fitsread(updatedir('gradient_'+var+'_'+str(k).zfill(2)+'.fits'))
+            model_k= read_model(var=var,iterno=iterno)
+            grad_k = read_grad(var=var,iterno=iterno)
             model_iplus1 = model_k
             grad_iplus1 = grad_k
             q = grad_k
@@ -324,7 +328,7 @@ def main():
                 if var+'_y_'+str(i) in LBFGS_data.keys():
                     y_i=LBFGS_data[var+'_y_'+str(i)]
                 else:
-                    grad_i=fitsread(updatedir('gradient_'+var+'_'+str(i).zfill(2)+'.fits'))
+                    grad_i= read_grad(var=var,iterno=i)
                     y_i = grad_iplus1 - grad_i
                     LBFGS_data[var+'_y_'+str(i)] = y_i
                     grad_iplus1 = grad_i
@@ -332,7 +336,7 @@ def main():
                 if var+'_s_'+str(i) in LBFGS_data.keys():
                     s_i=LBFGS_data[var+'_s_'+str(i)]
                 else:
-                    model_i=fitsread(updatedir('model_'+var+'_'+str(i).zfill(2)+'.fits'))
+                    model_i= read_grad(var=var,iterno=i)
                     s_i = model_iplus1 - model_i
                     LBFGS_data[var+'_s_'+str(i)] = s_i
                     model_iplus1 = model_i
@@ -376,9 +380,6 @@ def main():
                 if var+'_alpha_'+str(i) in LBFGS_data: del LBFGS_data[var+'_alpha_'+str(i)]
             
             
-            updatemax = r.max()
-            if updatemax!=0: r/=updatemax
-            
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),r)
 
         LBFGS_data_file = updatedir('LBFGS_data.npz')
@@ -389,13 +390,13 @@ def main():
             data=None
         except IOError: LBFGS_data={}
         
-        if enf_cont and psi_cont: LBFGS_update(var='psi')
+        if continuity_enforced and psi_cont: LBFGS_update(var='psi')
             
-        elif enf_cont and vx_cont: LBFGS_update(var='vx')
+        elif continuity_enforced and vx_cont: LBFGS_update(var='vx')
             
-        elif enf_cont and vz_cont: LBFGS_update(var='vz')
+        elif continuity_enforced and vz_cont: LBFGS_update(var='vz')
             
-        elif not enf_cont:
+        elif not continuity_enforced:
             LBFGS_update(var='vx')
             LBFGS_update(var='vz')
             
@@ -404,62 +405,49 @@ def main():
         
         np.savez(LBFGS_data_file,**LBFGS_data)
             
-            
-            
-    #~ Create new models to be used for linesearch
 
-    if enf_cont and psi_cont:
-        model_psi = fitsread(updatedir('model_psi_'+str(iterno).zfill(2)+'.fits'))
-        update_psi = fitsread(updatedir('update_psi_'+str(iterno).zfill(2)+'.fits'))
-        psi_scale=rms(model_psi)
+    def create_ls_model(var='psi',eps=0,kind='linear'):
+        model = read_model(var=var,iterno=iterno)
+        update = read_update(var=var,iterno=iterno)
         
-    elif enf_cont and vx_cont:
-        model_vx=fitsread(updatedir('model_vx_'+str(iterno).zfill(2)+'.fits'))
-        update_vx = fitsread(updatedir('update_vx_'+str(iterno).zfill(2)+'.fits'))
-        vx_scale = 2000
-        
-    elif enf_cont and vz_cont:
-        model_vz=fitsread(updatedir('model_vz_'+str(iterno).zfill(2)+'.fits'))
-        update_vz = fitsread(updatedir('update_vz_'+str(iterno).zfill(2)+'.fits'))
-        vz_scale=100
-        
-    elif not enf_cont:
-        update_vx = fitsread(updatedir('update_vx_'+str(iterno).zfill(2)+'.fits'))
-        vx_scale = 200
-        
-        update_vz = fitsread(updatedir('update_vz_'+str(iterno).zfill(2)+'.fits'))
-        vz_scale = 100
+        updatemax=update.max()
+        if updatemax!=0: update/=updatemax
+
+        if kind=='linear':
+            model_scale = rms(model)
+            if model_scale == 0: model_scale = 100
+            return model+eps*update*model_scale
+        elif kind=='exp':
+            return model*(1+eps*update)
     
-    if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
-        model_c = fitsread(updatedir('model_c_'+str(iterno).zfill(2)+'.fits'))
-        update_c = fitsread(updatedir('update_c_'+str(iterno).zfill(2)+'.fits'))
-        
+    #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
         
         if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
-            lsmodel = model_c + eps_i * update_c
+            lsmodel = create_ls_model(var='c',eps=eps_i,kind='exp')
             fitswrite(updatedir('test_c_'+str(i+1)+'.fits'), lsmodel)
             
-        if enf_cont and psi_cont:
-            lsmodel = model_psi + eps_i * psi_scale * update_psi
+        if continuity_enforced and psi_cont:
+            lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
             fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
             
-        elif enf_cont and vx_cont:
-            lsmodel = lastmodel_vx - vx_scale * eps_i * update_vx
+        elif continuity_enforced and vx_cont:
+            lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
             fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
 
-        elif enf_cont and vz_cont:
-            lsmodel = model_vz - vz_scale * eps_i * update_vz
+        elif continuity_enforced and vz_cont:
+            lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
             fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
             
-        elif not enf_cont:
-            lsmodel = model_vx - vx_scale*eps_i * update_vx
+        elif not continuity_enforced:
+            lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
             fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
             
-            lsmodel = model_vz - vz_scale*eps_i * update_vz
+            lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
             fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
 
 
+    #~ Update epslist
     try:
         epslist=np.load('epslist.npz')
         iter_done_list = epslist.files
