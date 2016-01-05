@@ -29,7 +29,7 @@ nsrc = len(srclocs)
 ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
 for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
-modes['8']='first bounce'
+modes['8']='large_dist_pmode'
 
 if mistype == "data":
 
@@ -59,10 +59,8 @@ if mistype == "data":
             plt.semilogy(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
             plt.semilogy(range(nfiles),[0]*nfiles,ls='dashed')
 
-            plt.title(modes[ridge],fontsize=16,loc='right')
+            plt.title(modes[ridge].replace("_"," "),fontsize=16,loc='right')
             
-            
-
             #~ plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
             plt.tick_params(axis='both', which='major', labelsize=14)
             #~ plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
