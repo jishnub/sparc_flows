@@ -5,7 +5,7 @@ import pyfits
 import os,re,sys,glob
 from matplotlib.ticker import MaxNLocator
 import read_params
-plt=plotc.plt
+import matplotlib.pyplot as plt
 
 datadir = read_params.get_directory()
 nfiles=0
@@ -28,7 +28,8 @@ nsrc = len(srclocs)
 
 ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
-for i in xrange(1,10): modes[str(i)]='p'+str(i)+'mode'
+for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
+modes['8']='first bounce'
 
 if mistype == "data":
 

@@ -224,21 +224,21 @@ if plot_travel_time_misfit:
             left_pix=np.where(td[:,0]<srcloc_ind)[0]
             xcoords_left=np.take(x,td[left_pix,0].astype(int))
             right_pix=np.where(td[:,0]>srcloc_ind)[0]
-            xcoords_right=np.take(x,td[right_pix,0].astype(int))            
+            xcoords_right=np.take(x,td[right_pix,0].astype(int))    
+            
+            ax=tdiffaxes[modeno]        
             
             #~ Points to the left
-            plotc.plot1D(td[left_pix,1],x=xcoords_left,ax=tdiffaxes[modeno],color=c[color_index],
-                        label="iter "+str(iter_index),marker='o',linestyle='-',
-                        axes_properties=dict(locator_properties_x=dict(nbins=4)),
-                        title=spaced(modes[mode]),title_properties={'fontsize':15,'loc':'right'}
-                        )
+            ax.plot(xcoords_left,td[left_pix,1],color=c[color_index],
+                        label="iter "+str(iter_index),marker='o',linestyle='-')
 
             #~ Points to the right
-            plotc.plot1D(td[right_pix,1],x=xcoords_right,ax=tdiffaxes[modeno],color=c[color_index],
-                            marker='o',linestyle='-')
+            ax.plot(xcoords_right,td[right_pix,1],color=c[color_index],marker='o',linestyle='-')
 
             #~ Zero misfit line
-            plotc.draw_hlines(y=[0],ax=tdiffaxes[modeno],ls='--')
+            ax.axhline(y=[0],ls='--')
+            
+            plt.title(spaced(modes[mode]),fontsize=15,loc='right')
             
             
     for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
@@ -258,8 +258,11 @@ if plot_travel_time_misfit:
         ax.axvline(x=vlimleft,ls='dotted',color='black')
         ax.axvline(x=vlimright,ls='dotted',color='black')
         ax.axvspan(vlimleft,vlimright,color='paleturquoise')
+        
         ax.legend(loc='best')
+        ax.xaxis.set_major_locator(MaxNLocator(4))
         ax.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        
 
 
     tdfig.tight_layout()
