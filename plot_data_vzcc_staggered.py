@@ -239,7 +239,7 @@ if plot_travel_time_misfit:
             #~ Zero misfit line
             ax.axhline(y=[0],ls='--')
             
-            plt.title(spaced(modes[mode]),fontsize=15,loc='right')
+            ax.set_title(spaced(modes[mode]),fontsize=15,loc='right')
             
             
     for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
