@@ -58,7 +58,7 @@ END SUBROUTINE FMODE_FILTER
 
 !=======================================================================
 
-SUBROUTINE PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
+SUBROUTINE P1MODE_FILTER(nt,outputcad,nx,xlength,pmode)
     
     implicit none
     integer, intent(in) :: nt,nx
@@ -115,7 +115,7 @@ SUBROUTINE PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
     
     close(123)
 
-END SUBROUTINE PMODE_FILTER
+END SUBROUTINE P1MODE_FILTER
 
 !=======================================================================
 
@@ -468,7 +468,7 @@ END SUBROUTINE P7MODE_FILTER
 
 !==========================================================================================
 
-SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
+SUBROUTINE ALL_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
 
   implicit none
     integer, intent(in) :: nt,nx
@@ -479,6 +479,8 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
     real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
     real*8 pi
     parameter (pi=3.141592654)
+    
+    dt=outputcad
 
   
     Polylow(0)=1.1
@@ -503,7 +505,8 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
   
   pmode = 0.0
   do i=1,nx
-   delta = (f1(i) - f0(i))
+   delta = f1(i) - f0(i)
+    
     do j=1,nt
      d = f(j) - f0(i)
      if ((d .lt. delta) .and. (d .gt. 0)) then
@@ -512,14 +515,14 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
     enddo
    enddo 
    
-!~    do j=1,nt
-!~     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-!~     if (f(j) .lt. f_low+df) &
-!~       pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
-!~    enddo
+   do j=1,nt
+    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low+df) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+   enddo
    
 
-END SUBROUTINE LARGE_DIST_PMODE_FILTER
+END SUBROUTINE ALL_PMODE_FILTER
 !================================================================================
 
 SUBROUTINE FIRST_BOUNCE_FILTER(nt,dt,nx,Lx,srcloc,fb)
