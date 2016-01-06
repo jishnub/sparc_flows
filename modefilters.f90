@@ -522,6 +522,72 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
 END SUBROUTINE LARGE_DIST_PMODE_FILTER
 !================================================================================
 
+SUBROUTINE FIRST_BOUNCE_FILTER(nt,dt,nx,Lx,srcloc,fb)
+    
+    implicit none
+    integer, intent(in) :: nt,nx
+    real*8, intent(in) :: Lx,dt,srcloc
+    real*8, intent(out) :: fb(nx, 1, nt)
+    real*8 dist,xcoord
+    integer i,j,timest,timefin
+    
+    ! dt in seconds, in driver dt is in minutes
+    
+    fb=0.
+    do i=1,nx
+    
+    xcoord = dble(i)*Lx/nx - Lx/2.
+    dist=abs(xcoord - srcloc)
+    
+
+    timest = floor((-1.45511095e-04*(dist)**2 &
+            + 2.72140632e-01*dist + 2.16331969e+01 )* 1./(dt/60))
+                                
+    timefin = floor((3.85746516e-08*(dist)**2 &
+        + 2.21324786e-01*dist + 4.36702155e+01 )* 1./(dt/60))
+        
+    fb(i,1,timest:timefin) = 1.
+
+    end do
+    
+
+END SUBROUTINE FIRST_BOUNCE_FILTER
+
+SUBROUTINE HIGHPMODE_FILTER(nt,outputcad,nx,xlength,pmode)
+    implicit none
+    integer, intent(in) :: nt,nx
+    real*8, intent(in) :: xlength,outputcad
+    integer i,j
+    real*8, intent(out) :: pmode(nx, 1, nt)
+    real*8 k(nx),dt,f_mode_const
+    real*8 Polylow(0:2),f0(nx),w(nt),f(nt)
+    real*8 pi
+    parameter (pi=3.141592654)
+
+    dt = outputcad
+
+    Polylow(0)=2.9
+    Polylow(1)=5.9
+    Polylow(2)=-1.3
+
+    call distmat(nx,1,k) 
+    call distmat(nt,1,w) 
+    k = abs(k) * 2.*pi/(xlength *nx/(nx-1.))
+    w = abs(w) * 2.*pi/(nt*dt)
+
+    f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+    f = w/(2.*pi)*1e3
+
+    pmode = 0.0
+    do i=1,nx
+    do j=1,nt
+    pmode(i,1,j) = 1./(1.+ exp(-(f(j) - f0(i))/0.5))
+    enddo
+    enddo    
+
+
+END SUBROUTINE HIGHPMODE_FILTER
+
 SUBROUTINE distmat(n,m,f)
  
  implicit none
