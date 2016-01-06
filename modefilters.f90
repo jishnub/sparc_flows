@@ -501,16 +501,16 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt,outputcad,nx,xlength,pmode)
   f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
   
-  pmode = 1.0
-!~   do i=1,nx
-!~    delta = (f1(i) - f0(i))
-!~     do j=1,nt
-!~      d = f(j) - f0(i)
-!~      if ((d .lt. delta) .and. (d .gt. 0)) then
-!~         pmode(i,1,j) = 1
-!~      end if   
-!~     enddo
-!~    enddo 
+  pmode = 0.0
+  do i=1,nx
+   delta = (f1(i) - f0(i))
+    do j=1,nt
+     d = f(j) - f0(i)
+     if ((d .lt. delta) .and. (d .gt. 0)) then
+        pmode(i,1,j) = 1.
+     end if   
+    enddo
+   enddo 
    
 !~    do j=1,nt
 !~     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
