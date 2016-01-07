@@ -1339,7 +1339,7 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
 END SUBROUTINE HIGHPMODE_FILTER
 !================================================================================
 
-SUBROUTINE PMODE_FILTER(nt, pmode)
+SUBROUTINE P1MODE_FILTER(nt, pmode)
 
   use initialize
   use all_modules
@@ -1393,7 +1393,7 @@ SUBROUTINE PMODE_FILTER(nt, pmode)
    
    close(32)
 
-END SUBROUTINE PMODE_FILTER
+END SUBROUTINE P1MODE_FILTER
 !================================================================================
 
 SUBROUTINE P2MODE_FILTER(nt, pmode)
@@ -1741,7 +1741,7 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
 END SUBROUTINE P7MODE_FILTER
 !================================================================================
 
-SUBROUTINE LARGE_DIST_PMODE_FILTER(nt, pmode)
+SUBROUTINE ALL_PMODE_FILTER(nt, pmode)
 
   use initialize
   use all_modules
@@ -1753,10 +1753,6 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt, pmode)
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
   
-!~   f_mode_const=4.1004
-
-!~   f_mode_const=5.8
-
     Polylow(0)=1.1
     Polylow(1)=2.4
     Polylow(2)=-0.3
@@ -1773,31 +1769,30 @@ SUBROUTINE LARGE_DIST_PMODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
   
-!~   f0=f_mode_const*abs(k)**0.5
   f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
   f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
   
   pmode = 1.0
-!~   do i=1,nx
-!~    delta = (f1(i) - f0(i))
-!~     do j=1,nt
-!~      d = f(j) - f0(i)
-!~      if ((d .lt. delta) .and. (d .gt. 0)) then
-!~         pmode(i,1,j) = 1
-!~      end if   
-!~     enddo
-!~    enddo 
+  do i=1,nx
+   delta = (f1(i) - f0(i))
+    do j=1,nt
+     d = f(j) - f0(i)
+     if ((d .lt. delta) .and. (d .gt. 0)) then
+        pmode(i,1,j) = 1
+     end if   
+    enddo
+   enddo 
    
-!~    do j=1,nt
-!~     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-!~     if (f(j) .lt. f_low+df) &
-!~       pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
-!~    enddo
+   do j=1,nt
+    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low+df) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+   enddo
    
    close(32)
 
-END SUBROUTINE LARGE_DIST_PMODE_FILTER
+END SUBROUTINE ALL_PMODE_FILTER
 !================================================================================
 
 SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
@@ -1852,7 +1847,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
     real*8 ampquiet, ampmag
     real*8,dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      large_dist_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
+                                      all_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat,& !, filtquiet, tempquiet, &
@@ -1863,7 +1858,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     integer kxord
     parameter(kxord=3)
     real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
-    real*8 ign1,ign2, d_i
+    real*8 ign1,ign2, dist
     real*8 prevtau,iwls_pow,iwls_misfit_factor,iwls_eps
     logical iwls,prev_iter_exist,sgd,ws_exist
     
@@ -1936,15 +1931,36 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
     filt = 1.0
     call fmode_filter(nt, fmode)
-    call pmode_filter(nt, p1mode)
+    call p1mode_filter(nt, p1mode)
     call p2mode_filter(nt, p2mode)
     call p3mode_filter(nt, p3mode)
     call p4mode_filter(nt, p4mode)
     call p5mode_filter(nt, p5mode)
     call p6mode_filter(nt, p6mode)
     call p7mode_filter(nt, p7mode)
-    call large_dist_pmode_filter(nt, large_dist_pmode)
-!~     all_else = 1. - fmode - p1mode               !  ??
+    call all_pmode_filter(nt, all_pmode)
+    
+    inquire(file=directory//'filter.params.allmodes', exist=lexist)
+    if (lexist) then
+    open(94,file=directory//'filter.params.allmodes', action='read',position='rewind')
+        read(94,*) leftcorner ! mHz
+        read(94,*) rightcorner  ! mHz
+        close(94)
+
+        call freq_filter(leftcorner, rightcorner, nt, filt)
+    endif
+
+    do i=1,nt
+        fmode(:,1,i)     =     fmode(:,1,i) * filt(i)!* UNKNOWN
+        p1mode(:,1,i)    =    p1mode(:,1,i) * filt(i)!* UNKNOWN
+        p2mode(:,1,i)    =    p2mode(:,1,i) * filt(i)!* UNKNOWN
+        p3mode(:,1,i)    =    p3mode(:,1,i) * filt(i)!* UNKNOWN
+        p4mode(:,1,i)    =    p4mode(:,1,i) * filt(i)!* UNKNOWN
+        p5mode(:,1,i)    =    p5mode(:,1,i) * filt(i)!* UNKNOWN
+        p6mode(:,1,i)    =    p6mode(:,1,i) * filt(i)!* UNKNOWN
+        p7mode(:,1,i)    =    p7mode(:,1,i) * filt(i)!* UNKNOWN
+        all_pmode(:,1,i) = all_pmode(:,1,i) * filt(i)!* UNKNOWN
+    end do
     
     inquire(file=directory//'filter.params.0', exist=lexist)
     if (lexist) then
@@ -2063,18 +2079,16 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 filter = p7mode
                 call writefits_3d('p7mode_filter.fits',p7mode,nt)
             else if (pord==8) then 
-                filter = large_dist_pmode
-                call writefits_3d('large_dist_pmode_filter.fits',large_dist_pmode,nt)
+                filter = all_pmode
+                call writefits_3d('all_pmode_filter.fits',all_pmode,nt)
             end if
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
-
             call dfftw_execute(invplantemp)
             call dfftw_execute(invplandata)
 
             con = 2.0*pi
 
-            
             
 !~             inquire(file='wavespeed',exist=ws_exist) 
 !~             if (ws_exist) then
@@ -2122,12 +2136,11 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                             timest = floor(distances(i)/vel(pord) * 1./dt)
                             timefin = timest + 40
                         else if (pord .eq. 8) then
-                            d_i = distances(i)
-                            timest = floor((-1.45511095e-04*(d_i)**2 &
-                                    + 2.72140632e-01*d_i + 2.16331969e+01 )* 1./dt)
-                                    
-                            timefin = floor((3.85746516e-08*(d_i)**2 &
-                                    + 2.21324786e-01*d_i + 4.36702155e+01 )* 1./dt)
+                            dist = distances(i)
+                            timest = floor((-0.000417147774671*dist**2&
+                            +0.313350998096*dist+17.9609631186)* 1./(dt))
+                            timefin = floor((-0.00028361249034*dist**2&
+                            +0.29270337114*dist+36.4398734578)* 1./(dt))
                         end if
                         
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
@@ -2171,7 +2184,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
  
                     nmeasurements = nmeasurements + 1
                     con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) * iwls_misfit_factor !* sign(1.0,signed(i))
-                
                     do j=1,nt
                         adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
                     enddo
@@ -2354,7 +2366,7 @@ SUBROUTINE MISFIT_ALL(nt)
     character*1 ord,ffstr
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:10)
     real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
-                                      large_dist_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
+                                      all_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:10),misfit_tot(0:10)
     complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat, &
@@ -2464,14 +2476,14 @@ SUBROUTINE MISFIT_ALL(nt)
         call freq_filter(leftcorner, rightcorner, nt, filt)
 
         call fmode_filter(nt, fmode)
-        call pmode_filter(nt, pmode)
+        call p1mode_filter(nt, pmode)
         call p2mode_filter(nt, p2mode)
         call p3mode_filter(nt, p3mode)
         call p4mode_filter(nt, p4mode)
         call p5mode_filter(nt, p5mode)
         call p6mode_filter(nt, p6mode)
         call p7mode_filter(nt, p7mode)
-        call large_dist_pmode_filter(nt, large_dist_pmode)
+        call all_pmode_filter(nt, all_pmode)
 !~         all_else = 1. - fmode - pmode          ! ???
 !~         highpmode = 1.0
 
@@ -2484,7 +2496,7 @@ SUBROUTINE MISFIT_ALL(nt)
             p5mode(:,1,i) = p5mode(:,1,i) * filt(i)!* UNKNOWN
             p6mode(:,1,i) = p6mode(:,1,i) * filt(i)!* UNKNOWN
             p7mode(:,1,i) = p7mode(:,1,i) * filt(i)!* UNKNOWN
-            large_dist_pmode(:,1,i) = large_dist_pmode(:,1,i) * filt(i) !* UNKNOWN
+            all_pmode(:,1,i) = all_pmode(:,1,i) * filt(i) !* UNKNOWN
         enddo
 
         misfit = 0.0
@@ -2532,7 +2544,7 @@ SUBROUTINE MISFIT_ALL(nt)
                 if (pord==5) filter = p5mode
                 if (pord==6) filter = p6mode
                 if (pord==7) filter = p7mode
-                if (pord==8) filter = large_dist_pmode
+                if (pord==8) filter = all_pmode
                 filtout = tempout * cmplx(filter)
                 filtdat = tempdat * cmplx(filter)
 

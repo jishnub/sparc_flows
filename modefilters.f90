@@ -543,11 +543,8 @@ SUBROUTINE FIRST_BOUNCE_FILTER(nt,dt,nx,Lx,srcloc,fb)
     dist=abs(xcoord - srcloc)
     
 
-    timest = floor((-1.45511095e-04*(dist)**2 &
-            + 2.72140632e-01*dist + 2.16331969e+01 )* 1./(dt/60))
-                                
-    timefin = floor((3.85746516e-08*(dist)**2 &
-        + 2.21324786e-01*dist + 4.36702155e+01 )* 1./(dt/60))
+    timest = floor((-0.000417147774671*dist**2+0.313350998096*dist+17.9609631186)* 1./(dt/60))
+    timefin = floor((-0.00028361249034*dist**2+0.29270337114*dist+36.4398734578)* 1./(dt/60))
         
     fb(i,1,timest:timefin) = 1.
 

@@ -52,7 +52,10 @@ for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
 modes['8']="large_dist_pmode"
 ridge_filters=sorted(read_params.get_modes_used())
 
-def spaced(a): return a[:-4]+" "+a[-4:]
+def spaced(a): 
+    b=a[:-4]+" "+a[-4:]
+    b=b.replace("_"," ")
+    return b
 
 vzcc=[]
 vzcc_ridges=[]
