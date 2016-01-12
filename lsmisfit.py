@@ -35,16 +35,6 @@ misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in xrange(no_of_l
 
 print "iteration",int(iterno)
 
-try:
-    epslist=np.load('epslist.npz')['epslist']
-    iterind=np.where(epslist[:,0]==(int(iterno)+1))
-    if len(iterind[0])>0:
-        iterind=iterind[0][0]
-        eps=epslist[iterind,1]
-        print "eps",eps
-except IOError:
-    print "Could not read epslist.npz"
-
 np.set_printoptions(precision=3)
     
 
