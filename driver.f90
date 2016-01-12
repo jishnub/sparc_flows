@@ -47,7 +47,7 @@ Program driver
     real*8 bes(0:2), Lregular,signt
     logical saved, iteration, init_variables, tempbool
     character*1 ci
-    real*8 tau,dt,xcutoff,xpix_cutoff
+    real*8 tau,dt
     
 20  format(8f12.4)
 
@@ -56,8 +56,6 @@ Program driver
     ! --------------------------------------------
 
     call Initialize_all    
-    
-!~     call adjoint_source_filt(280)
 
     if (COMPUTE_DATA) then
 
@@ -166,12 +164,7 @@ Program driver
                     psivar(:,:,1:10) = 0.0
                     psivar(:,:,nz-9:nz) = 0.0
                     
-                    
-                    xpix_cutoff = 40/(xlength/10.**8)*nx
-                    do i=1,nx
-                        xcutoff = 1./(1+exp((i-xpix_cutoff)/2.))+1./(1+exp(-(i+xpix_cutoff)/2.)) - 1.
-                        psivar(i,:,:)=psivar(i,:,:)*xcutoff
-                    end do
+                    call writefits_3d("psivar_used.fits",psivar,nz)
                     
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -1642,14 +1635,17 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
   
+!~   f_mode_const=4.1004
 
-    Poly(0)=1.98567115899
-    Poly(1)=8.09108986838
-    Poly(2)=-3.20316331815
+!~   f_mode_const=5.8
 
-    Polylow(0)=1.80035417224
-    Polylow(1)=7.42939105658
-    Polylow(2)=-2.84595764385
+    Poly(0)=2.65
+    Poly(1)=5.7
+    Poly(2)=-1.2
+
+    Polylow(0)=2.4
+    Polylow(1)=5.4
+    Polylow(2)=-1.3
 
     f_low = 1.6
     df = 0.5 
@@ -1702,13 +1698,13 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
 
 !~   f_mode_const=5.8
 
-    Poly(0)=2.18544600032
-    Poly(1)=8.68183289647
-    Poly(2)=-3.84478880142
+    Poly(0)=2.9
+    Poly(1)=5.9
+    Poly(2)=-1.3
 
-    Polylow(0)=1.98297334673
-    Polylow(1)=7.94931076885
-    Polylow(2)=-3.00725356897
+    Polylow(0)=2.65
+    Polylow(1)=5.7
+    Polylow(2)=-1.2
 
     f_low = 1.6
     df = 0.5 
@@ -1850,7 +1846,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     character*2 contribmatch
     real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
     real*8 ampquiet, ampmag
-    real*8,dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,filter,phase,temparr,&
+    real*8,dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,all_else,filter,phase,temparr,&
                                       all_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
     real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
     real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
@@ -1933,6 +1929,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     call dfftw_execute(fwdplantemp)
     call dfftw_execute(fwdplandata)
 
+    filt = 1.0
     call fmode_filter(nt, fmode)
     call p1mode_filter(nt, p1mode)
     call p2mode_filter(nt, p2mode)
@@ -2133,6 +2130,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 !~             RECEIVER PIXEL END FLAG
 !~                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
+
                     if (.not. linesearch) then
                         if (pord .ne. 8) then
                             timest = floor(distances(i)/vel(pord) * 1./dt)
