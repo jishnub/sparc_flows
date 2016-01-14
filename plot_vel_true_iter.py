@@ -5,7 +5,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 import read_params
 import pyfits
-import os,fnmatch
+import os,fnmatch,sys
 import warnings
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
@@ -19,7 +19,12 @@ def get_iter_no():
     return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
 iterno=get_iter_no()
 
-def iterm(i): return str(iterno-i).zfill(2)
+itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
+if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
+else: itercutoff=np.inf
+
+def iterm(i): 
+    return str(min(itercutoff,iterno-i)).zfill(2)
 
 enf_cont = read_params.get_enforced_continuity()
 contvar=read_params.get_continuity_variable()
@@ -52,89 +57,94 @@ if enf_cont and (contvar == 'psi'):
         prev1_vz=None
         prev2_vz=None
     
-    gl=plotc.layout_subplots(4)[2]
+    gl=plotc.gridlist(1,4)
     
     warnings.filterwarnings("ignore", message="Unicode equal comparison failed")
     
-    ax1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar=False,
-    centerzero=True,
-    vmax=max(abs(current_vx.max()),abs(current_vx.min()),abs(true_vx.max()),abs(true_vx.min())))[0]
+    ax1,cb1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
     
-    ax1.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    plt.ylabel("Depth (Mm)",fontsize=15)
     
-    forceAspect(ax1)
+    plt.title(r"True vx",fontsize=16,y=1.01)
     
-    plt.title(r"True vx",fontsize=20,y=1.01)
+    ax2,cb2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
+    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
     
-    ax2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
-    yr=[-5,None],axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
-    vmax=max(abs(current_vx.max()),abs(current_vx.min()),abs(true_vx.max()),abs(true_vx.min())))[0]
+    plt.title(r"Iterated vx",fontsize=16,y=1.01)
     
-    ax2.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
-    forceAspect(ax2)
-    plt.title(r"Iterated vx",fontsize=20,y=1.01)
+    ax3,cb3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
+    centerzero=True,axes_properties={'sharey':ax1,'hide_yticklabels':True},
+    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
     
-    ax3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar=False,centerzero=True,
-    vmax=max(abs(current_vz.max()),abs(current_vz.min()),abs(true_vz.max()),abs(true_vz.min())))[0]
+    plt.title(r"True vz",fontsize=16,y=1.01)
     
-    ax3.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
-    forceAspect(ax3)
+    ax4,cb4=plotc.colorplot(current_vz,sp=next(gl),x=x,y=z,
+    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
+    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
     
-    plt.title(r"True vz",fontsize=20,y=1.01)
+    ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    for ax in [ax2,ax3]:
+        ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    ax4=plotc.colorplot(current_vz,sp=next(gl),x=x,y=z,
-    yr=[-5,None],axes_properties={'sharey':ax3,'hide_yticklabels':True},centerzero=True,
-    vmax=max(abs(current_vz.max()),abs(current_vz.min()),abs(true_vz.max()),abs(true_vz.min())))[0]
+    for ax in [ax1,ax2,ax3,ax4]:
+        ax.set_xlim(-Lx/8,Lx/8)
+        ax.set_ylim(-5,z.max())
+        forceAspect(ax)
+        ax.set_xlabel("x (Mm)",fontsize=15)
+        ax.yaxis.set_tick_params(which='major', labelsize=12)
+        ax.xaxis.set_tick_params(which='major', labelsize=12)
+        
+    for cb in [cb1,cb2,cb3,cb4]:
+        cb.ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    cb1.ax.set_ylabel("m/s",rotation=90,fontsize=14)
     
-    ax4.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
     
-    plt.title(r"Iterated vz",fontsize=20,y=1.01)
-    forceAspect(ax4)
+    plt.title(r"Iterated vz",fontsize=16,y=1.01)
     
-    plt.gcf().text(0.5, 0.01,"Horizontal Distance (Mm)",fontsize=20,ha='center')
-    plt.gcf().text(0.1, 0.5,"Depth (Mm)",fontsize=20,va='center',rotation='vertical')
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0)
     
-    plt.subplots_adjust(wspace=0,hspace=0.3)
     
     plt.figure()
     vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
     vz_max_row_index,vz_max_col_index = divmod(true_vz.argmax(),nx)
     
     plt.subplot(121)
-    plt.plot(z,true_vx[:,vx_max_col_index],label="True vx")
-    plt.plot(z,current_vx[:,vx_max_col_index],label="Iterated vx",
+    plt.plot(z,true_vx[:,vx_max_col_index],label="True")
+    plt.plot(z,current_vx[:,vx_max_col_index],label="Iter",
     linestyle='dashed',linewidth=2)
-    if prev1_vx is not None:
-        plt.plot(z,prev1_vx[:,vx_max_col_index],label="Previous iter",
-        linestyle='dotted',linewidth=2)
-    if prev2_vx is not None:
-        plt.plot(z,prev2_vx[:,vx_max_col_index],label="2 iter ago",
-        linestyle='dotted',linewidth=2)
-    plt.xlabel("Depth (Mm)",fontsize=20)
-    plt.ylabel("vx (m/s)",fontsize=20)
-    plt.legend(loc='best')
+    #~ if prev1_vx is not None:
+        #~ plt.plot(z,prev1_vx[:,vx_max_col_index],label="Previous iter",
+        #~ linestyle='dotted',linewidth=2)
+    #~ if prev2_vx is not None:
+        #~ plt.plot(z,prev2_vx[:,vx_max_col_index],label="2 iter ago",
+        #~ linestyle='dotted',linewidth=2)
+    plt.xlabel("Depth (Mm)",fontsize=25)
+    plt.ylabel("vx (m/s)",fontsize=25)
+    plt.legend(loc='best',fontsize=20)
     plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.tick_params(axis='both', which='major', labelsize=18)
     
     plt.subplot(122)
-    plt.plot(z,true_vz[:,vz_max_col_index],label="True vz")
-    plt.plot(z,current_vz[:,vz_max_col_index],label="Iterated vz",
+    plt.plot(z,true_vz[:,vz_max_col_index],label="True")
+    plt.plot(z,current_vz[:,vz_max_col_index],label="Iter",
     linestyle='dashed',linewidth=2)
-    if prev1_vz is not None:
-        plt.plot(z,prev1_vz[:,vz_max_col_index],label="Previous iter",
-        linestyle='dotted',linewidth=2)
-    if prev2_vz is not None:
-        plt.plot(z,prev2_vz[:,vz_max_col_index],label="2 iter ago",
-        linestyle='dotted',linewidth=2)
-    plt.xlabel("Depth (Mm)",fontsize=20)
-    plt.ylabel("vz (m/s)",fontsize=20)
-    plt.legend(loc='best')
+    #~ if prev1_vz is not None:
+        #~ plt.plot(z,prev1_vz[:,vz_max_col_index],label="Previous iter",
+        #~ linestyle='dotted',linewidth=2)
+    #~ if prev2_vz is not None:
+        #~ plt.plot(z,prev2_vz[:,vz_max_col_index],label="2 iter ago",
+        #~ linestyle='dotted',linewidth=2)
+    plt.xlabel("Depth (Mm)",fontsize=25)
+    plt.ylabel("vz (m/s)",fontsize=25)
+    plt.legend(loc='best',fontsize=20)
     plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.tick_params(axis='both', which='major', labelsize=18)
     
     plt.tight_layout()
     

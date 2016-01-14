@@ -1639,13 +1639,13 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
 
 !~   f_mode_const=5.8
 
-    Poly(0)=2.65
-    Poly(1)=5.7
-    Poly(2)=-1.2
+    Poly(0)=1.98567115899
+    Poly(1)=8.09108986838
+    Poly(2)=-3.20316331815
 
-    Polylow(0)=2.4
-    Polylow(1)=5.4
-    Polylow(2)=-1.3
+    Polylow(0)=1.80035417224
+    Polylow(1)=7.42939105658
+    Polylow(2)=-2.84595764385
 
     f_low = 1.6
     df = 0.5 
@@ -1698,13 +1698,13 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
 
 !~   f_mode_const=5.8
 
-    Poly(0)=2.9
-    Poly(1)=5.9
-    Poly(2)=-1.3
+    Poly(0)=2.18544600032
+    Poly(1)=8.68183289647
+    Poly(2)=-3.84478880142
 
-    Polylow(0)=2.65
-    Polylow(1)=5.7
-    Polylow(2)=-1.2
+    Polylow(0)=1.98297334673
+    Polylow(1)=7.94931076885
+    Polylow(2)=-3.00725356897
 
     f_low = 1.6
     df = 0.5 

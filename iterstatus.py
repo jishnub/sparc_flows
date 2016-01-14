@@ -1,4 +1,4 @@
-import os,read_params,glob
+import os,read_params,glob,fnmatch
 
 datadir=read_params.get_directory()
 print datadir
@@ -12,8 +12,9 @@ if not os.path.exists(os.path.join(datadir,"update")):
     print "qsub data_forward.sh"
     quit()
 
-lsfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in f])
-misfitfiles=sorted([int(f[-2:]) for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in f])
+updatedir = os.path.join(datadir,"update")
+lsfiles=sorted([int(f[-2:]) for f in fnmatch.filter(os.listdir(updatedir),'linesearch_[0-9][0-9]')])
+misfitfiles=sorted([int(f[-2:]) for f in fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]')])
 
 if len(misfitfiles)==0:
     print "Zero iterations done."
@@ -22,7 +23,8 @@ if len(misfitfiles)==0:
 
 if len(misfitfiles)>len(lsfiles):
     print "Forward computation for iteration",misfitfiles[-1],"done"
-    print "python grad.py && qsub linesearch.sh"
+    print "python grad.py algo=cg 0.1 0.2 0.3 0.4 0.5 0.6"
+    print "qsub linesearch.sh"
     quit()
 
 if len(misfitfiles)==len(lsfiles):

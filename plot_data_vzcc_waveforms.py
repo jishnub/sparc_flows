@@ -71,9 +71,6 @@ if plotridge:
 else:
     ridges=[modes[modes_used[0]]+'mode']
     
-print ridges
-exit()
-    
 iterno=0
 if filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv): 
     iterno=int(filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv)[0].split("=")[-1])
@@ -95,6 +92,7 @@ for ridge in ridges:
                 "rig",ttfile[lineno,3],"loc",ttfile[lineno,4],"tmin",ttfile[lineno,5],"tmax",ttfile[lineno,6]
         lef=ttfile[lineno,2]
         rig=ttfile[lineno,3]
+    except: pass
 
     modefilter = fitsread(ridge+'_filter.fits')
     data_filtered=np.fft.ifft2(np.fft.fft2(data)*modefilter).real
@@ -105,9 +103,10 @@ for ridge in ridges:
     ax1.set_title(ridge[:-4]+" "+ridge[-4:]+" time-distance",fontsize=20)
     
     if ttfile is not None:
-        plotc.draw_hlines(y=[t[lef],t[rig]],linestyle='dashed')
+        plt.axhline(t[lef],linestyle='dashed')
+        plt.axhline(t[rig],linestyle='dashed')
         
-    plotc.draw_vlines(x=[x[pix]-srcloc],linestyle='dotted')
+    plt.axvline(x[pix]-srcloc,linestyle='dotted')
     plt.ylim(t[10],t[200])
     plt.xlim(-70,70)
     plt.ylabel("Time (min)",fontsize=20)
@@ -122,8 +121,9 @@ for ridge in ridges:
     ax=plt.gca()
     xlim_cur=ax.get_xlim()
     if ttfile is not None:
-        plotc.draw_hlines(y=[t[lef],t[rig]],xmin=-1,xmax=1,linestyle='dashed')
-        plt.ylim(t[lef]*0.8,t[rig]*1.2)
+        plt.axhline(t[lef],xmin=-1,xmax=1,linestyle='dashed')
+        plt.axhline(t[rig],xmin=-1,xmax=1,linestyle='dashed')
+        plt.ylim(t[lef]*0.95,t[rig]*1.05)
     ax.set_xlim(xlim_cur)     
     plt.ylabel("Time (min)",fontsize=20)
     plt.xlabel("Wave Velocity",fontsize=20)

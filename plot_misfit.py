@@ -21,7 +21,11 @@ typeinp=filter(lambda x: x.startswith("type="),sys.argv)
 if len(typeinp)==0: mistype="data"
 else: mistype = typeinp[0].split("=")[-1]
 
+itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
+if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
+else: itercutoff=np.inf
 
+nfiles = min(itercutoff,nfiles)
 
 srclocs = np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
 nsrc = len(srclocs)
@@ -31,16 +35,19 @@ modes={'0':'fmode'}
 for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
 modes['8']='large_dist_pmode'
 
+def spaced(mode):
+    return mode[:-4]+" "+mode[-4:]
+
 if mistype == "data":
 
     modemisfit = np.zeros((len(ridges),nfiles,nsrc))
 
-    subplot_layout = plotc.layout_subplots(len(ridges))[:2]
+    subplot_layout = plotc.layout_subplots(4)[:2]
 
-
-    for plotno,ridge in enumerate(ridges):
+    for plotno,ridge in enumerate(ridges[:4]):
         
         for src in xrange(1,nsrc+1):
+            
             for iterno in xrange(nfiles):
             
                 ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
@@ -57,27 +64,21 @@ if mistype == "data":
 
             plt.subplot(*subplot_index)
             plt.semilogy(range(nfiles),modemisfit[plotno,:,src-1],'o-',label="x="+str(int(srclocs[src-1]))+" Mm")
-            plt.semilogy(range(nfiles),[0]*nfiles,ls='dashed')
-
-            plt.title(modes[ridge].replace("_"," "),fontsize=16,loc='right')
             
-            #~ plt.gca().yaxis.set_major_locator(MaxNLocator(4,prune='both'))
-            plt.tick_params(axis='both', which='major', labelsize=14)
-            #~ plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-
-            plt.xlim(-0.5,nfiles+0.5)
-            #~ plt.legend()
-            
-        #~ insetax=plt.axes([0.35, 0.5, .3, .3])
-        #~ plt.plot(range(nfiles),np.sum(modemisfit[plotno],axis=-1))
-        #~ plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-        #~ plt.ylabel("Total Misfit")
-
-    plt.gcf().text(0.5, 0.02, 'Iteration number', ha='center',fontsize=20)
-    plt.gcf().text(0.02, 0.5, 'Mean misfit per receiver ($s^2$)', va='center', rotation='vertical',fontsize=20)
+        plt.title(spaced(modes[ridge].replace("_"," ")),fontsize=16,loc='right')
+        plt.tick_params(axis='both', which='major', labelsize=14)    
+        plt.xlim(-0.5,nfiles+0.5)
+        plt.grid()
     
-    plt.subplots_adjust(hspace=0.3)
-    plt.show()
+    for sp in xrange(subplot_layout[1]):
+        sp_ind = (subplot_layout[0]-1)*subplot_layout[1]+sp+1
+        subplot_index = (subplot_layout+(sp_ind,))
+        plt.subplot(*subplot_index)
+        plt.xlabel("Iteration",fontsize=25)
+        
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=0.3,left=0.13)
+    plt.gcf().text(0.02, 0.5, 'Mean misfit per receiver ($s^2$)', va='center', rotation='vertical',fontsize=25)
 
 elif mistype == "model":
     try:  
@@ -88,7 +89,7 @@ elif mistype == "model":
     
     modelmisfit_list = []
     
-    for iterno in xrange(nfiles):    
+    for iterno in xrange(nfiles):
         try:  
             itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_"+str(iterno).zfill(2)+".fits")))
         except IOError:
@@ -105,12 +106,12 @@ elif mistype == "model":
     
     plt.plot(range(nfiles),modelmisfit_list,'o-',label="vx")
     plt.xlim(-0.5,nfiles+0.5)
-    plt.ylim(0.4,1.05)
-    plt.xlabel("Iteration number",fontsize=20)
-    plt.ylabel("Normalized model misfit",fontsize=20)
+    plt.ylim(0.5,1.05)
+    plt.xlabel("Iteration number",fontsize=25)
+    plt.ylabel("Normalized model misfit",fontsize=25)
     
-    plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
+    plt.tick_params(axis='both', which='major', labelsize=18)
     
 
     try:  
@@ -138,9 +139,13 @@ elif mistype == "model":
     
     plt.plot(range(nfiles),modelmisfit_list,'s-',label="vz")
     
-    plt.legend(loc="best")
+    plt.grid()
+    
+    plt.legend(loc="best",fontsize=20)
+    
     plt.tight_layout()
-    plt.show()
+
+plt.show()
 
     
 
