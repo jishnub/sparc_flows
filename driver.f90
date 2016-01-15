@@ -44,7 +44,7 @@ Program driver
     integer i,j, init, ierr, t, k, index(1000,2), randinit(2), aind, nsteps_given,reclmax, loc
     real*8 start_time,end_time,tempf,t1,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
     real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz
-    real*8 bes(0:2), Lregular,signt
+    real*8 bes(0:2), Lregular,signt, xcutoffpix, xcutoff
     logical saved, iteration, init_variables, tempbool
     character*1 ci
     real*8 tau,dt
@@ -164,6 +164,12 @@ Program driver
                     psivar(:,:,1:10) = 0.0
                     psivar(:,:,nz-9:nz) = 0.0
                     
+                    xcutoffpix = 40./(xlength/(10.**8)) * nx
+                    do i=1,nx
+                        xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
+                        psivar(i,:,:) = psivar(i,:,:)*xcutoff
+                    end do
+                    
                     call writefits_3d("psivar_used.fits",psivar,nz)
                     
                     if (.not. CONSTRUCT_KERNELS) then
@@ -180,10 +186,6 @@ Program driver
                         v0_z = v0_z/rho0 
                     endif
                 
-!~                     v0_x(:,:,260:nz)=0
-!~                     v0_x(:,:,1:30) = 0
-!~                     v0_z(:,:,260:nz)=0
-!~                     v0_z(:,:,1:30) = 0
                 elseif (enf_cont .and. (vx_cont)) then
                     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
                     v0_x = v0_x/dimc * 10.**2
@@ -1639,6 +1641,13 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
 
 !~   f_mode_const=5.8
 
+!~     Poly(0)=2.65
+!~     Poly(1)=5.7
+!~     Poly(2)=-1.2
+!~ 
+!~     Polylow(0)=2.4
+!~     Polylow(1)=5.4
+!~     Polylow(2)=-1.3
     Poly(0)=1.98567115899
     Poly(1)=8.09108986838
     Poly(2)=-3.20316331815
@@ -1698,6 +1707,13 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
 
 !~   f_mode_const=5.8
 
+!~     Poly(0)=2.9
+!~     Poly(1)=5.9
+!~     Poly(2)=-1.3
+!~ 
+!~     Polylow(0)=2.65
+!~     Polylow(1)=5.7
+!~     Polylow(2)=-1.2
     Poly(0)=2.18544600032
     Poly(1)=8.68183289647
     Poly(2)=-3.84478880142

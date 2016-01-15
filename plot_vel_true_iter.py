@@ -57,55 +57,51 @@ if enf_cont and (contvar == 'psi'):
         prev1_vz=None
         prev2_vz=None
     
-    gl=plotc.gridlist(1,4)
     
     warnings.filterwarnings("ignore", message="Unicode equal comparison failed")
     
-    ax1,cb1=plotc.colorplot(true_vx,sp=next(gl),x=x,y=z,
-    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
+    yr_plot = [-5,None]
     
-    plt.ylabel("Depth (Mm)",fontsize=15)
+    ax1,cb1=plotc.colorplot(true_vx,sp=221,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"True vx",fontsize=16,y=1.01)
+    plt.title(r"True vx",fontsize=20,y=1.01)
     
-    ax2,cb2=plotc.colorplot(current_vx,sp=next(gl),x=x,y=z,
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
-    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
+    ax2,cb2=plotc.colorplot(current_vx,sp=222,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"Iterated vx",fontsize=16,y=1.01)
+    plt.title(r"Iterated vx",fontsize=20,y=1.01)
     
-    ax3,cb3=plotc.colorplot(true_vz,sp=next(gl),x=x,y=z,
-    centerzero=True,axes_properties={'sharey':ax1,'hide_yticklabels':True},
-    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
+    ax4,cb4=plotc.colorplot(true_vz,sp=223,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"True vz",fontsize=16,y=1.01)
+    plt.title(r"True vz",fontsize=20,y=1.01)
     
-    ax4,cb4=plotc.colorplot(current_vz,sp=next(gl),x=x,y=z,
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True,
-    colorbar_properties={"orientation":"horizontal","shrink":0.8})[0:2]
+    ax5,cb5=plotc.colorplot(current_vz,sp=224,x=x,y=z,yr=yr_plot,centerzero=True,
+    colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    for ax in [ax2,ax3]:
-        ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    plt.title(r"Iterated vz",fontsize=20,y=1.01)
     
-    for ax in [ax1,ax2,ax3,ax4]:
+    #~ ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    #~ for ax in [ax2,ax3]:
+        #~ ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    #~ ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    
+    for ax in [ax1,ax2,ax4,ax5]:
         ax.set_xlim(-Lx/8,Lx/8)
         ax.set_ylim(-5,z.max())
-        forceAspect(ax)
+        #~ forceAspect(ax)
         ax.set_xlabel("x (Mm)",fontsize=15)
         ax.yaxis.set_tick_params(which='major', labelsize=12)
         ax.xaxis.set_tick_params(which='major', labelsize=12)
+    
+    ax1.set_ylabel("Depth (Mm)",fontsize=20)
+    ax4.set_ylabel("Depth (Mm)",fontsize=20)
         
-    for cb in [cb1,cb2,cb3,cb4]:
+    for cb in [cb1,cb2,cb4,cb5]:
         cb.ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    cb1.ax.set_ylabel("m/s",rotation=90,fontsize=14)
+        cb.ax.set_ylabel("m/s",rotation=90,fontsize=14)
     
-    
-    plt.title(r"Iterated vz",fontsize=16,y=1.01)
-    
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0)
     
     
     plt.figure()
@@ -116,37 +112,28 @@ if enf_cont and (contvar == 'psi'):
     plt.plot(z,true_vx[:,vx_max_col_index],label="True")
     plt.plot(z,current_vx[:,vx_max_col_index],label="Iter",
     linestyle='dashed',linewidth=2)
-    #~ if prev1_vx is not None:
-        #~ plt.plot(z,prev1_vx[:,vx_max_col_index],label="Previous iter",
-        #~ linestyle='dotted',linewidth=2)
-    #~ if prev2_vx is not None:
-        #~ plt.plot(z,prev2_vx[:,vx_max_col_index],label="2 iter ago",
-        #~ linestyle='dotted',linewidth=2)
-    plt.xlabel("Depth (Mm)",fontsize=25)
-    plt.ylabel("vx (m/s)",fontsize=25)
-    plt.legend(loc='best',fontsize=20)
+
+    plt.xlabel("Depth (Mm)",fontsize=20)
+    plt.ylabel("vx (m/s)",fontsize=20)
+    plt.legend(loc='best',fontsize=18)
     plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=18)
-    
+    plt.tick_params(axis='both', which='major', labelsize=14)
+
     plt.subplot(122)
     plt.plot(z,true_vz[:,vz_max_col_index],label="True")
     plt.plot(z,current_vz[:,vz_max_col_index],label="Iter",
     linestyle='dashed',linewidth=2)
-    #~ if prev1_vz is not None:
-        #~ plt.plot(z,prev1_vz[:,vz_max_col_index],label="Previous iter",
-        #~ linestyle='dotted',linewidth=2)
-    #~ if prev2_vz is not None:
-        #~ plt.plot(z,prev2_vz[:,vz_max_col_index],label="2 iter ago",
-        #~ linestyle='dotted',linewidth=2)
-    plt.xlabel("Depth (Mm)",fontsize=25)
-    plt.ylabel("vz (m/s)",fontsize=25)
-    plt.legend(loc='best',fontsize=20)
+
+    plt.xlabel("Depth (Mm)",fontsize=20)
+    plt.ylabel("vz (m/s)",fontsize=20)
+    plt.legend(loc='best',fontsize=18)
     plt.xlim(-8,2)
     plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=18)
+    plt.tick_params(axis='both', which='major', labelsize=14)
     
     plt.tight_layout()
+    plt.subplots_adjust(wspace=0.3)
     
     
     
