@@ -5,7 +5,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np
 import read_params
 import pyfits
-import os,fnmatch
+import os,fnmatch,sys
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
     
@@ -30,16 +30,21 @@ Rsun=695.8
 z=np.loadtxt(os.path.join(codedir,read_params.get_solarmodel()),usecols=[0])
 z=(z-1)*Rsun
 
+#~ Check if specific iter is to be plotted
+iter_to_plot=next(iter(filter(lambda x: x.startswith("iter="),sys.argv)),None)
+if iter_to_plot is not None: iter_to_plot = iter_to_plot.split("=")[-1].zfill(2)
+else: iter_to_plot = iterm1
+
 if enf_cont and (contvar == 'psi'):
     true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
-    current_model = fitsread(os.path.join(datadir,'model_psi_ls00.fits'))
+    current_model = fitsread(os.path.join(datadir,'update','model_psi_'+iter_to_plot+'.fits'))
     current_model = current_model-current_model[0,0]
     plot_update=True
     if plot_update:
         try:
-            update=fitsread(os.path.join(datadir,'update','update_psi_'+iterm1+'.fits'))
+            update=fitsread(os.path.join(datadir,'update','update_psi_'+iter_to_plot+'.fits'))
         except IOError:
-            update=np.zeros_like(current_model)
+            update=None
             print "Could not load update psi"
         gl=plotc.layout_subplots(3)[2]
     else:
@@ -70,7 +75,7 @@ if enf_cont and (contvar == 'psi'):
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    if plot_update:
+    if plot_update and update is not None:
         cp=plotc.colorplot(update,sp=next(gl),x=x,y=z,
         yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
         axes_properties={'sharey':ax1,'hide_yticklabels':True})
