@@ -15,7 +15,7 @@ datadir=read_params.get_directory()
 masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 
-dt=0.5
+dt=read_params.get_dt()/60.
 
 temp=filter(lambda x: x.startswith("src=") or x.startswith("source="),sys.argv)
 if temp: src=int(temp[0].split("=")[-1])
@@ -29,25 +29,25 @@ if src>len(masterpixels): src=len(masterpixels)
 src=str(src).zfill(2)
 
 
-Nx=read_params.get_nx()
+nx=read_params.get_nx()
 Lx=read_params.get_xlength()
-x=np.linspace(-Lx/2,Lx/2,Nx,endpoint=False)
+x=np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 
 #~ Read in velocity and compute length scales
 
 vxfile=os.path.join(codedir,'true_vx.fits')
 vx=fitsread(vxfile)
-vx_max_row_index,vx_max_col_index = divmod(vx.argmax(),Nx)
+vx_max_row_index,vx_max_col_index = divmod(vx.argmax(),nx)
 vx_max_row = vx[vx_max_row_index]
 vx=None
 vxmax=vx_max_row.max()
-vx_hwhm=np.where(vx_max_row>vxmax/2)[0][-1]-Nx//2
-vlimleft,vlimright=x[Nx//2-vx_hwhm],x[Nx//2+vx_hwhm]
+vx_hwhm=np.where(vx_max_row>vxmax/2)[0][-1]-nx//2
+vlimleft,vlimright=x[nx//2-vx_hwhm],x[nx//2+vx_hwhm]
 
 datafile=os.path.join(datadir,'forward_src'+src+'_ls00','data.fits')
 data=fitsread(datafile)
-Nt=data.shape[0]
-time=np.arange(Nt)*dt
+nt=data.shape[0]
+time=np.arange(nt)*dt
 
 
 
@@ -99,9 +99,7 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     if num_iterations > 4: plot_every = int(np.ceil(np.sqrt(num_iterations)))
     if num_iterations > 10: plot_every = int(num_iterations//2)
     
-    iters_to_plot = ttdiff_ridges[mode]["iter_no"][::plot_every]
-    #~ if iters_to_plot[-1] != min(itercutoff,ttdiff_ridges[mode]["iter_no"][-1]):
-        #~ iters_to_plot.append(min(itercutoff,ttdiff_ridges[mode]["iter_no"][-1]))
+    iters_to_plot = [ttdiff_ridges[mode]["iter_no"][i] for i in xrange(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
     
     for color_index,iter_index in enumerate(iters_to_plot):
         
@@ -155,5 +153,5 @@ for ax_ind,ax in enumerate(tdiffaxes):
 
 tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)
-
+#~ plt.suptitle(str(read_params.get_dt_simulation()),fontsize=20)
 plt.show()
