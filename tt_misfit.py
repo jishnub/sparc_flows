@@ -53,7 +53,7 @@ time=np.arange(nt)*dt
 
 modes={'0':'fmode'}
 for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
-modes['8']="large_dist_pmode"
+modes['8']="first_bounce_pmode"
 ridge_filters=sorted(read_params.get_modes_used())
 
 def spaced(a): 

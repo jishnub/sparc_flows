@@ -33,7 +33,7 @@ nsrc = len(srclocs)
 ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
 for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
-modes['8']='large_dist_pmode'
+modes['8']='first_bounce_pmode'
 
 def spaced(mode):
     return mode[:-4]+" "+mode[-4:]

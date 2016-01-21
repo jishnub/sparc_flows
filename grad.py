@@ -152,6 +152,8 @@ def main():
     nx = read_params.get_nx()
     ny = 1
     nz = read_params.get_nz()
+    
+    Lx = read_params.get_xlength()
 
     back=np.loadtxt(read_params.get_solarmodel())
 
@@ -412,13 +414,24 @@ def main():
         
         updatemax=update.max()
         if updatemax!=0: update/=updatemax
-
+        
+        cutoff_switch,cutoff_dist=read_params.get_cutoff_dist()
+        cutoff = 1.0
+        
+        if cutoff_switch:
+            pix = np.arange(nx)
+            cutoff_pix = cutoff_dist/Lx*nx
+            cutoff =  1./(1+np.exp((pix-(nx/2+xcutoffpix))/2.))+1./(1+np.exp(-(pix-(nx/2-xcutoffpix))/2.))-1.
+            cutoff = cutoff.reshape(nx,1,1)
+        
         if kind=='linear':
             model_scale = rms(model)
             if model_scale == 0: model_scale = 100
-            return model+eps*update*model_scale
+            test= (model+eps*update*model_scale)*cutoff
         elif kind=='exp':
-            return model*(1+eps*update)
+            test= model*(1+eps*update)*cutoff
+        
+        return test
     
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):

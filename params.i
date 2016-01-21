@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/cutoff/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/largedist/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -156,3 +156,8 @@ parameter ( psi_cont = .TRUE. )
 parameter ( vx_cont = .FALSE. )
 parameter ( vz_cont = .FALSE. )
 
+!CUTOFF
+logical cutoff_switch
+real*8 cutoff_dist
+parameter ( cutoff_switch = .TRUE. )
+parameter ( cutoff_dist = 40. )

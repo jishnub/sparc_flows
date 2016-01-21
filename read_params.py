@@ -157,3 +157,21 @@ def get_Lregular():
                 psi_cont_check=False
                 break
     
+def get_cutoff_dist():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    switch=False
+    val = None
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile.readlines():
+            line=line.strip()
+            if line.startswith("!"): continue
+            
+            if ("parameter" in line.lower()) and ("cutoff_switch" in line.lower()):
+                switch= line.split("=")[-1].split(")")[0].strip()
+                if switch.upper() == '.TRUE.': switch =True
+                elif switch.upper() == '.FALSE.': switch = False
+            if ("parameter" in line.lower()) and ("cutoff_dist" in line.lower()):
+                val= float(line.split("=")[-1].split(")")[0].strip())
+                
+    return switch,val
