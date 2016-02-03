@@ -420,16 +420,16 @@ def main():
         
         if cutoff_switch:
             pix = np.arange(nx)
-            cutoff_pix = cutoff_dist/Lx*nx
+            xcutoffpix = cutoff_dist/Lx*nx
             cutoff =  1./(1+np.exp((pix-(nx/2+xcutoffpix))/2.))+1./(1+np.exp(-(pix-(nx/2-xcutoffpix))/2.))-1.
             cutoff = cutoff.reshape(nx,1,1)
         
         if kind=='linear':
             model_scale = rms(model)
             if model_scale == 0: model_scale = 100
-            test= (model+eps*update*model_scale)*cutoff
+            test= model+eps*update*model_scale*cutoff
         elif kind=='exp':
-            test= model*(1+eps*update)*cutoff
+            test= model*(1+eps*update*cutoff)
         
         return test
     

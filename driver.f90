@@ -1122,7 +1122,7 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
 
     print *,"Continuity check maxval",maxval(abs(cont)),", should ideally be zero"
     
-    if (contrib=="01") call writefits_3d('contcheck_ls'//jobno//'.fits',cont,nz)
+!~     if (contrib=="01") call writefits_3d('contcheck_ls'//jobno//'.fits',cont,nz)
         
 END SUBROUTINE CONTINUITY_CHECK
 

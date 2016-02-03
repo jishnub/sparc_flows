@@ -140,6 +140,7 @@ for query in xrange(100000):
         if running_ls:
             print "It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly"
             exit()
+        print "Misfit from previous iteration",np.sum(np.loadtxt(os.path.join(datadir,"update",misfit_files[-1]),usecols=[2]))
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
         try: 
