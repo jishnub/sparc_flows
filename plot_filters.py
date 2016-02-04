@@ -594,7 +594,7 @@ if modes['p6mode']:
     plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=plot_freq_range,sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
-    title="p5 mode",colorbar=True,
+    title="p6 mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
     subplot_properties={'sharey':ax1,'sharex':ax1})
     
@@ -675,7 +675,7 @@ if modes['p7mode']:
     plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
     xr=[0,None],yr=plot_freq_range,sp=122,
     axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
-    title="p5 mode",colorbar=True,
+    title="p7 mode",colorbar=True,
     colorbar_properties={'orientation':'horizontal','shrink':0.8},
     subplot_properties={'sharey':ax1,'sharex':ax1})
     

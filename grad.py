@@ -249,6 +249,7 @@ def main():
             grad = read_grad(var=var,iterno=iterno)
             update = -grad
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
+            print "Steepest descent"
         
         if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
             sd_update(var='c')

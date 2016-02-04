@@ -85,9 +85,10 @@ for iteration_no in xrange(0,100):
 
 #~ The actual plotting stuff
 
-modes_to_plot=6
+modes_to_plot=8
 
 subplot_layout=plotc.layout_subplots(len(ridge_filters[:modes_to_plot]))[:2]
+
 tdfig,tdiffaxes=plotc.plt.subplots(*subplot_layout)
 tdiffaxes=np.array(list([tdiffaxes])).flatten()
 
@@ -129,14 +130,14 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
         
         
 for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
-    tdiffaxes[ax_no].set_ylabel(r"$\Delta \tau$ (sec)",fontsize=30)
+    tdiffaxes[ax_no].set_ylabel(r"$\Delta \tau$ (sec)",fontsize=20)
 
 for ax_no in xrange(subplot_layout[1]*(subplot_layout[0]-1),len(tdiffaxes)):    
-    tdiffaxes[ax_no].set_xlabel("x (Mm)",fontsize=30)
+    tdiffaxes[ax_no].set_xlabel("x (Mm)",fontsize=20)
     
    
 for ax_ind,ax in enumerate(tdiffaxes):
-    if ax_ind>= len(ridge_filters[:modes_to_plot]): 
+    if ax_ind>= modes_to_plot: 
         ax.axis('off')
         continue
     #~ Source location line
@@ -147,9 +148,16 @@ for ax_ind,ax in enumerate(tdiffaxes):
     ax.axvspan(vlimleft,vlimright,color='paleturquoise')
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    ax.legend(loc="best")
     ax.xaxis.set_tick_params(which='major', labelsize=16)
     ax.yaxis.set_tick_params(which='major', labelsize=16)
+
+if modes_to_plot<np.prod(subplot_layout):
+    # This means that there are empty subplots
+    # Place legend in empty spot
+    handles,labels = tdiffaxes[modes_to_plot-1].get_legend_handles_labels()
+    tdiffaxes[-1].legend(handles,labels,loc="center")
+else:
+    for ax in tdiffaxes[:modes_to_plot]: ax.legend(loc="best")
 
 tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)

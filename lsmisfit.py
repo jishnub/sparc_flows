@@ -1,4 +1,4 @@
-import sys,os,glob,re
+import sys,os,glob,re,fnmatch
 import numpy as np
 import read_params
 
@@ -10,7 +10,8 @@ number_args=filter(lambda x: x.isdigit(),sys.argv)
 if number_args:
     iterno=number_args[0].zfill(2)
 else:
-    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","linesearch_*")) if "all" not in os.path.basename(f)]
+    lsfiles=[os.path.join(datadir,"update",f) for f in 
+    fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'linesearch_[0-9][0-9]')]
     nfiles=len(lsfiles)
     if nfiles==0:
         print "No linesearch files found"

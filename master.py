@@ -1,7 +1,8 @@
 from __future__ import division
-import subprocess ,time, os, shutil,read_params,glob,fnmatch
+import subprocess ,time, os, shutil,read_params,glob,fnmatch,sys
 import numpy as np
 import matplotlib.pyplot as plt
+from termcolor import colored
 
 np.set_printoptions(precision=5)
 
@@ -17,7 +18,10 @@ def grad_command(algo="cg",eps=[0.1*i for i in xrange(1,num_linesearches+1)]):
     eps_str = ' '.join(eps)
     return "python grad.py algo="+algo+" "+str(eps_str)
 
-id_text = "bigbox"
+if len(sys.argv)<1: 
+    print "Usage: python master.py <id>"
+    exit()
+id_text = sys.argv[1]
 
 def update_id_in_file(filename):
     with open(filename,'r') as f:
@@ -70,7 +74,7 @@ def get_eps_around_minimum(prev1_eps,prev1_misfits,prev2_eps=None,prev2_misfits=
         step = - p[1]/(2*p[0])
     elif p[0]==0:
         step = -p[2]/p[1]
-    assert step>0,"ls minimum predicted at less than zero step"
+    assert step>0,colored("ls minimum predicted at less than zero step","red")
     eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
     pred_misfit = np.polyval(p,eps)
     
@@ -117,7 +121,7 @@ for query in xrange(100000):
     
     if not os.path.exists(os.path.join(datadir,"forward_src01_ls00","data.fits")):
         #~ no iterations done
-        print "Running data_forward"
+        print colored("Running data_forward","blue")
         status=subprocess.call(data_command.split())
         assert status==0,"Error in running data forward"
         time.sleep(30)
@@ -125,11 +129,12 @@ for query in xrange(100000):
         
     misfit_files,misfit_all_files,ls_files,ls_all_files,iterno = get_iter_status()
     #~ print misfit_files,ls_files
-    print "Iteration",iterno
+    print colored("Iteration "+str(iterno),"green")
     
     if iterno==-1:
         #~ Start of iterations
-        print "Starting with iterations, running full for the first time"
+        print "#"*80
+        print colored("Starting with iterations, running full for the first time","blue")
         status=subprocess.call(full_command.split())
         assert status==0,"Error in running full"
         time.sleep(30)
@@ -138,7 +143,7 @@ for query in xrange(100000):
     elif len(misfit_files)>len(ls_files):
         running_full = False
         if running_ls:
-            print "It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly"
+            print colored("It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly","red")
             exit()
         print "Misfit from previous iteration",np.sum(np.loadtxt(os.path.join(datadir,"update",misfit_files[-1]),usecols=[2]))
         #~ Need to run linesearch for this iteration
@@ -212,7 +217,7 @@ for query in xrange(100000):
         assert status==0,"Error in running grad"
         
         #~ Run linesearch
-        print "Running linesearch"
+        print colored("Running linesearch","blue")
         status=subprocess.call(ls_command.split())
         assert status==0,"Error in running linesearch"
         running_ls = True
@@ -222,7 +227,7 @@ for query in xrange(100000):
     elif iterno>=0 and len(misfit_files)==len(ls_files):
         running_ls = False
         if running_full:
-            print "It seems the full misfit was not generated. Check if the previous full.sh finished without errors"
+            print colored("It seems the full misfit was not generated. Check if the previous full.sh finished without errors","red")
             exit()
         #~ check linesearch misfits
         ls_latest = os.path.join(datadir,"update",ls_files[-1])
@@ -231,7 +236,7 @@ for query in xrange(100000):
         try:
             lsdata = np.loadtxt(ls_latest)
         except IOError:
-            print "Could not load",ls_latest , "check if file exists"
+            print colored("Could not load "+ls_latest+", check if file exists","red")
             exit()
         
         assert len(np.where(lsdata[:,0]==1)[0])==num_linesearches,"Not all linesearches finished correctly"
@@ -269,10 +274,11 @@ for query in xrange(100000):
             plt.clf() # Refresh the linesearch stepsize-misfit plot
             
             #~ Run full.sh
-            print "Running full"
+            print "#"*80
+            print colored("Running full","blue")
             status=subprocess.call(full_command.split())
-            assert status==0,"Error in running full"
             running_full=True
+            assert status==0,"Error in running full"
             time.sleep(30)
         else:
             if misfit_diff[0]>0: print "Linesearch strictly increasing"
