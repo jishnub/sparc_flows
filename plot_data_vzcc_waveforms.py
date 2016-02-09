@@ -61,7 +61,7 @@ else:
 
 modes={'0':'f'}
 for i in xrange(1,8): modes[str(i)]='p'+str(i)
-modes['8']='large_dist_p'
+modes['8']='first_bounce_p'
 
 modes_used=read_params.get_modes_used()
 

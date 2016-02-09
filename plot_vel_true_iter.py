@@ -1,5 +1,6 @@
 from __future__ import division
 import plotc
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
@@ -7,6 +8,8 @@ import read_params
 import pyfits
 import os,fnmatch,sys
 import warnings
+
+matplotlib.rcParams['axes.unicode_minus'] = False
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
     
@@ -62,78 +65,109 @@ if enf_cont and (contvar == 'psi'):
     
     yr_plot = [-5,None]
     
-    ax1,cb1=plotc.colorplot(true_vx,sp=221,x=x,y=z,yr=yr_plot,
+    ax1,cb1=plotc.colorplot(true_vx,sp=231,x=x,y=z,yr=yr_plot,
     centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"True vx",fontsize=20,y=1.01)
+    plt.title(r"True vx",y=1.01)
     
-    ax2,cb2=plotc.colorplot(current_vx,sp=222,x=x,y=z,yr=yr_plot,
+    ax2,cb2,qm=plotc.colorplot(current_vx,sp=232,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})
+    
+    plt.title(r"Iterated vx",y=1.01)
+    
+    plt.subplot(233)
+    model_misfit_initial = np.trapz(true_vx**2,x=x,axis=1)
+    max_misfit_init = model_misfit_initial.max()
+    model_misfit_initial/= max_misfit_init
+    model_misfit = np.trapz((true_vx - current_vx)**2,x=x,axis=1)
+    model_misfit/= max_misfit_init
+    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed')
+    plt.plot(model_misfit,z,color='black',linestyle='solid')
+    plt.title("Misfit")
+    ax=plt.gca()
+    ax.xaxis.set_major_locator(MaxNLocator(5,prune="both"))
+    ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
+    plt.ylim(-5,z.max())
+    cb3=plt.colorbar(mappable=qm,ax=ax,orientation="horizontal",shrink=0.8,pad=0.25)
+    #~ cb3.ax.set_visible(False)
+    
+    ax4,cb4=plotc.colorplot(true_vz,sp=234,x=x,y=z,yr=yr_plot,
     centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"Iterated vx",fontsize=20,y=1.01)
+    plt.title(r"True vz",y=1.01)
     
-    ax4,cb4=plotc.colorplot(true_vz,sp=223,x=x,y=z,yr=yr_plot,
-    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
-    
-    plt.title(r"True vz",fontsize=20,y=1.01)
-    
-    ax5,cb5=plotc.colorplot(current_vz,sp=224,x=x,y=z,yr=yr_plot,centerzero=True,
+    ax5,cb5=plotc.colorplot(current_vz,sp=235,x=x,y=z,yr=yr_plot,centerzero=True,
     colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
     
-    plt.title(r"Iterated vz",fontsize=20,y=1.01)
+    plt.title(r"Iterated vz",y=1.01)
     
-    #~ ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    #~ for ax in [ax2,ax3]:
-        #~ ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    #~ ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    plt.subplot(236)
+    model_misfit_initial = np.trapz(true_vz**2,x=x,axis=-1)
+    max_misfit_init = model_misfit_initial.max()
+    model_misfit_initial/= max_misfit_init
+    model_misfit = np.trapz((true_vz - current_vz)**2,x=x,axis=-1)
+    model_misfit/= max_misfit_init
+    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed')
+    plt.plot(model_misfit,z,color='black',linestyle='solid')
+    #~ plt.legend(loc="lower right")
+    plt.title("Misfit")
+    ax=plt.gca()
+    ax.xaxis.set_major_locator(MaxNLocator(5,prune="both"))
+    ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
+    plt.ylim(-5,z.max())
+    cb6=plt.colorbar(mappable=qm,ax=ax,orientation="horizontal",shrink=0.8,pad=0.25)
+    
     
     for ax in [ax1,ax2,ax4,ax5]:
         ax.set_xlim(-Lx/8,Lx/8)
         ax.set_ylim(-5,z.max())
-        #~ forceAspect(ax)
-        ax.set_xlabel("x (Mm)",fontsize=15)
-        ax.yaxis.set_tick_params(which='major', labelsize=12)
-        ax.xaxis.set_tick_params(which='major', labelsize=12)
+        ax.set_xlabel("x (Mm)")
     
-    ax1.set_ylabel("Depth (Mm)",fontsize=20)
-    ax4.set_ylabel("Depth (Mm)",fontsize=20)
+    ax1.set_ylabel("Depth (Mm)")
+    ax4.set_ylabel("Depth (Mm)")
         
     for cb in [cb1,cb2,cb4,cb5]:
         cb.ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
         cb.ax.set_ylabel("m/s",rotation=90,fontsize=14)
-    
-    
-    
-    plt.figure()
-    vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
-    vz_max_row_index,vz_max_col_index = divmod(true_vz.argmax(),nx)
-    
-    plt.subplot(121)
-    plt.plot(z,true_vx[:,vx_max_col_index],label="True")
-    plt.plot(z,current_vx[:,vx_max_col_index],label="Iter",
-    linestyle='dashed',linewidth=2)
-
-    plt.xlabel("Depth (Mm)",fontsize=20)
-    plt.ylabel("vx (m/s)",fontsize=20)
-    plt.legend(loc='best',fontsize=18)
-    plt.xlim(-8,2)
-    plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=14)
-
-    plt.subplot(122)
-    plt.plot(z,true_vz[:,vz_max_col_index],label="True")
-    plt.plot(z,current_vz[:,vz_max_col_index],label="Iter",
-    linestyle='dashed',linewidth=2)
-
-    plt.xlabel("Depth (Mm)",fontsize=20)
-    plt.ylabel("vz (m/s)",fontsize=20)
-    plt.legend(loc='best',fontsize=18)
-    plt.xlim(-8,2)
-    plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    
+        
+    plotc.apj_2col_format(plt.gcf())
     plt.tight_layout()
-    plt.subplots_adjust(wspace=0.3)
+    cb3.ax.set_visible(False)
+    cb6.ax.set_visible(False)
+    
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig("plots/f6.eps")
+    
+    #~ plt.figure()
+    #~ vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
+    #~ vz_max_row_index,vz_max_col_index = divmod(true_vz.argmax(),nx)
+    #~ 
+    #~ plt.subplot(121)
+    #~ plt.plot(z,true_vx[:,vx_max_col_index],label="True")
+    #~ plt.plot(z,current_vx[:,vx_max_col_index],label="Iter",
+    #~ linestyle='dashed',linewidth=2)
+#~ 
+    #~ plt.xlabel("Depth (Mm)",fontsize=20)
+    #~ plt.ylabel("vx (m/s)",fontsize=20)
+    #~ plt.legend(loc='best',fontsize=18)
+    #~ plt.xlim(-8,2)
+    #~ plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    #~ plt.tick_params(axis='both', which='major', labelsize=14)
+#~ 
+    #~ plt.subplot(122)
+    #~ plt.plot(z,true_vz[:,vz_max_col_index],label="True")
+    #~ plt.plot(z,current_vz[:,vz_max_col_index],label="Iter",
+    #~ linestyle='dashed',linewidth=2)
+#~ 
+    #~ plt.xlabel("Depth (Mm)",fontsize=20)
+    #~ plt.ylabel("vz (m/s)",fontsize=20)
+    #~ plt.legend(loc='best',fontsize=18)
+    #~ plt.xlim(-8,2)
+    #~ plt.gca().yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    #~ plt.tick_params(axis='both', which='major', labelsize=14)
+    #~ 
+    #~ plt.tight_layout()
+    #~ plt.subplots_adjust(wspace=0.3)
     
     
     

@@ -85,10 +85,6 @@ def compute_forward_adjoint_kernel(src):
                         os.path.join(datadir,"tt","iter"+iterno2dig,
                         "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
                         
-    #~ windows_files = glob.glob(os.path.join(datadir,forward,"windows.*"))
-    #~ for w in windows_files:
-        #~ safecopy(w,os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src,os.path.basename(w)))
-
     
     ####################################################################
     #~ Adjoint

@@ -7,6 +7,7 @@ import matplotlib.patches as patches
 from matplotlib.ticker import MaxNLocator
 import read_params
 import matplotlib.pyplot as plt
+import itertools
 
 def fitsread(fitsfile): return np.squeeze(pf.getdata(fitsfile))
 
@@ -92,7 +93,7 @@ subplot_layout=plotc.layout_subplots(len(ridge_filters[:modes_to_plot]))[:2]
 tdfig,tdiffaxes=plotc.plt.subplots(*subplot_layout)
 tdiffaxes=np.array(list([tdiffaxes])).flatten()
 
-c=['olivedrab','burlywood','skyblue','dimgray','red','sienna','black','tomato','grey','teal']
+c=['olivedrab','black','blue','dimgray','red','sienna','black','tomato','grey','teal']
 
 for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     num_iterations=min(itercutoff,len(ttdiff_ridges[mode]["iter_no"]))
@@ -101,6 +102,8 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     if num_iterations > 10: plot_every = int(num_iterations//2)
     
     iters_to_plot = [ttdiff_ridges[mode]["iter_no"][i] for i in xrange(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
+    
+    linestyles = itertools.cycle(('solid','dashed','dotted'))
     
     for color_index,iter_index in enumerate(iters_to_plot):
         
@@ -116,15 +119,16 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
         ax=tdiffaxes[modeno]        
         
         #~ Points to the left
-        skip_pix = 3
+        skip_pix = 1
+        ls = next(linestyles)
         ax.plot(xcoords_left[::skip_pix],td[left_pix[::skip_pix],1],color=c[color_index],
-                    label="iter "+str(iter_index),marker='o',linestyle='-')
+                    label="iter "+str(iter_index),linestyle=ls,linewidth=2)
 
         #~ Points to the right
-        ax.plot(xcoords_right[::skip_pix],td[right_pix[::skip_pix],1],color=c[color_index],marker='o',linestyle='-')
+        ax.plot(xcoords_right[::skip_pix],td[right_pix[::skip_pix],1],color=c[color_index],linestyle=ls,linewidth=2)
 
         #~ Zero misfit line
-        ax.axhline(y=[0],ls='--')
+        ax.axhline(y=[0],ls='-',color='black')
         
         ax.set_title(spaced(modes[mode]),fontsize=18,loc='right')
         
@@ -161,5 +165,8 @@ else:
 
 tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)
-#~ plt.suptitle(str(read_params.get_dt_simulation()),fontsize=20)
-plt.show()
+
+plotc.apj_2col_format(plt.gcf())
+#~ plt.show()
+if not os.path.exists("plots"): os.makedirs("plots")
+plt.savefig("plots/f5.eps")

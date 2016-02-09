@@ -1,9 +1,13 @@
 from __future__ import division
+import matplotlib
+from matplotlib import rcParams
+rcParams['font.family']='serif'
+rcParams['font.serif']='Computer Modern'
 import matplotlib.pyplot as plt
 import numpy as np
 import read_params
 import pyfits,os
-from matplotlib.ticker import MaxNLocator,NullFormatter
+from matplotlib.ticker import MaxNLocator,NullFormatter,ScalarFormatter
 import plotc
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
@@ -27,7 +31,6 @@ modes_found = []
 for mode in modes_list: 
     try:
         arrays_to_plot.append(fitsread(os.path.join(parentdir,mode,'update','update_psi_00.fits')))
-        #~ arrays_to_plot_max_x.append(divmod(arrays_to_plot[-1].argmax(),arrays_to_plot[-1].shape[1]))
         modes_found.append(mode)
     except IOError:
         pass
@@ -49,21 +52,32 @@ axeslist=[]
 
 for ind,mode in enumerate(modes_found):
     axeslist.append(plt.subplot(1,nplots,ind+1))
-    plt.plot(arrays_to_plot[ind][:,arrays_to_plot_max_x[1]],z,color='black')
-    plt.plot([0]*len(z),z,linestyle='dotted')
+    kernel = arrays_to_plot[ind][:,arrays_to_plot_max_x[1]]
+    #~ kernel /= kernel.max()
+    plt.plot(kernel,z,color='black',linewidth=2 if ind==nplots-1 else 1)
+    plt.plot([0]*len(z),z,linestyle='dotted',color='black')
     plt.ylim(depth_cutoff,z.max())
     ax=plt.gca()
     ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
+    #~ ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-    plt.title(mode,fontsize=20)
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    ax.xaxis.major.formatter._useMathText = True
-    if ind>0: ax.yaxis.set_major_formatter(NullFormatter())
+    plt.title(mode)
+    ax.xaxis.get_offset_text().set_size(14)
+    #~ plt.text(0.92, -0.07,sci_power, fontsize=12 , transform = ax.transAxes)
+    if ind>0: ax.yaxis.set_major_formatter(NullFormatter())        
     ax.grid()
 
 plt.subplot(1,nplots,1)
-plt.ylabel("Depth (Mm)",fontsize=20)
+plt.ylabel("Depth (Mm)")
 
+plt.subplot(1,nplots,nplots//2+1)
+plt.xlabel("Sensitivity Kernel ($s^2/$Mm)",labelpad=20)
+
+plt.subplot(1,nplots,nplots)
+plt.xlabel(r"$\psi$ (Mm)",labelpad=20)
+
+plotc.apj_2col_format(plt.gcf(),default_fontsize=14)
+plt.gcf().set_size_inches(8,5.3)
 plt.tight_layout()
 plt.subplots_adjust(wspace=0)
 
@@ -88,4 +102,6 @@ plt.connect('axes_enter_event', on_axis_enter)
 plt.connect('axes_leave_event', on_axis_leave)
 plt.connect('button_press_event', on_click)
 
+if not os.path.exists("plots"): os.makedirs("plots")
+#~ plt.savefig("plots/f4.eps")
 plt.show()
