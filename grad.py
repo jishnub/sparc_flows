@@ -166,8 +166,9 @@ def main():
     totkern_vz=np.zeros(array_shape)
     hess=np.zeros(array_shape)
     
-    
-    continuity_enforced=read_params.get_enforced_continuity()
+    sound_speed_perturbed = read_params.if_soundspeed_perturbed()
+    flows = read_params.if_flows()
+    continuity_enforced=read_params.if_continuity_enforced()
     cont_var=read_params.get_continuity_variable()
     psi_cont = False
     vx_cont = False
@@ -228,19 +229,18 @@ def main():
     totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
     
     #~ Write out gradients for this iteration
-    fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),totkern_c)
-    if continuity_enforced and psi_cont:
-        print "Writing out gradient"
-        fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
-    elif continuity_enforced and vx_cont:
-        fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-    elif continuity_enforced and vz_cont:
-        fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-    elif not continuity_enforced:
-        fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vz)
-        fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-
-
+    if sound_speed_perturbed:
+        fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),totkern_c)
+    if flows:
+        if continuity_enforced and psi_cont:
+            fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
+        elif continuity_enforced and vx_cont:
+            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
+        elif continuity_enforced and vz_cont:
+            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
+        elif not continuity_enforced:
+            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vz)
+            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
 
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
@@ -251,19 +251,19 @@ def main():
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
             print "Steepest descent"
         
-        if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
-            sd_update(var='c')
+        if sound_speed_perturbed: sd_update(var='c')
         
-        if continuity_enforced and psi_cont: sd_update(var='psi')
-                
-        elif continuity_enforced and vx_cont: sd_update(var='vx')
-                
-        elif continuity_enforced and vz_cont: sd_update(var='vz')
+        if flows:
+            if continuity_enforced and psi_cont: sd_update(var='psi')
+                    
+            elif continuity_enforced and vx_cont: sd_update(var='vx')
+                    
+            elif continuity_enforced and vz_cont: sd_update(var='vz')
 
-        elif not continuity_enforced:
-            sd_update(var='vz')
-            sd_update(var='vx')
-        
+            elif not continuity_enforced:
+                sd_update(var='vz')
+                sd_update(var='vx')
+            
         if iterno > 0: print 'Forcing steepest descent'
 
     elif conjugate_gradient:
@@ -299,23 +299,23 @@ def main():
             update=-grad_k +  beta_k*p_km1
             
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
-            
         
-        if continuity_enforced and psi_cont: cg_update(var='psi')
-            
-        elif continuity_enforced and vx_cont: cg_update(var='vx')
-            
-        elif continuity_enforced and vz_cont: cg_update(var='vz')
-            
-        elif not continuity_enforced:
-            cg_update(var='vz')
-            cg_update(var='vx')
+        if sound_speed_perturbed: cg_update(var='c')    
         
-        try: cg_update(var='c')
-        except IOError: pass
+        if flows:
+            if continuity_enforced and psi_cont: cg_update(var='psi')
+                
+            elif continuity_enforced and vx_cont: cg_update(var='vx')
+                
+            elif continuity_enforced and vz_cont: cg_update(var='vz')
+                
+            elif not continuity_enforced:
+                cg_update(var='vz')
+                cg_update(var='vx')
+        
             
     elif LBFGS:
-        #needs to be corrected
+
         m=4
         k = iterno
         
@@ -392,19 +392,19 @@ def main():
             for key,val in data.items(): LBFGS_data[key]=val
             data=None
         except IOError: LBFGS_data={}
+
+        if sound_speed_perturbed: LBFGS_update(var='c')
         
-        if continuity_enforced and psi_cont: LBFGS_update(var='psi')
-            
-        elif continuity_enforced and vx_cont: LBFGS_update(var='vx')
-            
-        elif continuity_enforced and vz_cont: LBFGS_update(var='vz')
-            
-        elif not continuity_enforced:
-            LBFGS_update(var='vx')
-            LBFGS_update(var='vz')
-            
-        try: LBFGS_update(var='c')
-        except IOError: pass
+        if flows:
+            if continuity_enforced and psi_cont: LBFGS_update(var='psi')
+                
+            elif continuity_enforced and vx_cont: LBFGS_update(var='vx')
+                
+            elif continuity_enforced and vz_cont: LBFGS_update(var='vz')
+                
+            elif not continuity_enforced:
+                LBFGS_update(var='vx')
+                LBFGS_update(var='vz')
         
         np.savez(LBFGS_data_file,**LBFGS_data)
             
@@ -437,28 +437,29 @@ def main():
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
         
-        if os.path.exists(updatedir('model_c_'+str(iterno).zfill(2)+'.fits')):
+        if sound_speed_perturbed:
             lsmodel = create_ls_model(var='c',eps=eps_i,kind='exp')
             fitswrite(updatedir('test_c_'+str(i+1)+'.fits'), lsmodel)
-            
-        if continuity_enforced and psi_cont:
-            lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
-            fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
-            
-        elif continuity_enforced and vx_cont:
-            lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-            fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
+        
+        if flows:    
+            if continuity_enforced and psi_cont:
+                lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
+                fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
+                
+            elif continuity_enforced and vx_cont:
+                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
+                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
 
-        elif continuity_enforced and vz_cont:
-            lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-            fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
-            
-        elif not continuity_enforced:
-            lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-            fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
-            
-            lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-            fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
+            elif continuity_enforced and vz_cont:
+                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
+                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
+                
+            elif not continuity_enforced:
+                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
+                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
+                
+                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
+                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
 
 
     #~ Update epslist

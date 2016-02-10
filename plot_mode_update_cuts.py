@@ -1,8 +1,6 @@
 from __future__ import division
 import matplotlib
 from matplotlib import rcParams
-rcParams['font.family']='serif'
-rcParams['font.serif']='Computer Modern'
 import matplotlib.pyplot as plt
 import numpy as np
 import read_params
@@ -62,7 +60,7 @@ for ind,mode in enumerate(modes_found):
     #~ ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     plt.title(mode)
-    ax.xaxis.get_offset_text().set_size(14)
+    ax.xaxis.get_offset_text().set_size(11)
     #~ plt.text(0.92, -0.07,sci_power, fontsize=12 , transform = ax.transAxes)
     if ind>0: ax.yaxis.set_major_formatter(NullFormatter())        
     ax.grid()
@@ -103,5 +101,5 @@ plt.connect('axes_leave_event', on_axis_leave)
 plt.connect('button_press_event', on_click)
 
 if not os.path.exists("plots"): os.makedirs("plots")
-#~ plt.savefig("plots/f4.eps")
+plt.savefig("plots/f4.eps")
 plt.show()

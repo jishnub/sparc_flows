@@ -109,7 +109,7 @@ def get_obs_depth():
             if ("parameter" in line.lower()) and ("obsheight" in line.lower()):
                 return float(line.split("=")[-1].strip(")").replace(" ",""))
 
-def get_enforced_continuity():
+def if_continuity_enforced():
     codedir=os.path.dirname(os.path.abspath(__file__))
     paramsfile = os.path.join(codedir,"params.i")
     with open(paramsfile,'r') as paramsfile:
@@ -119,7 +119,7 @@ def get_enforced_continuity():
             if ("parameter" in line.lower()) and ("enf_cont" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
-    return "unknown"
+    return None
                 
 def get_continuity_variable():
     codedir=os.path.dirname(os.path.abspath(__file__))
@@ -135,6 +135,26 @@ def get_continuity_variable():
             if ("parameter" in line.lower()) and ("vz_cont" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'vz'
     return "unknown"
+
+def if_soundspeed_perturbed():
+    with open("params.i",'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("sound_speed_perturbation" in line.lower()):
+                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
+                elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
+    return None
+
+def if_flows():
+    with open("params.i",'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("flows" in line.lower()):
+                if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
+                elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
+    return None
 
 def get_modes_used():
     ridge_filters_driver=get_ridge_filter()

@@ -43,7 +43,7 @@ Program driver
 
     integer i,j, init, ierr, t, k, index(1000,2), randinit(2), aind, nsteps_given,reclmax, loc
     real*8 start_time,end_time,tempf,t1,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
-    real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz
+    real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz,sigmax,c_bump
     real*8 bes(0:2), Lregular,signt, xcutoffpix, xcutoff
     logical saved, iteration, init_variables, tempbool
     character*1 ci
@@ -59,6 +59,10 @@ Program driver
 
     if (COMPUTE_DATA) then
 
+        if (sound_speed_perturbed) then
+        if (contrib=="01") call writefits_3d('true_c.fits',c_speed*dimc,nz)
+        end if
+        
         if (FLOWS) then
             Rchar = 15. *10.**8/diml
 !~             Rchar = 10. *10.**8/diml

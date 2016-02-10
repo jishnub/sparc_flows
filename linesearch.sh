@@ -1,4 +1,4 @@
-#PBS -N  ls_bigbox
+#PBS -N  ls_f_to_p7
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch

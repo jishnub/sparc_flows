@@ -18,7 +18,7 @@ def grad_command(algo="cg",eps=[0.1*i for i in xrange(1,num_linesearches+1)]):
     eps_str = ' '.join(eps)
     return "python grad.py algo="+algo+" "+str(eps_str)
 
-if len(sys.argv)<1: 
+if len(sys.argv[1:])!=1:
     print "Usage: python master.py <id>"
     exit()
 id_text = sys.argv[1]

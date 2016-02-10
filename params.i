@@ -53,6 +53,7 @@ logical, parameter :: DAMP_WAVES = .falsE.
 
 
 ! TYPE OF SIMULATION (DEFAULT IS QUIET OR SOURCE/SOUND-SPEED ANOMALIES):: FLOWS OR MAGNETIC FIELDS 
+logical, parameter :: sound_speed_perturbation = .False.
 logical, parameter :: magnetic = .falsE.
 logical, parameter :: FLOWS = .true.
 logical :: TEST_IN_2D != .false.

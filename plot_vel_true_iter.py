@@ -81,8 +81,9 @@ if enf_cont and (contvar == 'psi'):
     model_misfit_initial/= max_misfit_init
     model_misfit = np.trapz((true_vx - current_vx)**2,x=x,axis=1)
     model_misfit/= max_misfit_init
-    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed')
-    plt.plot(model_misfit,z,color='black',linestyle='solid')
+    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed',label="iter 0")
+    plt.plot(model_misfit,z,color='black',linestyle='solid',label="iter "+iterm(1))
+    plt.legend(loc="lower right",fontsize=14)
     plt.title("Misfit")
     ax=plt.gca()
     ax.xaxis.set_major_locator(MaxNLocator(5,prune="both"))
@@ -107,9 +108,9 @@ if enf_cont and (contvar == 'psi'):
     model_misfit_initial/= max_misfit_init
     model_misfit = np.trapz((true_vz - current_vz)**2,x=x,axis=-1)
     model_misfit/= max_misfit_init
-    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed')
-    plt.plot(model_misfit,z,color='black',linestyle='solid')
-    #~ plt.legend(loc="lower right")
+    plt.plot(model_misfit_initial,z,color='black',linestyle='dashed',label="iter 0")
+    plt.plot(model_misfit,z,color='black',linestyle='solid',label="iter "+iterm(1))
+    plt.legend(loc="lower right",fontsize=14)
     plt.title("Misfit")
     ax=plt.gca()
     ax.xaxis.set_major_locator(MaxNLocator(5,prune="both"))
@@ -130,13 +131,13 @@ if enf_cont and (contvar == 'psi'):
         cb.ax.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
         cb.ax.set_ylabel("m/s",rotation=90,fontsize=14)
         
-    plotc.apj_2col_format(plt.gcf())
+    plotc.apj_2col_format(plt.gcf(),default_fontsize=18)
     plt.tight_layout()
     cb3.ax.set_visible(False)
     cb6.ax.set_visible(False)
     
     if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig("plots/f6.eps")
+    plt.savefig("plots/f7.eps")
     
     #~ plt.figure()
     #~ vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)

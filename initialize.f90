@@ -728,9 +728,8 @@ END SUBROUTINE INIT_KERNEL
 Subroutine solar_data
 
   implicit none
-  integer k,q
-  real*8 data(nz,6),temp
-
+  integer k,q,i
+  real*8 data(nz,6),temp,sigmax,sigmaz,c_bump
 
   ! Data in the file is arranged as 
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
@@ -769,6 +768,20 @@ Subroutine solar_data
   enddo
 
   height = (z-1.)*695.98994
+  
+    if (sound_speed_perturbation) then
+        do k=1,nz
+        do i=1,nx
+            sigmax = 30.*exp(height(k)/10)+20.
+            sigmaz = 1.
+            c_bump = (5e4/dimc)*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
+                      exp(-(height(k)- (-1.5))**2/(2*sigmaz**2))
+            c_speed(i,:,k) = c_speed(i,:,k) + c_bump
+        end do
+        end do
+        
+        c2 = c_speed**2    
+    end if
 
  
 end Subroutine solar_data
