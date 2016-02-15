@@ -195,42 +195,43 @@ def main():
 
     for src in xrange(1,num_src+1):
         
-        kern = read_kern(var='c',src=src)
-        totkern_c+=kern
+        if sound_speed_perturbed:
+            totkern_c += read_kern(var='c',src=src)
         
-        if continuity_enforced and psi_cont:
-            kern = read_kern(var='psi',src=src)
-            totkern_psi += kern
-        
-        elif continuity_enforced and vx_cont:
-            kern = read_kern(var='vx',src=src)
-            totkern_vx += kern
+        if flows:
+            if continuity_enforced and psi_cont:
+                totkern_psi += read_kern(var='psi',src=src)
             
-        elif continuity_enforced and vz_cont:
-            kern = read_kern(var='vz',src=src)
-            totkern_vz += kern
+            elif continuity_enforced and vx_cont:
+                totkern_vx += read_kern(var='vx',src=src)
+                
+            elif continuity_enforced and vz_cont:
+                totkern_vz += read_kern(var='vz',src=src)
+                
+            elif not continuity_enforced:
+                totkern_vx += read_kern(var='vx',src=src)
+                totkern_vz += read_kern(var='vz',src=src)
             
-        elif not continuity_enforced:
-            kern = read_kern(var='vx',src=src)
-            totkern_vx += kern
-            kern = read_kern(var='vz',src=src)
-            totkern_vz += kern
-        
         hess+=abs(fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits')))
 
     hess=hess*np.atleast_3d(back[:,2]).transpose(0,2,1)
     hess = hess/abs(hess).max()
     hess[hess<5e-3]=5e-3
 
-    #~ Smoothing and symmetrization  
-    totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='smooth',z_filt_pix=0.3,sym=None)
-    totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=8.,sym='asym')
-    totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
-    totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
+    #~ Smoothing and symmetrization 
+    if sound_speed_perturbed: 
+        totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='gaussian',z_filt_pix=5,sym='sym')
+    if flows:
+        if continuity_enforced and psi_cont:
+            totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=8.,sym='asym')
+        elif (continuity_enforced and vx_cont) or (not continuity_enforced):
+            totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
+        elif (continuity_enforced and vz_cont) or (not continuity_enforced):
+            totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
     
     #~ Write out gradients for this iteration
     if sound_speed_perturbed:
-        fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),totkern_c)
+        fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),-totkern_c)
     if flows:
         if continuity_enforced and psi_cont:
             fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)

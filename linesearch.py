@@ -1,4 +1,4 @@
-import os,sys,shutil,glob,time,re,subprocess,read_params
+import os,sys,shutil,glob,time,re,subprocess,read_params,fnmatch
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
@@ -29,11 +29,8 @@ print "Running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno
 ls_no=str(linesearch_no).zfill(2)
 src=str(src_no).zfill(2)
 
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
+updatedir=os.path.join(datadir,"update")
+iter_no = len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))-1
 
 def compute_forward(linesearch_no,src):
     
@@ -41,7 +38,7 @@ def compute_forward(linesearch_no,src):
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls"+linesearch_no)
     forward = os.path.join(datadir,"forward_src"+src+"_ls"+linesearch_no)
     
-    safecopy(Spectral,Instruction)
+    shutil.copyfile(Spectral,Instruction)
     
     mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" "+linesearch_no
@@ -54,7 +51,7 @@ def compute_forward(linesearch_no,src):
     assert fwd==0,"Error in running linesearch for lsno "+str(linesearch_no)
     t1=time.time()
     
-    safecopy(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_"+str(linesearch_no)+".fits"))
+    shutil.copyfile(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_iter"+str(iter_no).zfill(2)+".fits"))
     
     partialfiles=glob.glob(os.path.join(forward,"*partial*"))
     for f in partialfiles: os.remove(f)

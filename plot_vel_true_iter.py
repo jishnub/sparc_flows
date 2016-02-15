@@ -29,7 +29,7 @@ else: itercutoff=np.inf
 def iterm(i): 
     return str(min(itercutoff,iterno-i)).zfill(2)
 
-enf_cont = read_params.get_enforced_continuity()
+enf_cont = read_params.if_continuity_enforced()
 contvar=read_params.get_continuity_variable()
 
 Lx=read_params.get_xlength()

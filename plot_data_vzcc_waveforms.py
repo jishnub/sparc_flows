@@ -76,7 +76,17 @@ if filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv):
     iterno=int(filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv)[0].split("=")[-1])
     assert iterno>=0,"Iteration number must be greater than zero"
     
-vzcc=fitsread(os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),'vz_cc_src'+str(src).zfill(2)+'.fits'))
+ls=0   
+ls_passed = filter(lambda x: x.startswith("ls="),sys.argv)
+if ls_passed:
+    ls = int(ls_passed[0].split("=")[-1].strip())
+
+if ls==0:
+    vzcc=fitsread(os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),'vz_cc_src'+str(src).zfill(2)+'.fits'))
+else:
+    forwarddir = 'forward_src'+str(src).zfill(2)+'_ls'+str(ls).zfill(2)
+    vzcc=fitsread(os.path.join(datadir,forwarddir,
+    'vz_cc_iter'+str(iterno).zfill(2)+'.fits'))
 
 for ridge in ridges:
     ttfile = None
@@ -100,7 +110,7 @@ for ridge in ridges:
     
     ax1=plotc.colorplot(data_filtered,cmap='seismic',centerzero=True,
     y=t,x=x-srcloc,colorbar=False,sp=121)[0]
-    ax1.set_title(ridge[:-4]+" "+ridge[-4:]+" time-distance",fontsize=20)
+    ax1.set_title(ridge[:-4]+" "+ridge[-4:],fontsize=20)
     
     if ttfile is not None:
         plt.axhline(t[lef],linestyle='dashed')

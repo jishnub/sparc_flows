@@ -75,6 +75,7 @@ MODULE INITIALIZE
    real*8, allocatable, dimension(:,:,:) :: div, vr, c2, omega_r,spongexyz
    real*8, allocatable, dimension(:,:) :: forcing
    real*8, allocatable, dimension(:,:,:) :: p0, gradp0_z, c_speed, rho0, gradrho0_z, rhoinv, c2rho0, c2div_v0 ,reduction
+   real*8, allocatable, dimension(:,:,:) :: c_bump
    real*8, allocatable, dimension(:) :: source_dep, g, gamma
    real*8, allocatable, target, dimension(:,:,:,:) ::  a,temp_step,scr, gradp
 
@@ -383,7 +384,7 @@ Contains
       dvxdx(nx,dim2(rank),nz), forcing(nx,dim2(rank)), dvydy(nx,dim2(rank),nz),&
       spongexyz(nx, dim2(rank), nz), gradrho0_z(nx, dim2(rank), nz),&
       gradp0_z(nx, dim2(rank), nz), rhoinv(nx, dim2(rank), nz), rho0(nx, dim2(rank), nz), &
-      p0(nx, dim2(rank), nz), c_speed(nx, dim2(rank), nz), c2rho0(nx,dim2(rank),nz),&
+      p0(nx, dim2(rank), nz), c_speed(nx, dim2(rank), nz),c_bump(nx, dim2(rank), nz), c2rho0(nx,dim2(rank),nz),&
       z_i(nx,dim2(rank)), z_iplus1(nx,dim2(rank)), LC0(nx,dim2(rank)), LC1(nx,dim2(rank)), LC2(nx,dim2(rank)),&
       LC3(nx,dim2(rank)), LC4(nx,dim2(rank)), LC5(nx,dim2(rank)), LC6(nx,dim2(rank)),&
       az(nx,dim2(rank),nz),bzpml(nx,dim2(rank),nz),gradvz(nx,dim2(rank),nz))
@@ -666,7 +667,8 @@ SUBROUTINE INIT_KERNEL
 	   a_acc_z(nx,dim2(rank),nz_kern), hessian(nx,dim2(rank),nz_kern))
 
 
-  allocate(p0(nx, dim2(rank), nz_kern), rho0(nx, dim2(rank), nz_kern), c2(nx, dim2(rank), nz_kern),c_speed(nx,dim2(rank),nz_kern))
+  allocate(p0(nx, dim2(rank), nz_kern), rho0(nx, dim2(rank), nz_kern), c2(nx, dim2(rank), nz_kern),&
+  c_speed(nx,dim2(rank),nz_kern),c_bump(nx,dim2(rank),nz_kern))
 
   if (magnetic) allocate(curlbox(nx, dim2(rank), nz_kern), curlboy(nx, dim2(rank), nz_kern), &
         curlboz(nx,dim2(rank),nz_kern), box(nx, dim2(rank), nz_kern), boy(nx, dim2(rank), nz_kern), &
@@ -729,7 +731,7 @@ Subroutine solar_data
 
   implicit none
   integer k,q,i
-  real*8 data(nz,6),temp,sigmax,sigmaz,c_bump
+  real*8 data(nz,6),temp,sigmax,sigmaz
 
   ! Data in the file is arranged as 
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
@@ -768,21 +770,19 @@ Subroutine solar_data
   enddo
 
   height = (z-1.)*695.98994
-  
     if (sound_speed_perturbation) then
-        do k=1,nz
+        do k=1,nz_kern
+        sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional
+        sigmaz = 1.4
         do i=1,nx
-            sigmax = 30.*exp(height(k)/10)+20.
-            sigmaz = 1.
-            c_bump = (5e4/dimc)*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
-                      exp(-(height(k)- (-1.5))**2/(2*sigmaz**2))
-            c_speed(i,:,k) = c_speed(i,:,k) + c_bump
+            
+            c_bump(i,1,k) = 3e-3*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
+                      exp(-(height(k)- (-2.5))**2/(2*sigmaz**2))
         end do
         end do
-        
-        c2 = c_speed**2    
+        c_speed = c_speed*(1+c_bump)
+        c2 = c_speed**2
     end if
-
  
 end Subroutine solar_data
 

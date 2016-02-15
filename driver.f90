@@ -38,12 +38,12 @@ Program driver
     use bspline
     use integrals
     use derivatives
-
+    
     implicit none
 
     integer i,j, init, ierr, t, k, index(1000,2), randinit(2), aind, nsteps_given,reclmax, loc
     real*8 start_time,end_time,tempf,t1,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
-    real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz,sigmax,c_bump
+    real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz,sigmax
     real*8 bes(0:2), Lregular,signt, xcutoffpix, xcutoff
     logical saved, iteration, init_variables, tempbool
     character*1 ci
@@ -59,8 +59,8 @@ Program driver
 
     if (COMPUTE_DATA) then
 
-        if (sound_speed_perturbed) then
-        if (contrib=="01") call writefits_3d('true_c.fits',c_speed*dimc,nz)
+        if (sound_speed_perturbation) then
+            if (contrib=="01") call writefits_3d('true_c.fits',c_speed*dimc,nz)
         end if
         
         if (FLOWS) then
@@ -138,6 +138,7 @@ Program driver
         inquire(file=directory//'model_c_ls'//jobno//'.fits', exist = iteration)
         if (iteration) then
             call readfits(directory//'model_c_ls'//jobno//'.fits',c2,nz)
+            call writefits_3d('model_c_ls00.fits',c2,nz)
             c2 = (c2/dimc)**2
         endif
 
@@ -332,9 +333,7 @@ Program driver
         print *, 'NUMBER OF TIMESTEPS =', maxtime
     if (kernel_mode) then
         call DETERMINE_STATUS(init, maxtime)
-!~         stop
         if (rank==0) call system('rm Instruction_src'//contrib//'_ls'//jobno)
-!~         stop
         if (compute_forward) then
             indexglob = 0
             if (rank == 0) then 
@@ -357,7 +356,6 @@ Program driver
                 enddo
             endif
             call timestepping(init)
-
             if (rank==0) then 
                 close(28)
                 close(1244)
@@ -449,18 +447,14 @@ SUBROUTINE TIMESTEPPING(init)
     T00 = t1
     start_time = MPI_WTIME() 
     if (.not. kernel_mode) call lagrange_interp
-
     if ( kernel_mode .and. compute_adjoint .and. &
 	(i .le. forcing_length*cadforcing_step) ) call lagrange_interp
-
     call step()
     end_time = MPI_WTIME() 
     call cpu_time(t1) 
-   
     if (.not. displ) nor1 = norm(a(:,:,:,4)) !* dimc
     if (displ .and. test_in_2d) nor1 = sum(abs(a(:,:,:,6)**2.))**0.5
   
- 
   ! Timing and 'convergence' statistics 
   ! The criterion used to see if the results are 'convergent' is the
   ! L2 norm of the radial velocity. 
@@ -478,10 +472,8 @@ SUBROUTINE TIMESTEPPING(init)
     print *,'' 
 
     write(19,*) nor1
-
+    
    endif
- 
-
    timeline = timeline + timestep
 
    if (mod(time,steps) == 0) then
@@ -516,8 +508,6 @@ SUBROUTINE TIMESTEPPING(init)
        if (compute_adjoint) call write_out_partial_state(directory//'adjoint_src'//contrib//'/') 
 
    endif
-
-
    if (mod(time+1,200) == 0)  then
 
      if (.not. kernel_mode) call write_out_full_state(directory) 
@@ -554,8 +544,6 @@ SUBROUTINE TIMESTEPPING(init)
      if (rank ==0 ) print *,'Full output done, index:',time
 
    endif
-
-
  end do
 
  if (rank==0) then
@@ -575,7 +563,6 @@ SUBROUTINE TIMESTEPPING(init)
 !~   endif
 
  endif
-
 END SUBROUTINE TIMESTEPPING
 
 

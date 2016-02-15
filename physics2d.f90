@@ -949,7 +949,6 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
  integer k,i,j,pmlindex
  real*8 f(nx,dim2(rank))
 
-
  call ddx(xi_x, dxixdx, 1)
  dxizdz(:,:,nz) = -dxixdx(:,:,nz)*unstretch(nz)
  call ddz(xi_z, dxizdz, 3)
@@ -985,7 +984,6 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
 
   endif
 
-
  ! Compute divergence
 
  div = dxixdx + dxizdz
@@ -1020,6 +1018,7 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
   
  endif
 
+
  call ddz(p, gradp_z, 2)
 
  pmlindex = 0
@@ -1034,7 +1033,6 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
 
  enddo
 
-
 ! RHS v_x
 
  RHSv_x = - rhoinv * gradp_x 
@@ -1045,7 +1043,6 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
  do k= 1,nz
   RHSv_z(:,:,k) =  - rhoinv(:,:,k) * (gradp_z(:,:,k) + rho(:,:,k)*g(k))
  enddo
-
 
  RHSxi_x = v_x
  RHSxi_z = v_z
@@ -1062,8 +1059,8 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
   endif
  endif
 
-! if (damp_waves) call damp_velocity
 
+! if (damp_waves) call damp_velocity
  if (BACKGROUND_FLOWS_EXIST) then
 
   call ddx(v_x,dxixdx,1)
@@ -1080,7 +1077,6 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
 
  endif
 
-
 ! RHSv_x(:,:,nz) = 0.
 ! RHSv_z(:,:,nz) = 0.
  RHSv_x(:,:,1) = 0.
@@ -1090,12 +1086,10 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
  RHSxi_z(:,:,1) = 0.
 ! RHSxi_z(:,:,nz) = 0.
 
-
  if (HORIZONTAL_PMLS) then
   scr(1,:,:,:) = 0.0
   scr(nx,:,:,:) = 0.0
  endif
-
  END SUBROUTINE MP_QUIET_PML_2D_DISPL
 
 

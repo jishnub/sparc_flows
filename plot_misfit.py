@@ -8,6 +8,9 @@ import read_params
 import matplotlib.pyplot as plt
 import itertools
 
+flows = read_params.if_flows()
+sound_speed_perturbed = read_params.if_soundspeed_perturbed()
+
 datadir = read_params.get_directory()
 updatedir = os.path.join(datadir,"update")
 num_misfit_files=0
@@ -193,107 +196,147 @@ elif mistype == "data_freq":
 
 elif mistype == "model":
     
-    # vx
-    try:  
-        truemodel=np.squeeze(pyfits.getdata("true_vx.fits"))
-    except IOError:
-        print "True vx model doesn't exist"
-        quit()
-    
-    modelmisfit_list = []
-    
-    model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_00.fits")))
-    model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
-    
-    for iterno in xrange(num_misfit_files):
+    if flows:
+        # vx
         try:  
-            itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_"+str(iterno).zfill(2)+".fits")))
+            truemodel=np.squeeze(pyfits.getdata("true_vx.fits"))
         except IOError:
-            print "vx_"+str(iterno).zfill(2)+".fits doesn't exist"
-            continue
-    
-        modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
-
+            print "True vx model doesn't exist"
+            quit()
         
-        modelmisfit/=model0_misfit
+        modelmisfit_list = []
         
-        modelmisfit_list.append(modelmisfit)
-    
-    plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$v_x$",color='black')
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_"+str(iterno).zfill(2)+".fits")))
+            except IOError:
+                print "vx_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$v_x$",color='black')
 
 
-    # vz
-    try:  
-        truemodel=np.squeeze(pyfits.getdata("true_vz.fits"))
-    except IOError:
-        print "True vz model doesn't exist"
-        quit()
-    
-    modelmisfit_list = []
-    model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_00.fits")))
-    model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
-    
-    for iterno in xrange(num_misfit_files):    
+        # vz
         try:  
-            itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_"+str(iterno).zfill(2)+".fits")))
+            truemodel=np.squeeze(pyfits.getdata("true_vz.fits"))
         except IOError:
-            print "vz_"+str(iterno).zfill(2)+".fits doesn't exist"
-            continue
-    
-        modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            print "True vz model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):    
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_"+str(iterno).zfill(2)+".fits")))
+            except IOError:
+                print "vz_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
 
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
         
-        modelmisfit/=model0_misfit
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dashed',marker='o',label="$v_z$",color='black')
         
-        modelmisfit_list.append(modelmisfit)
-    
-    plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dashed',marker='o',label="$v_z$",color='black')
-    
-    # Vector potential
-    try:  
-        truemodel=np.squeeze(pyfits.getdata("true_psi.fits"))
-    except IOError:
-        print "True psi model doesn't exist"
-        quit()
-    
-    modelmisfit_list = []
-    
-    truemodel -= truemodel[0,0]
-    
-    model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_00.fits")))
-    model0-=model0[0,0]
-    model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
-    
-    for iterno in xrange(num_misfit_files):    
+        # Vector potential
         try:  
-            itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_"+str(iterno).zfill(2)+".fits")))
-            itermodel -= itermodel[0,0]
+            truemodel=np.squeeze(pyfits.getdata("true_psi.fits"))
         except IOError:
-            print "model_psi_"+str(iterno).zfill(2)+".fits doesn't exist"
-            continue
-    
-        modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
-        modelmisfit/=model0_misfit
-        modelmisfit_list.append(modelmisfit)
-    
-    plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
-    
-    plt.grid()
-    plt.legend(loc="best")
-    
-    plt.xlim(-0.5,num_misfit_files+0.5)
-    plt.ylim(0.4,1.1)
-    plt.xlabel("Iteration number")
-    plt.ylabel("Model misfit")
-    
-    plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
+            print "True psi model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        
+        truemodel -= truemodel[0,0]
+        
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_00.fits")))
+        model0-=model0[0,0]
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):    
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_"+str(iterno).zfill(2)+".fits")))
+                itermodel -= itermodel[0,0]
+            except IOError:
+                print "model_psi_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            modelmisfit/=model0_misfit
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
+        
+        plt.grid()
+        plt.legend(loc="best")
+        
+        plt.xlim(-0.5,num_misfit_files+0.5)
+        plt.ylim(0.4,1.1)
+        plt.xlabel("Iteration number")
+        plt.ylabel("Model misfit")
+        
+        plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
 
-    plotc.apj_1col_format(plt.gcf())
-    plt.tight_layout()
+        plotc.apj_1col_format(plt.gcf())
+        plt.tight_layout()
+        
+        if not os.path.exists("plots"): os.makedirs("plots")
+        plt.savefig("plots/f6b.eps")
     
-    if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig("plots/f6b.eps")
-    
+    if sound_speed_perturbed:
+        try:  
+            truemodel=np.squeeze(pyfits.getdata("true_c.fits"))
+        except IOError:
+            print "True c model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_"+str(iterno).zfill(2)+".fits")))
+            except IOError:
+                print "model_c_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$c$",color='black')
+        
+        plt.grid()
+        plt.legend(loc="best")
+        
+        plt.xlim(-0.5,num_misfit_files+0.5)
+        plt.ylim(0,1.1)
+        plt.xlabel("Iteration number")
+        plt.ylabel("Model misfit")
+        
+        plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
+        plotc.apj_1col_format(plt.gcf())
+
 
 plt.show()
 

@@ -45,10 +45,7 @@ Contains
    implicit none
    integer :: i,j,k,l
   ! All new and improved optimized RK 5, 4th order accurate integrator. 50% increase in time step.
-
    do step_rk = 1,5
-
-
      if (step_rk == 1) then
        temp_step = a
 
@@ -69,8 +66,6 @@ Contains
 
 
      endif
- 
-
       if (option==1) then
        call MP_QUIET_SPONGE_3D ()
       elseif (option==2) then
@@ -108,23 +103,18 @@ Contains
       elseif (option==18) then
        call MP_MHD_PML_2D_DISPL ()
       endif
-
    enddo
-
    a = a + deltat*scr
-
    if (USE_PML) pmlvars = pmlvars + deltat * scrpml
    if ((.not. TEST_IN_2D)  .and. (.not. HORIZONTAL_PMLS)) call filter_vars_3d ()
    if (TEST_IN_2D) call filter_vars_2d ()
-
    if (HORIZONTAL_PMLS) then 
     pmlvarsx = pmlvarsx + deltat * scrpmlx
     if (PROC_HAS_PML .and. (.not. TEST_IN_2D)) pmlvarsy = pmlvarsy + deltat * scrpmly
     if (mod(time+1,2) ==0 .and. (.not. TEST_IN_2D)) call filter_vars_3d_horiz_pml
    endif
-
-
-      !print *,maxval(v0_x)*dimc*0.01,maxval(v0_z)*dimc*0.01
+!~       
+!~ print *,maxval(v0_x)*dimc*0.01,maxval(v0_z)*dimc*0.01
 
   End SUBROUTINE step
 !=====================================================================================

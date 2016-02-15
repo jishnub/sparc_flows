@@ -19,7 +19,9 @@ def get_iter_no():
 iterno=get_iter_no()
 iterm1=str(iterno-1).zfill(2)
 
-enf_cont = read_params.get_enforced_continuity()
+sound_speed_perturbed = read_params.if_soundspeed_perturbed()
+flows = read_params.if_flows()
+enf_cont = read_params.if_continuity_enforced()
 contvar=read_params.get_continuity_variable()
 
 Lx=read_params.get_xlength()
@@ -35,208 +37,290 @@ iter_to_plot=next(iter(filter(lambda x: x.startswith("iter="),sys.argv)),None)
 if iter_to_plot is not None: iter_to_plot = iter_to_plot.split("=")[-1].zfill(2)
 else: iter_to_plot = iterm1
 
-if enf_cont and (contvar == 'psi'):
-    true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
-    current_model = fitsread(os.path.join(datadir,'update','model_psi_'+iter_to_plot+'.fits'))
-    current_model = current_model-current_model[0,0]
+if flows:
+    if enf_cont and (contvar == 'psi'):
+        true_model = fitsread(os.path.join(codedir,'true_psi.fits'))
+        current_model = fitsread(os.path.join(datadir,'update','model_psi_'+iter_to_plot+'.fits'))
+        current_model = current_model-current_model[0,0]
+        plot_update=True
+        if plot_update:
+            try:
+                update=fitsread(os.path.join(datadir,'update','update_psi_'+iter_to_plot+'.fits'))
+            except IOError:
+                update=None
+                print "Could not load update psi"
+            gl=plotc.layout_subplots(3)[2]
+        else:
+            gl=plotc.layout_subplots(2)[2]
+      
+        
+        cp=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})
+        
+        ax1=cp[0]; cb=cp[1]
+        cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+        
+        plt.ylabel("Depth (Mm)",fontsize=20)
+        plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
+        plt.title(r"True $\psi$",fontsize=20,y=1.01)
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        
+        cp=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})
+        
+        ax2=cp[0]; cb=cp[1]
+        cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+        
+        plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
+        plt.title(r"Iterated $\psi$",fontsize=20,y=1.01)
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        
+        if plot_update and update is not None:
+            cp=plotc.colorplot(update,sp=next(gl),x=x,y=z,
+            yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+            axes_properties={'sharey':ax1,'hide_yticklabels':True})
+            
+            ax3=cp[0]; cb=cp[1]
+            cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+            
+            plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
+            plt.title(r"Next update",fontsize=20,y=1.01)
+            plt.tick_params(axis='both', which='major', labelsize=14)
+            ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        
+    #    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
+        
+        plt.subplots_adjust(wspace=0)
+        
+        plt.figure()
+        
+        psi_max_row_index,psi_max_col_index = divmod(true_model.argmax(),nx)
+        curpsi_max_row_index,curpsi_max_col_index = divmod(current_model.argmax(),nx)
+        Lregular = read_params.get_Lregular()/1e8 # cm to Mm
+        
+        plt.subplot(121)
+        plt.plot(x,true_model[curpsi_max_row_index,:],label="True model")
+        plt.plot(x,current_model[curpsi_max_row_index,:],label="Iterated model",
+        linestyle='dashed',linewidth=2)
+        plt.xlabel("x (Mm)",fontsize=20)
+        plt.ylabel("Scaled Stream Function",fontsize=20)
+        plt.title("Horizontal cut",fontsize=20)
+        plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        plt.legend(loc='best')
+        
+        plt.subplot(122)
+        plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
+        plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
+        linestyle='dashed',linewidth=2)
+        plt.xlim(-10,2.5)
+        plt.xlabel("Depth (Mm)",fontsize=20)
+        plt.title("Vertical Cut",fontsize=20)
+        plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+        plt.tick_params(axis='both', which='major', labelsize=14)
+        plt.legend(loc='best')
+        plt.tight_layout()
+        
+        
+    elif enf_cont and (contvar == 'vx'):
+        true_model = fitsread(os.path.join(codedir,'true_vx.fits'))
+        current_model = fitsread(os.path.join(datadir,'model_vx_ls00.fits'))
+        try:
+            update=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
+        except IOError:
+            update=np.zeros_like(current_model)
+            print "Could not load update vx"
+        
+        _,_,gl=plotc.layout_subplots(3)
+        
+        ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={})[0]
+        plt.ylabel("Depth (Mm)",fontsize=16)
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        ax3=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        plt.suptitle("Continuity: Compute vz from vx",fontsize=16)
+        
+        plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
+        
+    elif enf_cont and (contvar == 'vz'):
+        true_model = fitsread(os.path.join(codedir,'true_vz.fits'))
+        current_model = fitsread(os.path.join(datadir,'model_vz_ls00.fits'))
+        try:
+            update=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
+        except IOError:
+            update=np.zeros_like(current_model)
+            print "Could not load update vz"
+        
+        _,_,gl=plotc.layout_subplots(3)
+        
+        ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={})[0]
+        plt.ylabel("Depth (Mm)",fontsize=16)
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        ax3=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
+        
+        plt.suptitle("Continuity: Compute vx from vz",fontsize=16)
+        
+        plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
+        
+    elif not enf_cont:    
+        true_model_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
+        true_model_vz = fitsread(os.path.join(codedir,'true_vz.fits'))
+        
+        current_model_vx = fitsread(os.path.join(datadir,'model_vx_ls00.fits'))
+        current_model_vz = fitsread(os.path.join(datadir,'model_vz_ls00.fits'))
+        
+        try:
+            update_vx=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
+        except IOError:
+            update_vx=np.zeros_like(current_model)
+            print "Could not load update vx"
+        try:
+            update_vz=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
+        except IOError:
+            update_vz=np.zeros_like(current_model)
+            print "Could not load update vz"
+            
+        _,_,gl=plotc.layout_subplots(6)
+        
+        ax1=plotc.colorplot(true_model_vx,sp=next(gl),x=x,y=z,title="True vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        centerzero=True)[0]
+        plt.ylabel("Depth (Mm)",fontsize=16)
+        
+        ax2=plotc.colorplot(current_model_vx,sp=next(gl),x=x,y=z,title="Current vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+        
+        ax3=plotc.colorplot(update_vx,sp=next(gl),x=x,y=z,title="Update vx",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+        
+        ax4=plotc.colorplot(true_model_vz,sp=next(gl),x=x,y=z,title="True vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1},centerzero=True)[0]
+        plt.ylabel("Depth (Mm)",fontsize=16)
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+        
+        ax5=plotc.colorplot(current_model_vz,sp=next(gl),x=x,y=z,title="Current vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+        
+        ax6=plotc.colorplot(update_vz,sp=next(gl),x=x,y=z,title="Update vz",
+        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
+        plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
+        
+        plt.suptitle("No continuity, vx and vz unconstrained",fontsize=16)
+        
+        plt.tight_layout()
+
+if sound_speed_perturbed:
+    true_model = fitsread(os.path.join(codedir,'true_c.fits'))
+    current_model = fitsread(os.path.join(datadir,'update','model_c_'+iter_to_plot+'.fits'))
+    nz,nx=true_model.shape
+    oneD_stratification = np.tile(np.loadtxt(read_params.get_solarmodel(),usecols=[1]).reshape(nz,1),(1,nx))
+
     plot_update=True
     if plot_update:
         try:
-            update=fitsread(os.path.join(datadir,'update','update_psi_'+iter_to_plot+'.fits'))
+            update=fitsread(os.path.join(datadir,'update','update_c_'+iter_to_plot+'.fits'))
         except IOError:
             update=None
-            print "Could not load update psi"
-        gl=plotc.layout_subplots(3)[2]
+            print "Could not load update c"
+        gl=plotc.gridlist(1,4)
     else:
-        gl=plotc.layout_subplots(2)[2]
+        gl=plotc.gridlist(1,3)
   
-    
-    cp=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    xr_plot = [-Lx/8,Lx/8]
+    yr_plot = [-5,z[-1]]
+  
+    true_lndeltac = (true_model-oneD_stratification)/oneD_stratification
+    cp=plotc.colorplot(true_lndeltac,sp=next(gl),x=x,y=z,
+    yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
     
     ax1=cp[0]; cb=cp[1]
     cb.ax.xaxis.set_major_locator(MaxNLocator(3))
     
     plt.ylabel("Depth (Mm)",fontsize=20)
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"True $\psi$",fontsize=20,y=1.01)
+    plt.title(r"True $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    cp=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    current_lndeltac = (current_model-oneD_stratification)/oneD_stratification
+    cp=plotc.colorplot(current_lndeltac,sp=next(gl),x=x,y=z,
+    yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
     axes_properties={'sharey':ax1,'hide_yticklabels':True})
     
-    ax2=cp[0]; cb=cp[1]
+    ax2=cp[0]; cb=cp[1]; qm = cp[2]
     cb.ax.xaxis.set_major_locator(MaxNLocator(3))
     
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
-    plt.title(r"Iterated $\psi$",fontsize=20,y=1.01)
+    plt.title(r"Iterated $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
+    #~ Misfit
+    plt.subplot(next(gl))
+    misfit_z_0 = np.trapz(abs(true_lndeltac),x=x)
+    misfit_z = np.trapz(abs(true_lndeltac-current_lndeltac),x=x)
+    misfit_z /= misfit_z_0.max()
+    misfit_z_0/= misfit_z_0.max()
+    
+    plt.plot(misfit_z,z,label="iter "+str(iterno-1))
+    plt.plot(misfit_z_0,z,label="iter 0")
+    plt.legend(loc="lower right")
+    plt.ylim(*yr_plot)
+    ax3=plt.gca()
+    plt.tick_params(axis='x', which='major', labelsize=14)
+    plt.tick_params(axis='y', which='major', label1On=False)
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.title("Misfit",fontsize=20,y=1.01)
+    cb=plt.colorbar(mappable=qm,orientation="horizontal")
+    ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    ax3.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    cb.ax.set_visible(False)
+    
     if plot_update and update is not None:
         cp=plotc.colorplot(update,sp=next(gl),x=x,y=z,
-        yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
         axes_properties={'sharey':ax1,'hide_yticklabels':True})
         
         ax3=cp[0]; cb=cp[1]
         cb.ax.xaxis.set_major_locator(MaxNLocator(3))
         
         plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
-        plt.title(r"Next update",fontsize=20,y=1.01)
+        plt.title(r"Next Update",fontsize=20,y=1.01)
         plt.tick_params(axis='both', which='major', labelsize=14)
         ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-#    plt.suptitle("After "+str(iterno)+" iterations",fontsize=20)
-    
     plt.subplots_adjust(wspace=0)
-    
-    plt.figure()
-    
-    psi_max_row_index,psi_max_col_index = divmod(true_model.argmax(),nx)
-    curpsi_max_row_index,curpsi_max_col_index = divmod(current_model.argmax(),nx)
-    Lregular = read_params.get_Lregular()/1e8 # cm to Mm
-    
-    plt.subplot(121)
-    plt.plot(x,true_model[curpsi_max_row_index,:],label="True model")
-    plt.plot(x,current_model[curpsi_max_row_index,:],label="Iterated model",
-    linestyle='dashed',linewidth=2)
-    plt.xlabel("x (Mm)",fontsize=20)
-    plt.ylabel("Scaled Stream Function",fontsize=20)
-    plt.title("Horizontal cut",fontsize=20)
-    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.legend(loc='best')
-    
-    plt.subplot(122)
-    plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
-    plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
-    linestyle='dashed',linewidth=2)
-    plt.xlim(-10,2.5)
-    plt.xlabel("Depth (Mm)",fontsize=20)
-    plt.title("Vertical Cut",fontsize=20)
-    plt.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.legend(loc='best')
-    plt.tight_layout()
-    
-    
-elif enf_cont and (contvar == 'vx'):
-    true_model = fitsread(os.path.join(codedir,'true_vx.fits'))
-    current_model = fitsread(os.path.join(datadir,'model_vx_ls00.fits'))
-    try:
-        update=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
-    except IOError:
-        update=np.zeros_like(current_model)
-        print "Could not load update vx"
-    
-    _,_,gl=plotc.layout_subplots(3)
-    
-    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={})[0]
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    ax3=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    plt.suptitle("Continuity: Compute vz from vx",fontsize=16)
-    
-    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
-    
-elif enf_cont and (contvar == 'vz'):
-    true_model = fitsread(os.path.join(codedir,'true_vz.fits'))
-    current_model = fitsread(os.path.join(datadir,'model_vz_ls00.fits'))
-    try:
-        update=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
-    except IOError:
-        update=np.zeros_like(current_model)
-        print "Could not load update vz"
-    
-    _,_,gl=plotc.layout_subplots(3)
-    
-    ax1=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,title="True vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={})[0]
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    ax2=plotc.colorplot(current_model,sp=next(gl),x=x,y=z,title="Current vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    ax3=plotc.colorplot(update,sp=next(gl),x=x,y=z,title="Update vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=10)
-    
-    plt.suptitle("Continuity: Compute vx from vz",fontsize=16)
-    
-    plt.subplots_adjust(wspace=0,left=0.1,right=0.9)
-    
-elif not enf_cont:    
-    true_model_vx = fitsread(os.path.join(codedir,'true_vx.fits'))
-    true_model_vz = fitsread(os.path.join(codedir,'true_vz.fits'))
-    
-    current_model_vx = fitsread(os.path.join(datadir,'model_vx_ls00.fits'))
-    current_model_vz = fitsread(os.path.join(datadir,'model_vz_ls00.fits'))
-    
-    try:
-        update_vx=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
-    except IOError:
-        update_vx=np.zeros_like(current_model)
-        print "Could not load update vx"
-    try:
-        update_vz=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
-    except IOError:
-        update_vz=np.zeros_like(current_model)
-        print "Could not load update vz"
-        
-    _,_,gl=plotc.layout_subplots(6)
-    
-    ax1=plotc.colorplot(true_model_vx,sp=next(gl),x=x,y=z,title="True vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    centerzero=True)[0]
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    
-    ax2=plotc.colorplot(current_model_vx,sp=next(gl),x=x,y=z,title="Current vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
-    
-    ax3=plotc.colorplot(update_vx,sp=next(gl),x=x,y=z,title="Update vx",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
-    
-    ax4=plotc.colorplot(true_model_vz,sp=next(gl),x=x,y=z,title="True vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1},centerzero=True)[0]
-    plt.ylabel("Depth (Mm)",fontsize=16)
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
-    
-    ax5=plotc.colorplot(current_model_vz,sp=next(gl),x=x,y=z,title="Current vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
-    
-    ax6=plotc.colorplot(update_vz,sp=next(gl),x=x,y=z,title="Update vz",
-    yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True},centerzero=True)[0]
-    plt.xlabel("Horizontal Distance (Mm)",fontsize=16,labelpad=5)
-    
-    plt.suptitle("No continuity, vx and vz unconstrained",fontsize=16)
-    
-    plt.tight_layout()
-
 
 
 plt.show()

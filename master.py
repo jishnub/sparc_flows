@@ -8,6 +8,11 @@ np.set_printoptions(precision=5)
 
 datadir=read_params.get_directory()
 
+if read_params.if_flows():
+    iter_var="psi"
+elif read_params.if_soundspeed_perturbed():
+    iter_var="c"
+
 num_linesearches = 6
 
 data_command = "qsub data_forward.sh"
@@ -43,17 +48,10 @@ update_id_in_file('data_forward.sh')
 update_id_in_file('full.sh')
 update_id_in_file('linesearch.sh')
 
-
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
-
-def copy_updated_model(num):
-    updated_model_vectorpsi=os.path.join(datadir,'update','test_psi_'+str(num)+'.fits')
-    model_vectorpsi=os.path.join(datadir,'model_psi_ls00.fits')
-    safecopy(updated_model_vectorpsi,model_vectorpsi)
+def copy_updated_model(num,var="psi"):
+    updated_model=os.path.join(datadir,'update','test_'+var+'_'+str(num)+'.fits')
+    model_for_next_iter=os.path.join(datadir,'model_'+var+'_ls00.fits')
+    shutil.copyfile(updated_model,model_for_next_iter)
 
 if os.path.exists('compute_data'):
     os.remove('compute_data')
@@ -269,7 +267,7 @@ for query in xrange(100000):
             min_ls_index = misfit_diff_sign_change_locs[0]+1+1
             print "Misfit sign change detected"
             print "model #"+str(min_ls_index)+" has minimum misfit"
-            copy_updated_model(min_ls_index)
+            copy_updated_model(min_ls_index,var=iter_var)
             
             plt.clf() # Refresh the linesearch stepsize-misfit plot
             
