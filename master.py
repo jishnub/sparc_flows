@@ -65,28 +65,38 @@ if os.path.exists('running_full'):
 running_ls = False
 running_full = False
 
-def get_eps_around_minimum(prev1_eps,prev1_misfits,prev2_eps=None,prev2_misfits=None):
+def get_eps_around_minimum(prev1_eps,prev1_misfits):
+    
+    #~ Previous iteration, save the plot
+    plt.plot(prev1_eps,prev1_misfits,'bo')
+    plt.xlabel("Step size",fontsize=20)
+    plt.ylabel(r"misfit",fontsize=20)
+    plt.savefig('step_size_selection.eps')
+    
     p=np.polyfit(prev1_eps,prev1_misfits,2)
+
+    assert (not p[0]<0), colored("inverted parabolic fit, can't estimate step size","red")
     step = 1e-2
-    if p[0]!=0:
+    if p[0]>0:
         step = - p[1]/(2*p[0])
     elif p[0]==0:
         step = -p[2]/p[1]
     assert step>0,colored("ls minimum predicted at less than zero step","red")
+    
+    #~ Choose points around the predicted minimum stepsize, and compute predicted misfits
+    #~ according to the previous itreation's trend
     eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
     pred_misfit = np.polyval(p,eps)
-    
     print "Estimated step size",eps
     print "Predicted misfit",pred_misfit
+    plt.plot(eps,pred_misfit,'ro')
     
+    #~ Plot the fit polynomial, this should pass through the points and have a minimum
+    #~ around the predicted points
     epsfine = np.linspace(min(eps[0],prev1_eps[0]),max(eps[-1],prev1_eps[-1]),num=2000)
     misfitfine = np.polyval(p,epsfine)
-    
     plt.plot(epsfine,misfitfine,'g-')
-    plt.plot(prev1_eps,prev1_misfits,'bo')
-    plt.plot(eps,pred_misfit,'ro')
-    plt.xlabel("Step size",fontsize=20)
-    plt.ylabel(r"misfit",fontsize=20)
+    
     plt.savefig('step_size_selection.eps')
     plt.clf()
     
@@ -162,7 +172,7 @@ for query in xrange(100000):
                 prev2_done = ls_details[3].all()
                     
                 if prev1_done:
-                    print "Computing step size form previous linesearch"
+                    print "Computing step size from previous linesearch"
                     eps_prev = ls_details[0]
                     lsmisfit_prev =  ls_details[1]
                     eps = get_eps_around_minimum(eps_prev,lsmisfit_prev)
