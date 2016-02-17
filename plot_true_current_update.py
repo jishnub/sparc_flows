@@ -1,7 +1,7 @@
 from __future__ import division
 import plotc
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import MaxNLocator,ScalarFormatter
 import numpy as np
 import read_params
 import pyfits
@@ -246,7 +246,7 @@ if sound_speed_perturbed:
     nz,nx=true_model.shape
     oneD_stratification = np.tile(np.loadtxt(read_params.get_solarmodel(),usecols=[1]).reshape(nz,1),(1,nx))
 
-    plot_update=True
+    plot_update=False
     if plot_update:
         try:
             update=fitsread(os.path.join(datadir,'update','update_c_'+iter_to_plot+'.fits'))
@@ -258,15 +258,14 @@ if sound_speed_perturbed:
         gl=plotc.gridlist(1,3)
   
     xr_plot = [-Lx/8,Lx/8]
-    yr_plot = [-5,z[-1]]
+    yr_plot = [-10,z[-1]]
   
     true_lndeltac = (true_model-oneD_stratification)/oneD_stratification
-    cp=plotc.colorplot(true_lndeltac,sp=next(gl),x=x,y=z,
-    yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
-    
-    ax1=cp[0]; cb=cp[1]
+    ax1=plt.subplot(next(gl))
+    cp=plotc.colorplot(true_lndeltac,ax=ax1,x=x,y=z,
+    xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
+    cb=cp.colorbar
     cb.ax.xaxis.set_major_locator(MaxNLocator(3))
-    
     plt.ylabel("Depth (Mm)",fontsize=20)
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\delta \ln c$",fontsize=20,y=1.01)
@@ -274,51 +273,50 @@ if sound_speed_perturbed:
     ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     current_lndeltac = (current_model-oneD_stratification)/oneD_stratification
-    cp=plotc.colorplot(current_lndeltac,sp=next(gl),x=x,y=z,
-    yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'sharey':ax1,'hide_yticklabels':True})
-    
-    ax2=cp[0]; cb=cp[1]; qm = cp[2]
+    cp=plotc.colorplot(current_lndeltac,x=x,y=z,sp=next(gl),centerzero=True,
+    xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
+    axes_properties={'hide_yticklabels':True},subplot_properties={'sharey':ax1})
+    ax2=cp.axis;cb=cp.colorbar; qm = cp.mappable
     cb.ax.xaxis.set_major_locator(MaxNLocator(3))
-    
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     #~ Misfit
-    plt.subplot(next(gl))
+    ax3=plt.subplot(next(gl),sharey=ax1)
     misfit_z_0 = np.trapz(abs(true_lndeltac),x=x)
     misfit_z = np.trapz(abs(true_lndeltac-current_lndeltac),x=x)
     misfit_z /= misfit_z_0.max()
     misfit_z_0/= misfit_z_0.max()
-    
     plt.plot(misfit_z,z,label="iter "+str(iterno-1))
     plt.plot(misfit_z_0,z,label="iter 0")
     plt.legend(loc="lower right")
     plt.ylim(*yr_plot)
-    ax3=plt.gca()
     plt.tick_params(axis='x', which='major', labelsize=14)
     plt.tick_params(axis='y', which='major', label1On=False)
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     plt.title("Misfit",fontsize=20,y=1.01)
+    #~ Fake hidden colorbar
     cb=plt.colorbar(mappable=qm,orientation="horizontal")
     ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     ax3.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    ax3.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
     cb.ax.set_visible(False)
     
     if plot_update and update is not None:
-        cp=plotc.colorplot(update,sp=next(gl),x=x,y=z,
-        yr=yr_plot,xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
-        axes_properties={'sharey':ax1,'hide_yticklabels':True})
-        
-        ax3=cp[0]; cb=cp[1]
+        ax4=plt.subplot(next(gl),sharey=ax1)
+        cp=plotc.colorplot(update,x=x,y=z,ax=ax4,centerzero=True,
+        xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
+        axes_properties={'hide_yticklabels':True})
+        ax4.set_ylim(*yr_plot)
+        cb=cp.colorbar
         cb.ax.xaxis.set_major_locator(MaxNLocator(3))
         
         plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
         plt.title(r"Next Update",fontsize=20,y=1.01)
         plt.tick_params(axis='both', which='major', labelsize=14)
-        ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+        ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     plt.subplots_adjust(wspace=0)
 

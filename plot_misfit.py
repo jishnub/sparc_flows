@@ -311,14 +311,15 @@ elif mistype == "model":
         model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
         
         for iterno in xrange(num_misfit_files):
+            model_c_file = "model_c_"+str(iterno).zfill(2)+".fits"
             try:  
-                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_"+str(iterno).zfill(2)+".fits")))
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update",model_c_file)))
             except IOError:
-                print "model_c_"+str(iterno).zfill(2)+".fits doesn't exist"
+                print model_c_file,"doesn't exist"
                 continue
         
             modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
-
+            print model_c_file,"misfit",modelmisfit
             
             modelmisfit/=model0_misfit
             

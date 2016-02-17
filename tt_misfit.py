@@ -90,7 +90,7 @@ modes_to_plot=8
 
 subplot_layout=plotc.layout_subplots(len(ridge_filters[:modes_to_plot]))[:2]
 
-tdfig,tdiffaxes=plotc.plt.subplots(*subplot_layout)
+tdfig,tdiffaxes=plt.subplots(*subplot_layout)
 tdiffaxes=np.array(list([tdiffaxes])).flatten()
 
 c=['olivedrab','black','blue','dimgray','red','sienna','black','tomato','grey','teal']

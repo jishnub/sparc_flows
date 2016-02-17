@@ -24,9 +24,11 @@ x=np.linspace(-Lx/2,Lx/2,num=nx,endpoint=False)
 vx=fitsread('true_vx.fits')
 vz=fitsread('true_vz.fits')
 
-ax=plotc.quiver2D(vx,vz,x=x,y=z,every=[2,2],xr=[-40,40],yr=[-5,None],
+qv=plotc.quiver2D(vx,vz,x=x,y=z,every=[2,2],xr=[-40,40],yr=[-5,None],
 scale=8000,key=False,key_properties={'suffix':' m/s','fmt':'{:2.0f}','scale':250},rasterized=False,color='#777777',
 usetex=True)
+
+ax=qv.axis
 
 plt.xlabel("Horizontal Distance (Mm)")
 plt.ylabel("Depth (Mm)")
