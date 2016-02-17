@@ -51,8 +51,8 @@ elif sound_speed_perturbed:
     one_D_sound_speed = np.tile(np.loadtxt(read_params.get_solarmodel(),usecols=[1],ndmin=2).reshape(nz,1),(1,nx))
     ss_pert = (true_sound_speed - one_D_sound_speed)/one_D_sound_speed
     ss_pert_max_row_index,ss_pert_max_col_index = divmod(ss_pert.argmax(),nx)
-    ss_max_row = ss_pert[ss_pert_max_row_index]
-    ss_pert_max = ss_max_row.max()
+    ss_pert_max_row = ss_pert[ss_pert_max_row_index]
+    ss_pert_max = ss_pert_max_row.max()
     hwhm = np.where(ss_pert_max_row>ss_pert_max/2)[0][-1]-nx//2
 
 perturbation_left_limit,perturbation_right_limit=x[nx//2-hwhm],x[nx//2+hwhm]
@@ -98,7 +98,7 @@ for iteration_no in xrange(0,100):
 
 #~ The actual plotting stuff
 
-modes_to_plot=8
+modes_to_plot=min(8,len(ridge_filters))
 
 subplot_layout=plotc.layout_subplots(len(ridge_filters[:modes_to_plot]))[:2]
 
@@ -170,7 +170,7 @@ for ax_ind,ax in enumerate(tdiffaxes):
 if modes_to_plot<np.prod(subplot_layout):
     # This means that there are empty subplots
     # Place legend in empty spot
-    handles,labels = tdiffaxes[modes_to_plot-1].get_legend_handles_labels()
+    handles,labels = tdiffaxes[0].get_legend_handles_labels()
     tdiffaxes[-1].legend(handles,labels,loc="center")
 else:
     for ax in tdiffaxes[:modes_to_plot]: ax.legend(loc="best")
@@ -179,6 +179,6 @@ tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)
 
 plotc.apj_2col_format(plt.gcf())
-#~ plt.show()
+plt.show()
 if not os.path.exists("plots"): os.makedirs("plots")
-plt.savefig("plots/f5.eps")
+#~ plt.savefig("plots/f5.eps")
