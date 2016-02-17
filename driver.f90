@@ -64,7 +64,7 @@ Program driver
         end if
         
         if (FLOWS) then
-            Rchar = 15. *10.**8/diml
+            Rchar = 20. *10.**8/diml
 !~             Rchar = 10. *10.**8/diml
             con= (xlength/diml)/Rchar * 2
             kay = 2.*pi/(2.*Rchar)
@@ -177,7 +177,7 @@ Program driver
                     end do
                     end if
                     
-                    call writefits_3d("psivar_used.fits",psivar,nz)
+!~                     call writefits_3d("psivar_used.fits",psivar,nz)
                     
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -218,10 +218,13 @@ Program driver
                     
                     print *, "vxmax",maxval(abs(v0_x)*dimc*10.**(-2.)),"m/s " &
                     ,"vzmax", maxval(abs(v0_z)*dimc*10.**(-2.)),"m/s"
-                    call writefits_3d('vx_'//jobno//'.fits',v0_x*dimc*10.**(-2.),nz)
-                    call writefits_3d('vz_'//jobno//'.fits',v0_z*dimc*10.**(-2.),nz)
-                    if (enf_cont .and. psi_cont) then
-                    call writefits_3d('psivar_'//jobno//'.fits',psivar,nz)
+                    
+                    if (jobno=="00") then
+                        call writefits_3d('vx_00.fits',v0_x*dimc*10.**(-2.),nz)
+                        call writefits_3d('vz_00.fits',v0_z*dimc*10.**(-2.),nz)
+                        if (enf_cont .and. psi_cont) then
+                        call writefits_3d('psivar_00.fits',psivar,nz)
+                        endif
                     endif
                     
                 end if
@@ -242,7 +245,7 @@ Program driver
             endif
         endif
     endif
-!~     stop
+
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS 
 
 

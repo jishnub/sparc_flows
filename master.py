@@ -68,7 +68,7 @@ running_full = False
 def get_eps_around_minimum(prev1_eps,prev1_misfits):
     
     #~ Previous iteration, save the plot
-    plt.plot(prev1_eps,prev1_misfits,'bo')
+    plt.plot(prev1_eps,prev1_misfits,'bo',zorder=1)
     plt.xlabel("Step size",fontsize=20)
     plt.ylabel(r"misfit",fontsize=20)
     plt.savefig('step_size_selection.eps')
@@ -89,13 +89,13 @@ def get_eps_around_minimum(prev1_eps,prev1_misfits):
     pred_misfit = np.polyval(p,eps)
     print "Estimated step size",eps
     print "Predicted misfit",pred_misfit
-    plt.plot(eps,pred_misfit,'ro')
+    plt.plot(eps,pred_misfit,'ro',zorder=1)
     
-    #~ Plot the fit polynomial, this should pass through the points and have a minimum
+    #~ Plot the fit polynomial line, this should pass through the points and have a minimum
     #~ around the predicted points
     epsfine = np.linspace(min(eps[0],prev1_eps[0]),max(eps[-1],prev1_eps[-1]),num=2000)
     misfitfine = np.polyval(p,epsfine)
-    plt.plot(epsfine,misfitfine,'g-')
+    plt.plot(epsfine,misfitfine,'g-',zorder=0)
     
     plt.savefig('step_size_selection.eps')
     plt.clf()

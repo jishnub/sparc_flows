@@ -11,7 +11,6 @@ import itertools
 
 def fitsread(fitsfile): return np.squeeze(pf.getdata(fitsfile))
 
-codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
 masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
@@ -33,17 +32,30 @@ src=str(src).zfill(2)
 nx=read_params.get_nx()
 Lx=read_params.get_xlength()
 x=np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+nz = read_params.get_nz()
+
+flows = read_params.if_flows()
+sound_speed_perturbed = read_params.if_soundspeed_perturbed()
 
 #~ Read in velocity and compute length scales
+if flows:
+    vx=fitsread('true_vx.fits')
+    vx_max_row_index,vx_max_col_index = divmod(vx.argmax(),nx)
+    vx_max_row = vx[vx_max_row_index]
+    vx=None
+    vxmax=vx_max_row.max()
+    hwhm=np.where(vx_max_row>vxmax/2)[0][-1]-nx//2
+    
+elif sound_speed_perturbed:
+    true_sound_speed = fitsread('true_c.fits')
+    one_D_sound_speed = np.tile(np.loadtxt(read_params.get_solarmodel(),usecols=[1],ndmin=2).reshape(nz,1),(1,nx))
+    ss_pert = (true_sound_speed - one_D_sound_speed)/one_D_sound_speed
+    ss_pert_max_row_index,ss_pert_max_col_index = divmod(ss_pert.argmax(),nx)
+    ss_max_row = ss_pert[ss_pert_max_row_index]
+    ss_pert_max = ss_max_row.max()
+    hwhm = np.where(ss_pert_max_row>ss_pert_max/2)[0][-1]-nx//2
 
-vxfile=os.path.join(codedir,'true_vx.fits')
-vx=fitsread(vxfile)
-vx_max_row_index,vx_max_col_index = divmod(vx.argmax(),nx)
-vx_max_row = vx[vx_max_row_index]
-vx=None
-vxmax=vx_max_row.max()
-vx_hwhm=np.where(vx_max_row>vxmax/2)[0][-1]-nx//2
-vlimleft,vlimright=x[nx//2-vx_hwhm],x[nx//2+vx_hwhm]
+perturbation_left_limit,perturbation_right_limit=x[nx//2-hwhm],x[nx//2+hwhm]
 
 datafile=os.path.join(datadir,'forward_src'+src+'_ls00','data.fits')
 data=fitsread(datafile)
@@ -147,9 +159,9 @@ for ax_ind,ax in enumerate(tdiffaxes):
     #~ Source location line
     ax.axvline(x=srcloc,color='black')
     #~ Rectangle with border
-    ax.axvline(x=vlimleft,ls='dotted',color='black')
-    ax.axvline(x=vlimright,ls='dotted',color='black')
-    ax.axvspan(vlimleft,vlimright,color='paleturquoise')
+    ax.axvline(x=perturbation_left_limit,ls='dotted',color='black')
+    ax.axvline(x=perturbation_right_limit,ls='dotted',color='black')
+    ax.axvspan(perturbation_left_limit,perturbation_right_limit,color='paleturquoise')
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
     ax.xaxis.set_tick_params(which='major', labelsize=16)
