@@ -65,13 +65,17 @@ if enf_cont and (contvar == 'psi'):
     
     yr_plot = [-5,None]
     
-    ax1,cb1=plotc.colorplot(true_vx,sp=231,x=x,y=z,yr=yr_plot,
-    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
+    pc=plotc.colorplot(true_vx,sp=231,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})
+    
+    ax1,cb1 = pc.axis,pc.colorbar
     
     plt.title(r"True vx",y=1.01)
     
-    ax2,cb2,qm=plotc.colorplot(current_vx,sp=232,x=x,y=z,yr=yr_plot,
+    pc=plotc.colorplot(current_vx,sp=232,x=x,y=z,yr=yr_plot,
     centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})
+    
+    ax2,cb2,qm = pc.axis,pc.colorbar,pc.mappable
     
     plt.title(r"Iterated vx",y=1.01)
     
@@ -92,13 +96,17 @@ if enf_cont and (contvar == 'psi'):
     cb3=plt.colorbar(mappable=qm,ax=ax,orientation="horizontal",shrink=0.8,pad=0.25)
     #~ cb3.ax.set_visible(False)
     
-    ax4,cb4=plotc.colorplot(true_vz,sp=234,x=x,y=z,yr=yr_plot,
-    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
+    pc=plotc.colorplot(true_vz,sp=234,x=x,y=z,yr=yr_plot,
+    centerzero=True,colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})
+    
+    ax4,cb4 = pc.axis,pc.colorbar
     
     plt.title(r"True vz",y=1.01)
     
-    ax5,cb5=plotc.colorplot(current_vz,sp=235,x=x,y=z,yr=yr_plot,centerzero=True,
-    colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})[0:2]
+    pc=plotc.colorplot(current_vz,sp=235,x=x,y=z,yr=yr_plot,centerzero=True,
+    colorbar_properties={"orientation":"horizontal","shrink":0.8,"pad":0.25})
+    
+    ax5,cb5 = pc.axis,pc.colorbar
     
     plt.title(r"Iterated vz",y=1.01)
     

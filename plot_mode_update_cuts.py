@@ -37,7 +37,8 @@ if not modes_found:
     print "No modes found"
     exit()
 
-arrays_to_plot.append(fitsread('true_psi.fits'))
+Lregular = 30. # \psi is scaled by Lregular in Mm
+arrays_to_plot.append(fitsread('true_psi.fits')*Lregular)
 arrays_to_plot_max_x=divmod(arrays_to_plot[-1].argmax(),arrays_to_plot[-1].shape[1])
 
 modes_found.append(r"$\psi^{ref}$")
@@ -69,7 +70,7 @@ plt.subplot(1,nplots,1)
 plt.ylabel("Depth (Mm)")
 
 plt.subplot(1,nplots,nplots//2+1)
-plt.xlabel("Sensitivity Kernel ($s^2/$Mm)",labelpad=20)
+plt.xlabel("Sensitivity Kernel ($s^2\,\mathrm{Mm}^{-3}$)",labelpad=20)
 
 plt.subplot(1,nplots,nplots)
 plt.xlabel(r"$\psi$ (Mm)",labelpad=20)
