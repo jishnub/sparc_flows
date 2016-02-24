@@ -126,6 +126,7 @@ for query in xrange(100000):
     if something_running: 
         time.sleep(60)
         continue
+    #~ else: print "Nothing running, moving on"
     
     if not os.path.exists(os.path.join(datadir,"forward_src01_ls00","data.fits")):
         #~ no iterations done
@@ -149,11 +150,16 @@ for query in xrange(100000):
         continue
         
     elif len(misfit_files)>len(ls_files):
+        
+        #~ Kernel computation should be over for this iteration
+        #~ We should proceed to computing update and running linesearch
+        
         running_full = False
         if running_ls:
             print colored("It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly","red")
             exit()
         print "Misfit from previous iteration",np.sum(np.loadtxt(os.path.join(datadir,"update",misfit_files[-1]),usecols=[2]))
+        
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
         try: 
@@ -233,6 +239,11 @@ for query in xrange(100000):
         continue
         
     elif iterno>=0 and len(misfit_files)==len(ls_files):
+
+        #~ Linesearch should be over, and we can do two things - 
+        #~ (a) run linesearch again with different step size if misfit minimum is not found
+        #~ (b) run full if misfit minimum is found
+        
         running_ls = False
         if running_full:
             print colored("It seems the full misfit was not generated. Check if the previous full.sh finished without errors","red")
@@ -279,7 +290,7 @@ for query in xrange(100000):
             print "model #"+str(min_ls_index)+" has minimum misfit"
             copy_updated_model(min_ls_index,var=iter_var)
             
-            plt.clf() # Refresh the linesearch stepsize-misfit plot
+            plt.clf() # Refresh the stepsize-misfit plot
             
             #~ Run full.sh
             print "#"*80
