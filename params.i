@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/soundspeed3/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/smooth2/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -53,9 +53,9 @@ logical, parameter :: DAMP_WAVES = .falsE.
 
 
 ! TYPE OF SIMULATION (DEFAULT IS QUIET OR SOURCE/SOUND-SPEED ANOMALIES):: FLOWS OR MAGNETIC FIELDS 
-logical, parameter :: sound_speed_perturbation = .True.
+logical, parameter :: sound_speed_perturbation = .False.
 logical, parameter :: magnetic = .falsE.
-logical, parameter :: FLOWS = .false.
+logical, parameter :: FLOWS = .True.
 logical :: TEST_IN_2D != .false.
 
 
@@ -66,7 +66,7 @@ parameter(st_z = 1, fi_z = nz, nz_kern = (fi_z - st_z+1),nupeak=0.0017, nuwidth 
 logical BACKGROUND_FLOWS_EXIST, COMPUTE_FORWARD !, COMPUTE_CC_SLICE
 logical COMPUTE_ADJOINT, KERNEL_MODE, COMPUTE_POWER_SPEC, CONSTRUCT_KERNELS
 parameter(KERNEL_MODE =.true.)
-parameter(background_flows_exist = .false.)
+parameter(background_flows_exist = .True.)
 logical sound_speed_kernels, flow_kernels, magnetic_kernels, density_kernels
 
 
@@ -160,5 +160,5 @@ parameter ( vz_cont = .FALSE. )
 !CUTOFF
 logical cutoff_switch
 real*8 cutoff_dist
-parameter ( cutoff_switch = .TRUE. )
+parameter ( cutoff_switch = .True. )
 parameter ( cutoff_dist = 50. )

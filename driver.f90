@@ -56,6 +56,9 @@ Program driver
     ! --------------------------------------------
 
     call Initialize_all    
+    
+!~     call adjoint_source_filt(520)
+!~     stop
 
     if (COMPUTE_DATA) then
 
@@ -64,8 +67,7 @@ Program driver
         end if
         
         if (FLOWS) then
-            Rchar = 20. *10.**8/diml
-!~             Rchar = 10. *10.**8/diml
+            Rchar = 15. *10.**8/diml
             con= (xlength/diml)/Rchar * 2
             kay = 2.*pi/(2.*Rchar)
             z0 = 1.-2.3*10**8./diml
@@ -77,19 +79,18 @@ Program driver
                     signt = 1.0
                     if (x(i) .lt. 0.5) signt = -1.0
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
-!                    bes(0) = cos(rand1)
                      call bessel(0,rand1,bes(0))
-!                    bes(1) = sin(rand1)
                      call bessel(1,rand1,bes(1))
                      call bessel(2,rand1,bes(2))
+                     
+!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
                     v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -bes(1)/Rchar) * &
                      exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
 
+!~                     vx = d/dz(\rho c \psi)/\rho
                     v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
                              gradrho0_z(i,1,k)/rho0(i,1,k)) * &
                              exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
-                    !    v0_x(i,1,k) = 10.0**4/dimc * 1./(1.+exp((z(k)-0.9995)/0.0002)) * &
-                    !          1./(1.+exp((z(20) - z(k))/0.002)) * abs(z(k)-z(15))/(z(nz)-z(1))
                     
                 enddo
             enddo
@@ -100,15 +101,16 @@ Program driver
                 do i=1,nx
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
                     call bessel(1,rand1,bes(1))
-!~                     bes(1) = sin(rand1)
                     signt = 1.0
                     if (x(i) .lt. 0.5) signt = -1.0
                     psivar(i,1,k) = bes(1) * rand2 * exp(-abs(x(i)-0.5)*con &
                     - (z(k) -z0)**2./(2.*sigmaz**2.)) * signt/c2(i,1,k)**0.5
+!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
                 enddo
             enddo
-            print *,'The fiducial value psi_0 should be (roughly)',695./30.*maxval(psivar)*1./1.04
-            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*695./30.,nz)
+            print *,'The fiducial value psi_0 should be (roughly)',diml/30E8*maxval(psivar)
+            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/30E8,nz)
+!~             Multiply \psi by 30 to obtain \psi in Mm units
         
             deallocate(psivar)
             

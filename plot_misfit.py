@@ -7,6 +7,7 @@ from matplotlib.ticker import MaxNLocator,LogLocator
 import read_params
 import matplotlib.pyplot as plt
 import itertools
+from matplotlib import rc
 
 flows = read_params.if_flows()
 sound_speed_perturbed = read_params.if_soundspeed_perturbed()
@@ -101,9 +102,12 @@ elif mistype == "data_summed":
     linestyles = itertools.cycle(('solid','dashed','dotted'))
     modemisfit = np.zeros((len(ridges),num_misfit_files))
 
-    subplot_layout = plotc.layout_subplots(4)[:2]
+    rc('text', usetex=True)
+    rc('font',**{'family':'serif','serif':['Times']})
 
-    for ridgeno,ridge in enumerate(ridges):
+    plt.subplot(121)
+
+    for ridgeno,ridge in enumerate(ridges[:4]):
         
         nsources_found = 0
         
@@ -128,14 +132,47 @@ elif mistype == "data_summed":
             
     plt.tick_params(axis='both', which='major', labelsize=14)    
     plt.xlim(-0.5,num_misfit_files+5)
-    #~ plt.grid()
-    #~ plt.gca().yaxis.set_major_locator(LogLocator(numticks=6))
     ax=plt.gca()
-    plt.xlabel("Iteration")
-    plt.ylabel('Data misfit')  
-    legend=plt.legend(bbox_to_anchor=(1, 0.95),
-           bbox_transform=plt.gcf().transFigure)  
-    plotc.apj_1col_format(plt.gcf())
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Data misfit',fontsize=20)  
+    plt.legend()
+    #~ legend=plt.legend(bbox_to_anchor=(1, 0.95),
+           #~ bbox_transform=plt.gcf().transFigure)  
+
+    plt.subplot(122)
+    for ridgeno,ridge in enumerate(ridges[4:]):
+        
+        nsources_found = 0
+        
+        for src in xrange(1,num_source+1):
+            
+            for iterno in xrange(num_misfit_files):
+            
+                ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
+                            'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
+                try:
+                    tt=np.loadtxt(ttfile)
+                    npix = tt.shape[0]
+                    modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
+                    nsources_found+=1
+                except IOError:
+                    pass
+                
+        modemisfit[ridgeno] /= nsources_found            
+
+        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
+        ls=next(linestyles),label=modes[ridge][:-4])
+            
+    plt.tick_params(axis='both', which='major', labelsize=14)    
+    plt.xlim(-0.5,num_misfit_files+5)
+    ax=plt.gca()
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Data misfit',fontsize=20)  
+    plt.legend()
+    
+    plt.gcf().set_size_inches(8,4)
+           
+    #~ plotc.apj_2col_format(plt.gcf())
     
     plt.tight_layout()
     if not os.path.exists("plots"): os.makedirs("plots")
