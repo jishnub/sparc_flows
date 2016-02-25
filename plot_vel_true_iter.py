@@ -22,9 +22,7 @@ def get_iter_no():
     return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
 iterno=get_iter_no()
 
-itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
-if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
-else: itercutoff=np.inf
+itercutoff = read_params.parse_cmd_line_params("iter",mapto=int,default=np.inf)
 
 def iterm(i): 
     return str(min(itercutoff,iterno-i)).zfill(2)
@@ -144,8 +142,7 @@ if enf_cont and (contvar == 'psi'):
     cb3.ax.set_visible(False)
     cb6.ax.set_visible(False)
     
-    if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig("plots/f7.eps")
+    
     
     #~ plt.figure()
     #~ vx_max_row_index,vx_max_col_index = divmod(true_vx.argmax(),nx)
@@ -298,6 +295,15 @@ elif not enf_cont:
     plt.subplots_adjust(wspace=0)
 
 
+
+save = read_params.parse_cmd_line_params("save")
+if save is not None:
+    savepath = os.path.join("plots",save)
+    print "saving to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving plot to file"
 
 plt.show()
     

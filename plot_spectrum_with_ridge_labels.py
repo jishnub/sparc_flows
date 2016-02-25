@@ -39,10 +39,17 @@ nu_edges = np.linspace(nu[0]-dnu/2,nu[-1]+dnu/2,nt+1)
 rc("text",usetex=True)
 rc('font',**{'family':'serif','serif':['Helvetica']})
 
-if not os.path.exists("plots"): os.makedirs("plots")
+
+tdfig=None
+specfig=None
+
+save = read_params.parse_cmd_line_params("save",return_list=True)
+if save is not None: tdfig,specfig = save[0],save[1]
+print tdfig,type(tdfig)
+print specfig,type(specfig)
+quit()
 ###########################################################################################
 #~ Time distance
-fig=plt.figure()
 
 datamax = abs(data).max()/50
 plt.pcolormesh(x_edges,t_edges,data,cmap="Greys",vmax=datamax,vmin=-datamax,rasterized=True)
@@ -55,30 +62,30 @@ ax=plt.gca()
 ax.xaxis.set_major_locator(MaxNLocator(5))
 ax.yaxis.set_major_locator(MultipleLocator(1))
 
-plotc.apj_1col_format(fig)
+plotc.apj_1col_format(plt.gcf())
 plt.tight_layout()
 
-plt.savefig("plots/f2.eps")
+if tdfig is not None:
+    savepath = os.path.join("plots",save[0])
+    print "saving time distance plot to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving time distance plot to file"
+
 
 #############################################################################################
 #~ Spectrum
 
-fig=plt.figure()
-#~ gs=gridspec.GridSpec(1, 2, width_ratios=[3, 1]) 
-#~ gs.update(wspace=0)
-#~ ax0 = plt.subplot(gs[0])
+fig = plt.figure()
 plt.pcolormesh(k_edges*Rsun,nu_edges,data_spec,cmap='Greys',vmax=data_spec.max()*0.2,rasterized=True)
 ax = plt.gca()
-#~ cb=plt.colorbar()
 
 plt.xlim(0,1000)
 plt.ylim(0,8)
 
-#~ ax.set_aspect(1000/8)
-
 ax.xaxis.set_major_locator(MaxNLocator(5,prune="lower"))
 ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
-#~ cb.ax.yaxis.set_major_locator(MaxNLocator(5))
 
 plt.xlabel(r"$kR_\odot$")
 plt.ylabel(r"Frequency (mHz)")
@@ -91,17 +98,18 @@ plt.text(547,5.1,r"p$_4$",bbox={"facecolor":"white","edgecolor":"black","pad":6}
 plt.text(480,5.3,r"p$_5$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
 plt.text(400,5.4,r"p$_6$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
 
-#~ ax1 = plt.subplot(gs[1])
-#~ nu_src = 
-#~ srcamp = 
-#~ sigma = 
-#~ soirce_spectrum = srcamp*np.exp(-(nu-nu_src)**2/(2*sigma**2))
-#~ ax1.plot(srcamp,nu,color='black')
-
-plotc.apj_1col_format(fig)
+plotc.apj_1col_format(plt.gcf())
 plt.tight_layout()
-plt.savefig("plots/f3.eps",rasterized=True)
-#~ plt.show()
+
+if specfig is not None:
+    savepath = os.path.join("plots",specfig)
+    print "saving spectrum plot to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving spectrum plot to file"
+
+plt.show()
 
 
 

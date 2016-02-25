@@ -28,17 +28,13 @@ if num_misfit_files==0:
     quit()
 
 #~ If iteration cutoff is specified use it
-itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
-if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
-else: itercutoff=np.inf
+itercutoff = read_params.parse_cmd_line_params('iter',mapto=int,default=np.inf)
 
 num_misfit_files = min(itercutoff,num_misfit_files)
 num_misfit_all_files = min(itercutoff,num_misfit_all_files)
 
 #~ What to plot - data or model misfit?
-typeinp=filter(lambda x: x.startswith("type="),sys.argv)
-if len(typeinp)==0: mistype="data"
-else: mistype = typeinp[0].split("=")[-1]
+mistype = read_params.parse_cmd_line_params("type",default="data")
 
 #~ Get source location, useful if plotting sourcewise misfit (data_sourcewise)
 srclocs = np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
@@ -49,6 +45,11 @@ ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
 for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
 modes['8']='first_bounce_pmode'
+
+np.set_printoptions(linewidth=200,precision=4)
+
+#~ Get filename to save to
+save = read_params.parse_cmd_line_params("save")
 
 def spaced(a): 
     b=a[:-4]+" "+a[-4:]
@@ -105,7 +106,7 @@ elif mistype == "data_summed":
     rc('text', usetex=True)
     rc('font',**{'family':'serif','serif':['Times']})
 
-    plt.subplot(121)
+    plt.subplot(131)
 
     for ridgeno,ridge in enumerate(ridges[:4]):
         
@@ -132,14 +133,11 @@ elif mistype == "data_summed":
             
     plt.tick_params(axis='both', which='major', labelsize=14)    
     plt.xlim(-0.5,num_misfit_files+5)
-    ax=plt.gca()
     plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Data misfit',fontsize=20)  
-    plt.legend()
-    #~ legend=plt.legend(bbox_to_anchor=(1, 0.95),
-           #~ bbox_transform=plt.gcf().transFigure)  
+    plt.ylabel('Mean misfit',fontsize=20)  
+    plt.legend(ncol=2)
 
-    plt.subplot(122)
+    plt.subplot(132)
     for ridgeno,ridge in enumerate(ridges[4:]):
         
         nsources_found = 0
@@ -163,20 +161,29 @@ elif mistype == "data_summed":
         plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
         ls=next(linestyles),label=modes[ridge][:-4])
             
-    plt.tick_params(axis='both', which='major', labelsize=14)    
+    plt.tick_params(axis='both', which='major', labelsize=14)
     plt.xlim(-0.5,num_misfit_files+5)
-    ax=plt.gca()
     plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Data misfit',fontsize=20)  
-    plt.legend()
+    plt.ylabel('Mean Misfit',fontsize=20)
+    plt.legend(ncol=2)
     
-    plt.gcf().set_size_inches(8,4)
+   
+    total_misfit = np.zeros(num_misfit_files)
+    for fileno,misfitfile in enumerate(misfitfiles):
+        total_misfit[fileno] = np.sum(np.loadtxt(misfitfile,usecols=[2]))
+        
+    plt.subplot(133)
+    
+    plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid')
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.xlim(-0.5,num_misfit_files+5)
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Net misfit',fontsize=20)
+    
+    plt.gcf().set_size_inches(12,4)
            
-    #~ plotc.apj_2col_format(plt.gcf())
-    
     plt.tight_layout()
-    if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig("plots/f6a.eps")
+    
     
 elif mistype == "data_freq":
     
@@ -228,7 +235,6 @@ elif mistype == "data_freq":
     
     plotc.apj_2col_format(plt.gcf())
     plt.tight_layout()
-    plt.savefig("plots/f4.eps")
 
 
 elif mistype == "model":
@@ -319,22 +325,6 @@ elif mistype == "model":
         
         plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
         
-        plt.grid()
-        plt.legend(loc="best")
-        
-        plt.xlim(-0.5,num_misfit_files+0.5)
-        plt.ylim(0.4,1.1)
-        plt.xlabel("Iteration number")
-        plt.ylabel("Model misfit")
-        
-        plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
-
-        plotc.apj_1col_format(plt.gcf())
-        plt.tight_layout()
-        
-        if not os.path.exists("plots"): os.makedirs("plots")
-        plt.savefig("plots/f6b.eps")
-    
     if sound_speed_perturbed:
         try:  
             truemodel=np.squeeze(pyfits.getdata("true_c.fits"))
@@ -364,17 +354,27 @@ elif mistype == "model":
         
         plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$c$",color='black')
         
-        plt.grid()
-        plt.legend(loc="best")
+    plt.grid()
+    plt.legend(loc="best")
+    
+    plt.xlim(-0.5,num_misfit_files+0.5)
+    plt.ylim(0,1.1)
+    plt.xlabel("Iteration number")
+    plt.ylabel("Model misfit")
         
-        plt.xlim(-0.5,num_misfit_files+0.5)
-        plt.ylim(0,1.1)
-        plt.xlabel("Iteration number")
-        plt.ylabel("Model misfit")
+    plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
+    
+    plotc.apj_1col_format(plt.gcf())
+    plt.tight_layout()
         
-        plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
-        plotc.apj_1col_format(plt.gcf())
 
+if save is not None:
+    save_path = os.path.join("plots",save)
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(save_path)
+    print "Saved to",savepath
+else:
+    print "Not saving plot to file"
 
 plt.show()
 

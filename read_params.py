@@ -1,4 +1,4 @@
-import os,fnmatch
+import os,fnmatch,sys
 
 def get_directory():
     codedir=os.path.dirname(os.path.abspath(__file__))
@@ -195,3 +195,24 @@ def get_cutoff_dist():
                 val= float(line.split("=")[-1].split(")")[0].strip())
                 
     return switch,val
+
+
+
+################################################################################################
+
+
+def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=None):
+    cmd_line_param = filter(lambda x: x.startswith(key+"="),sys.argv)
+        
+    if len(cmd_line_param)!=0: 
+        retval=cmd_line_param[0].split("=")[-1]
+        retval = retval.strip().lstrip('[').rstrip(']').split(',')
+        if zfill is not None: retval=map(lambda x: x.zfill(zfill), retval)
+        if mapto is not None: retval=map(mapto,retval)
+        retval = [None if element=='None' else element for element in retval]
+        if not return_list and len(retval)==1:
+            retval=retval[0]
+            
+    else: retval=default
+    
+    return retval

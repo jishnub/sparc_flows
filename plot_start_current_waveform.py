@@ -16,10 +16,7 @@ def fitsread(fitsfile): return np.squeeze(pyfits.getdata(fitsfile))
 
 datadir = read_params.get_directory()
 
-try:
-    src=next(f for f in sys.argv if (f.startswith("src=") or f.startswith("source=")))
-    src=int(src.split("=")[-1])
-except StopIteration: src=1
+src = read_params.parse_cmd_line_params("src",mapto=int,default=1)
 
 mp=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
 srcloc = mp[src]
@@ -61,9 +58,7 @@ t=np.arange(nt)*dt_min
 
 vzcc_start=fitsread(os.path.join(datadir,'tt','iter00','vz_cc_src'+str(src).zfill(2)+'.fits'))
 
-itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
-if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
-else: itercutoff=np.inf
+itercutoff = read_params.parse_cmd_line_params("iter",mapto=int,default=np.inf)
 
 iters_done = glob.glob(os.path.join(datadir,'tt','iter*'))
 niters = len(iters_done)-1
@@ -77,14 +72,17 @@ modes['8']='first_bounce_p'
 
 modes_used=read_params.get_modes_used()
 
-plotridge=filter(lambda x: x in modes.values(),sys.argv)
+modes_passed_cmdline = read_params.parse_cmd_line_params("mode",default=["f"],return_list=True)
+plotridge=filter(lambda x: x in modes.values(),modes_passed_cmdline)
+
 if plotridge:
-    ridges=[r+'mode' for r in sys.argv if r in plotridge]
+    ridges=[r+'mode' for r in modes_passed_cmdline if r in plotridge]
 else:
     ridges=[modes[modes_used[0]]+'mode']
 
 
 for ridge in ridges:
+    print ridge
     plt.figure()
     filt = fitsread(ridge+'_filter.fits')
 
@@ -106,50 +104,48 @@ for ridge in ridges:
     lef_ttdiff = ttdiff_array[:,2]
     rig_ttdiff = ttdiff_array[:,3]
     
-    lef_ttdiff_cutoff = t[int(lef_ttdiff[pixel_ttdiff==pix])]
-    rig_ttdiff_cutoff = t[int(rig_ttdiff[pixel_ttdiff==pix])]
+    lef_ttdiff_cutoff = t[map(int,lef_ttdiff[pixel_ttdiff==pix])]
+    rig_ttdiff_cutoff = t[map(int,rig_ttdiff[pixel_ttdiff==pix])]
 
-    gl=plotc.gridlist(2,1)
     
-    plt.subplot(next(gl))
-    plt.plot(t,data_filtered[:,pix],label="True model")
-    plt.plot(t,vzcc_start_filtered[:,pix],label="Starting model",linestyle='dashed',linewidth=2,color='red')
+    plt.plot(t,data_filtered[:,pix],label="True",color='black')
+    plt.plot(t,vzcc_start_filtered[:,pix],label="Iter 0",linestyle='dashed',linewidth=2,color='#555555')
+    plt.plot(t,vzcc_iter_filtered[:,pix],label="Iter "+str(iter_to_plot),linestyle='dashed',linewidth=2,color='#333333',marker='o')
     ax1=plt.gca()
     ax1.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    plt.tick_params(axis='x', which='major', labelbottom=False,labeltop=True)
-    ax1.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
-    plt.tick_params(axis='y', which='major', labelsize=15)
+    ax1.xaxis.set_major_locator(MaxNLocator(6))
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    ax1.get_yaxis().get_offset_text().set_x(-0.07)
+    #~ ax1.get_yaxis().get_offset_text().set_x(-0.07)
     
+    #~ plt.legend(loc='best')
+    
+    #~ ax1_twin=ax1.twiny()
+    #~ ax1_twin.plot(t,vzcc_start_filtered[:,pix],label="Starting",linestyle='dashed',linewidth=2,color='red')
+    #~ ax1_twin.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
+    #~ ax1_twin.xaxis.set_major_formatter(FuncFormatter(lambda x,pos: "{:3.1f}".format(x*60)))
+    
+    ax1.set_ylabel("Wave velocity\n(arbitrary units)")
+    
+    xlim_left = lef_ttdiff_cutoff - (rig_ttdiff_cutoff - lef_ttdiff_cutoff)/3
+    xlim_right = rig_ttdiff_cutoff + (rig_ttdiff_cutoff - lef_ttdiff_cutoff)/3
+    plt.xlim(xlim_left,xlim_right)
     plt.legend(loc='best')
     
-    ax1_twin=ax1.twiny()
-    ax1_twin.plot(t,vzcc_start_filtered[:,pix],label="Starting model",linestyle='dashed',linewidth=2,color='red')
-    ax1_twin.xaxis.set_major_locator(MaxNLocator(6,prune='both'))
-    ax1_twin.xaxis.set_major_formatter(FuncFormatter(lambda x,pos: "{:3.1f}".format(x*60)))
+    plt.xlabel("Time (min)")
     
-    ax1.set_ylabel("wave vz",fontsize=25)
-    
-    plt.xlim(lef_ttdiff_cutoff,rig_ttdiff_cutoff)
-
-    plt.subplot(next(gl),sharex=ax1,sharey=ax1)
-    plt.plot(t,data_filtered[:,pix],label="True model")
-    plt.plot(t,vzcc_iter_filtered[:,pix],label="Iterated model",linestyle='dashed',linewidth=2,color='red')
-    ax2=plt.gca()
-    ax2.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    plt.tick_params(axis='both', which='major', labelsize=15)
-    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
-    ax2.yaxis.offsetText.set_visible(False)
-    plt.ylabel("wave vz",fontsize=25)
-    plt.legend(loc='best')
-    
-    plt.xlim(lef_ttdiff_cutoff,rig_ttdiff_cutoff)
-
-    plt.xlabel("Time (min)",fontsize=25)
+    plotc.apj_1col_format(plt.gcf())
   
   
 plt.tight_layout()
-plt.subplots_adjust(hspace=0)
+
+save = read_params.parse_cmd_line_params("save")
+if save is not None:
+    savepath = os.path.join("plots",save)
+    print "saving to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving plot to file"
+    
 plt.show()
 

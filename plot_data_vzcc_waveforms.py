@@ -65,7 +65,7 @@ modes['8']='first_bounce_p'
 
 modes_used=read_params.get_modes_used()
 
-plotridge=filter(lambda x: x in ['f','p1','p2','p3','p4','p5','p6','p7','large_dist_p'],sys.argv)
+plotridge=filter(lambda x: x in ['f','p1','p2','p3','p4','p5','p6','p7','first_bounce_p'],sys.argv)
 if plotridge:
     ridges=[r+'mode' for r in sys.argv if r in plotridge]
 else:
