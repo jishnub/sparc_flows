@@ -66,6 +66,15 @@ if not os.path.exists("plots"): os.makedirs("plots")
 
 plotc.apj_1col_format(plt.gcf())
 plt.tight_layout()
-#~ plt.savefig("plots/f1.eps")
+
+save = read_params.parse_cmd_line_params("save")
+if save is not None:
+    savepath = os.path.join("plots",save)
+    print "saving to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving plot to file"
+
 plt.show()
 

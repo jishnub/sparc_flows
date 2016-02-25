@@ -10,24 +10,10 @@ import plotc
 datadir = read_params.get_directory()
 updatedir = os.path.join(datadir,'update')
 
-def parse_cmd_line_params(key,mapto=None,default=None):
-    cmd_line_param = filter(lambda x: x.startswith(key+"="),sys.argv)
-        
-    if len(cmd_line_param)!=0: 
-        retval=cmd_line_param[0].split("=")[-1]
-        retval = retval.strip().lstrip('[').rstrip(']').split(',')
-        if mapto is not None: retval=map(mapto,retval)
-        if len(retval)==1: retval=retval[0]
-            
-    else: retval=default
-    
-    return retval
-    
+src = read_params.parse_cmd_line_params('src',mapto=int,default=1)
 
-src = parse_cmd_line_params('src',mapto=int,default=1)
-
-misfit_type = parse_cmd_line_params('type',default='tt')
-modes = parse_cmd_line_params('mode',default='f')
+misfit_type = read_params.parse_cmd_line_params('type',default='tt')
+modes = read_params.parse_cmd_line_params('mode',default='f')
 if type(modes)==str: modes=[modes]
 
 modeindex={'f':'0'}
@@ -38,7 +24,7 @@ misfitfiles=sorted([os.path.join(updatedir,f) for f in fnmatch.filter(os.listdir
 num_misfit_files=len(misfitfiles)
 
 #~ If iteration cutoff is specified use it
-itercutoff = parse_cmd_line_params('iter',mapto=int,default=np.inf)
+itercutoff = read_params.parse_cmd_line_params('iter',mapto=int,default=np.inf)
 
 iter_no = min(itercutoff,num_misfit_files-1)
 

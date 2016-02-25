@@ -101,6 +101,13 @@ plt.connect('axes_enter_event', on_axis_enter)
 plt.connect('axes_leave_event', on_axis_leave)
 plt.connect('button_press_event', on_click)
 
-if not os.path.exists("plots"): os.makedirs("plots")
-plt.savefig("plots/f4.eps")
+save = read_params.parse_cmd_line_params("save")
+if save is not None:
+    savepath = os.path.join("plots",save)
+    print "saving to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving plot to file"
+
 plt.show()

@@ -33,9 +33,7 @@ z=np.loadtxt(os.path.join(codedir,read_params.get_solarmodel()),usecols=[0])
 z=(z-1)*Rsun
 
 #~ Check if specific iter is to be plotted
-iter_to_plot=next(iter(filter(lambda x: x.startswith("iter="),sys.argv)),None)
-if iter_to_plot is not None: iter_to_plot = iter_to_plot.split("=")[-1].zfill(2)
-else: iter_to_plot = iterm1
+iter_to_plot=read_params.parse_cmd_line_params("iter",zfill=2,default=iterm1)
 
 if flows:
     if enf_cont and (contvar == 'psi'):

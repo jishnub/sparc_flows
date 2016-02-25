@@ -11,19 +11,16 @@ import itertools
 
 def fitsread(fitsfile): return np.squeeze(pf.getdata(fitsfile))
 
+
+
 datadir=read_params.get_directory()
 masterpixelsfile=os.path.join(datadir,'master.pixels')
 masterpixels=np.loadtxt(masterpixelsfile,ndmin=1)
 
 dt=read_params.get_dt()/60.
 
-temp=filter(lambda x: x.startswith("src=") or x.startswith("source="),sys.argv)
-if temp: src=int(temp[0].split("=")[-1])
-else: src=1
-
-itercutoff = filter(lambda x: x.startswith("iter="),sys.argv)
-if len(itercutoff)!=0: itercutoff=int(itercutoff[0].split("=")[-1])
-else: itercutoff=np.inf
+src = read_params.parse_cmd_line_params("src",mapto=int,default=1)
+itercutoff = read_params.parse_cmd_line_params("iter",mapto=int,default=np.inf)
 
 if src>len(masterpixels): src=len(masterpixels)
 src=str(src).zfill(2)
@@ -179,6 +176,16 @@ tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)
 
 plotc.apj_2col_format(plt.gcf())
+
+#~ Get filename to save to
+save = read_params.parse_cmd_line_params("save")
+
+if save is not None:
+    save_path = os.path.join("plots",save)
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(save_path)
+    print "Saved to",savepath
+else:
+    print "Not saving plot to file"
+
 plt.show()
-if not os.path.exists("plots"): os.makedirs("plots")
-#~ plt.savefig("plots/f5.eps")
