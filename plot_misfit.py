@@ -346,7 +346,6 @@ elif mistype == "model":
                 continue
         
             modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
-            print model_c_file,"misfit",modelmisfit
             
             modelmisfit/=model0_misfit
             
@@ -366,12 +365,226 @@ elif mistype == "model":
     
     plotc.apj_1col_format(plt.gcf())
     plt.tight_layout()
+
+elif mistype == "data_model":
+    
+    markers = iter(('o', 'v', '8','s','<', 7, '*', 'h', '^', 'D', 'd'))
+    linestyles = itertools.cycle(('solid','dashed','dotted'))
+    modemisfit = np.zeros((len(ridges),num_misfit_files))
+
+    rc('text', usetex=True)
+    rc('font',**{'family':'serif','serif':['Times']})
+
+    plt.subplot(141)
+
+    for ridgeno,ridge in enumerate(ridges[:4]):
         
+        nsources_found = 0
+        
+        for src in xrange(1,num_source+1):
+            
+            for iterno in xrange(num_misfit_files):
+            
+                ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
+                            'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
+                try:
+                    tt=np.loadtxt(ttfile)
+                    npix = tt.shape[0]
+                    modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
+                    nsources_found+=1
+                except IOError:
+                    pass
+                
+        modemisfit[ridgeno] /= nsources_found            
+
+        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
+        ls=next(linestyles),label=modes[ridge][:-4])
+            
+    plt.tick_params(axis='both', which='major', labelsize=14)    
+    plt.xlim(-0.5,num_misfit_files+5)
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Mean data misfit',fontsize=20)  
+    plt.legend(ncol=2)
+
+    plt.subplot(142)
+    for ridgeno,ridge in enumerate(ridges[4:]):
+        
+        nsources_found = 0
+        
+        for src in xrange(1,num_source+1):
+            
+            for iterno in xrange(num_misfit_files):
+            
+                ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
+                            'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
+                try:
+                    tt=np.loadtxt(ttfile)
+                    npix = tt.shape[0]
+                    modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
+                    nsources_found+=1
+                except IOError:
+                    pass
+                
+        modemisfit[ridgeno] /= nsources_found            
+
+        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
+        ls=next(linestyles),label=modes[ridge][:-4])
+            
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.xlim(-0.5,num_misfit_files+5)
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Mean data misfit',fontsize=20)
+    plt.legend(ncol=2)
+    
+   
+    total_misfit = np.zeros(num_misfit_files)
+    for fileno,misfitfile in enumerate(misfitfiles):
+        total_misfit[fileno] = np.sum(np.loadtxt(misfitfile,usecols=[2]))
+        
+    plt.subplot(143)
+    
+    plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid')
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.xlim(-0.5,num_misfit_files+5)
+    plt.xlabel("Iteration",fontsize=20)
+    plt.ylabel('Net data misfit',fontsize=20)
+    
+    plt.subplot(144)
+    
+    if flows:
+        # vx
+        try:  
+            truemodel=np.squeeze(pyfits.getdata("true_vx.fits"))
+        except IOError:
+            print "True vx model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_"+str(iterno).zfill(2)+".fits")))
+            except IOError:
+                print "vx_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$v_x$",color='black')
+
+
+        # vz
+        try:  
+            truemodel=np.squeeze(pyfits.getdata("true_vz.fits"))
+        except IOError:
+            print "True vz model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):    
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_"+str(iterno).zfill(2)+".fits")))
+            except IOError:
+                print "vz_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dashed',marker='o',label="$v_z$",color='black')
+        
+        # Vector potential
+        try:  
+            truemodel=np.squeeze(pyfits.getdata("true_psi.fits"))
+        except IOError:
+            print "True psi model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        
+        truemodel -= truemodel[0,0]
+        
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_00.fits")))
+        model0-=model0[0,0]
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):    
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_"+str(iterno).zfill(2)+".fits")))
+                itermodel -= itermodel[0,0]
+            except IOError:
+                print "model_psi_"+str(iterno).zfill(2)+".fits doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            modelmisfit/=model0_misfit
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
+        
+    if sound_speed_perturbed:
+        try:  
+            truemodel=np.squeeze(pyfits.getdata("true_c.fits"))
+        except IOError:
+            print "True c model doesn't exist"
+            quit()
+        
+        modelmisfit_list = []
+        
+        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_00.fits")))
+        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        
+        for iterno in xrange(num_misfit_files):
+            model_c_file = "model_c_"+str(iterno).zfill(2)+".fits"
+            try:  
+                itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update",model_c_file)))
+            except IOError:
+                print model_c_file,"doesn't exist"
+                continue
+        
+            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            
+            modelmisfit/=model0_misfit
+            
+            modelmisfit_list.append(modelmisfit)
+        
+        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$c$",color='black')
+        
+    plt.grid()
+    plt.legend(loc="best")
+    
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    plt.xlim(-0.5,num_misfit_files+0.5)
+    plt.ylim(0,1.1)
+    plt.xlabel("Iteration number",fontsize=20)
+    plt.ylabel("Model misfit",fontsize=20)
+        
+    plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
+    
+    plt.gcf().set_size_inches(16,4)
+    plt.tight_layout()
+    
+    
 
 if save is not None:
-    save_path = os.path.join("plots",save)
+    savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig(save_path)
+    plt.savefig(savepath)
     print "Saved to",savepath
 else:
     print "Not saving plot to file"

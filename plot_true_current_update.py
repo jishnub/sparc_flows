@@ -2,6 +2,7 @@ from __future__ import division
 import plotc
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator,ScalarFormatter
+from matplotlib import rc
 import numpy as np
 import read_params
 import pyfits
@@ -34,6 +35,9 @@ z=(z-1)*Rsun
 
 #~ Check if specific iter is to be plotted
 iter_to_plot=read_params.parse_cmd_line_params("iter",zfill=2,default=iterm1)
+
+rc('text', usetex=True)
+rc('font',**{'family':'serif','serif':['Times']})
 
 if flows:
     if enf_cont and (contvar == 'psi'):
@@ -260,26 +264,28 @@ if sound_speed_perturbed:
   
     true_lndeltac = (true_model-oneD_stratification)/oneD_stratification
     ax1=plt.subplot(next(gl))
-    cp=plotc.colorplot(true_lndeltac,ax=ax1,x=x,y=z,
+    cp=plotc.colorplot(true_lndeltac,ax=ax1,x=x,y=z,cmap='Greys',
     xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
-    cb=cp.colorbar
-    cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+    cb1=cp.colorbar
+    cb1.ax.xaxis.set_major_locator(MaxNLocator(3))
     plt.ylabel("Depth (Mm)",fontsize=20)
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax1.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    for label in cb1.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
     
     current_lndeltac = (current_model-oneD_stratification)/oneD_stratification
-    cp=plotc.colorplot(current_lndeltac,x=x,y=z,sp=next(gl),centerzero=True,
+    cp=plotc.colorplot(current_lndeltac,x=x,y=z,sp=next(gl),cmap='Greys',vmin=0,
     xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    axes_properties={'hide_yticklabels':True},subplot_properties={'sharey':ax1})
-    ax2=cp.axis;cb=cp.colorbar; qm = cp.mappable
-    cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+    subplot_properties={'sharey':ax1})
+    ax2=cp.axis;cb2=cp.colorbar
+    cb2.ax.xaxis.set_major_locator(MaxNLocator(3))
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
     ax2.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
+    for label in cb2.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
     
     #~ Misfit
     ax3=plt.subplot(next(gl),sharey=ax1)
@@ -287,38 +293,51 @@ if sound_speed_perturbed:
     misfit_z = np.trapz(abs(true_lndeltac-current_lndeltac),x=x)
     misfit_z /= misfit_z_0.max()
     misfit_z_0/= misfit_z_0.max()
-    plt.plot(misfit_z,z,label="iter "+str(iterno-1))
-    plt.plot(misfit_z_0,z,label="iter 0")
+    qm = ax3.pcolormesh(current_lndeltac)
+    plt.cla()
+    plt.plot(misfit_z,z,label="iter "+iter_to_plot,color='black')
+    plt.plot(misfit_z_0,z,label="iter 0",color='black',linestyle='dashed')
     plt.legend(loc="lower right")
     plt.ylim(*yr_plot)
     plt.tick_params(axis='x', which='major', labelsize=14)
-    plt.tick_params(axis='y', which='major', label1On=False)
+    #~ plt.tick_params(axis='y', which='major', label1On=False)
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     plt.title("Misfit",fontsize=20,y=1.01)
     #~ Fake hidden colorbar
-    cb=plt.colorbar(mappable=qm,orientation="horizontal")
+    cb3=plt.colorbar(mappable=qm,orientation="horizontal")
     ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     ax3.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
     ax3.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-    cb.ax.set_visible(False)
+    
     
     if plot_update and update is not None:
         ax4=plt.subplot(next(gl),sharey=ax1)
         cp=plotc.colorplot(update,x=x,y=z,ax=ax4,centerzero=True,
-        xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
-        axes_properties={'hide_yticklabels':True})
+        xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
         ax4.set_ylim(*yr_plot)
-        cb=cp.colorbar
-        cb.ax.xaxis.set_major_locator(MaxNLocator(3))
+        cb4=cp.colorbar
+        cb4.ax.xaxis.set_major_locator(MaxNLocator(3))
+        for label in cb4.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
         
         plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
         plt.title(r"Next Update",fontsize=20,y=1.01)
         plt.tick_params(axis='both', which='major', labelsize=14)
         ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
-    plt.subplots_adjust(wspace=0)
+    #~ plt.subplots_adjust(wspace=0)
+    plt.gcf().set_size_inches(12,6)
+    plt.tight_layout()
+    cb3.ax.set_visible(False)
 
-
+save = read_params.parse_cmd_line_params("save")
+if save is not None:
+    savepath = os.path.join("plots",save)
+    print "saving to",savepath
+    if not os.path.exists("plots"): os.makedirs("plots")
+    plt.savefig(savepath)
+else:
+    print "Not saving plot to file"
+    
 plt.show()
     
     
