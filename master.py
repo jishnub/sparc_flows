@@ -215,7 +215,7 @@ for query in xrange(100000):
                 #~ Choose the value corresponding to the closest iteration
                 prev_iternos= np.array([int(i) for i in iters_list])
                 closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
-                print closest_iter
+                print "Closest iteration",closest_iter
                 eps=epslist[closest_iter][0]
                 
                 
@@ -224,6 +224,10 @@ for query in xrange(100000):
             #~ Assign arbitrary small value
             print "Using arbitary step sizes"
             eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
+        
+        #~ Make sure that eps values are not nan
+        assert not np.isnan(eps).any(),"Step size is nan"
+        
         #~ Run grad
         print "Running grad with eps",eps
         gradcmd = grad_command(algo="cg",eps=eps)
