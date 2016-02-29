@@ -247,7 +247,7 @@ Program driver
             endif
         endif
     endif
-
+!~     stop
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS 
 
 

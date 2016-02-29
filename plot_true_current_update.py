@@ -55,7 +55,7 @@ if flows:
         cp=plotc.colorplot(true_model,sp=next(gl),x=x,y=z,
         yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8})
         
-        ax1=cp[0]; cb=cp[1]
+        ax1=cp.axis; cb=cp.colorbar
         cb.ax.xaxis.set_major_locator(MaxNLocator(3))
         
         plt.ylabel("Depth (Mm)",fontsize=20)
@@ -68,7 +68,7 @@ if flows:
         yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
         axes_properties={'sharey':ax1,'hide_yticklabels':True})
         
-        ax2=cp[0]; cb=cp[1]
+        ax2=cp.axis; cb=cp.colorbar
         cb.ax.xaxis.set_major_locator(MaxNLocator(3))
         
         plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
@@ -81,7 +81,7 @@ if flows:
             yr=[-5,None],colorbar_properties={'orientation':'horizontal','shrink':0.8},
             axes_properties={'sharey':ax1,'hide_yticklabels':True})
             
-            ax3=cp[0]; cb=cp[1]
+            ax3=cp.axis; cb=cp.colorbar
             cb.ax.xaxis.set_major_locator(MaxNLocator(3))
             
             plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
