@@ -1,4 +1,4 @@
-#PBS -N  ls_f_to_p7
+#PBS -N  ls_f_p7_2px
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
