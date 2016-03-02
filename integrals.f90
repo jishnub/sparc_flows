@@ -1,15 +1,13 @@
 MODULE INTEGRALS
 
 use initialize
-!~ use spline
-!~ use Gaussm3
 contains
 
-REAL*8 FUNCTION INTEGRATE_Z(f)
+SUBROUTINE INTEGRATE_Z(f,int_f)
 
     implicit none
     real*8, intent(in) :: f(nx,1,nz)
-    real*8 :: INTEGRATE_Z(nx,1,nz)
+    real*8,intent(out) :: int_f(nx,1,nz)
     real*8, dimension(nx,1,nz) :: int_f_spl,int_f_tpz
     real*8 int_spl,int_tpz
     real*8 splncoeff(3,nz)
@@ -52,26 +50,24 @@ REAL*8 FUNCTION INTEGRATE_Z(f)
                 end if
             
             end do
-        else
-            int_f_tpz(xdum,1,:) = trapz_irregular(f(xdum,1,:),z)
+
         end if
     end do
     
     if (use_antia .and. use_splines) then
-        INTEGRATE_Z = int_f_spl
+        int_f = int_f_spl
     else
-        INTEGRATE_Z = int_f_tpz
+        int_f = int_f_tpz
     endif
     
 
-END FUNCTION INTEGRATE_Z
+END SUBROUTINE INTEGRATE_Z
 
-REAL*8 FUNCTION INTEGRATE_X(f)
+SUBROUTINE INTEGRATE_X(f,int_f)
 
     implicit none
     real*8, intent(in) :: f(nx,1,nz)
-    real*8 int_f(nx,1,nz)
-    real*8 :: INTEGRATE_x(nx,1,nz)
+    real*8,intent(out) :: int_f(nx,1,nz)
     integer zdum
     integer*8 fwdplan,invplan
     complex*16 fkx(nx/2+1)
@@ -93,12 +89,10 @@ REAL*8 FUNCTION INTEGRATE_X(f)
     
     int_f = int_f/stretchx
     
-    integrate_x = int_f
-    
     call dfftw_destroy_plan(fwdplan)
     call dfftw_destroy_plan(invplan)
 
-END FUNCTION INTEGRATE_X
+END SUBROUTINE INTEGRATE_X
 
 SUBROUTINE INTEGRATE_TIME(f,int_f,dt)
 
@@ -106,41 +100,20 @@ SUBROUTINE INTEGRATE_TIME(f,int_f,dt)
     real*8, intent(in) :: dt,f(:)
     real*8, intent(out) ::  int_f
     
-    int_f=simpson_regular(f,dt)
-    
+    call simpson_regular(f,dt,int_f)
 
 END SUBROUTINE INTEGRATE_TIME
 
-REAL*8 FUNCTION TRAPZ_IRREGULAR(f,z)
-    implicit none
-    real*8, intent(in),dimension(nz) :: f,z
-    real*8, dimension(nz) :: int_f
-    real*8 TRAPZ_IRREGULAR(nz)
-    real*8 temp
-    integer k,l
-    
-    int_f=0.0
-    do k=2,248
-        do l=1,k-1
-            temp = 0.5*(f(l+1)+f(l))*(z(l+1)-z(l))
-            int_f(k) = int_f(k) + temp
-        end do
-    end do
-    
-    TRAPZ_IRREGULAR = int_f
-    
-END FUNCTION TRAPZ_IRREGULAR
-
-REAL*8 FUNCTION SIMPSON_REGULAR(f,dvar)
+SUBROUTINE SIMPSON_REGULAR(f,dvar,int_f)
 
     implicit none
     real*8, intent(in) :: dvar,f(:)
-    integer k,nt
-    real*8 int_f
+    real*8, intent(out) :: int_f
+    integer k
     
     do k=1,size(f)
     
-        if ((k == 1) .or. (k == nt)) then
+        if ((k == 1) .or. (k == size(f))) then
             int_f = int_f + f(k)
             cycle
         end if
@@ -153,8 +126,8 @@ REAL*8 FUNCTION SIMPSON_REGULAR(f,dvar)
         
     end do
     
-    SIMPSON_REGULAR=int_f*dvar/3.0
+    int_f=int_f*dvar/3.0
 
-END FUNCTION SIMPSON_REGULAR
+END SUBROUTINE SIMPSON_REGULAR
 
 END MODULE INTEGRALS

@@ -223,7 +223,7 @@ def main():
         totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='gaussian',z_filt_pix=5,sym='sym')
     if flows:
         if continuity_enforced and psi_cont:
-            totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=8.,sym='asym')
+            totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
         elif (continuity_enforced and vx_cont) or (not continuity_enforced):
             totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
         elif (continuity_enforced and vz_cont) or (not continuity_enforced):
