@@ -16,3 +16,5 @@ useless/
 code_python/
 *.txt
 *.eps
+running_full
+linesearch

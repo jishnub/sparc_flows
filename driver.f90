@@ -1052,8 +1052,8 @@ SUBROUTINE VZ_FROM_VX_CONTINUITY(vx,vz)
 
     call ddx(rho0*vx,dxrhovx,1)
     call writefits_3d("dxrhovx.fits",dxrhovx,nz)
-    vz=-integrate_z(dxrhovx)/rho0
-    
+    call integrate_z(dxrhovx,vz)
+    vz=-vz/rho0
     
 !~     call writefits_3d("dxrhovx_"//contrib//"_"//jobno//".fits",dxrhovx,nz)
     !stop
@@ -1091,7 +1091,8 @@ SUBROUTINE VX_FROM_VZ_CONTINUITY(vz,vx)
 
     call ddz(rho0*vz,dzrhovz,1)
 !~     call writefits_3d("dzrhovz.fits",dzrhovz,nz)
-    vx=-integrate_x(dzrhovz)/rho0
+    call integrate_x(dzrhovz,vx)
+    vx=-vx/rho0
 
 END SUBROUTINE
 
