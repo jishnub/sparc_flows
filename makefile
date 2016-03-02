@@ -41,7 +41,6 @@ clean:
 	@find . -maxdepth 1 -name "*.mod" -delete
 	@find . -maxdepth 1 -name "*.fits" -delete
 	@find . -maxdepth 1 -name "$(COMMAND1)" -delete
-	#@find . -maxdepth 1 -name "epslist.npz" -delete
 
 
 
