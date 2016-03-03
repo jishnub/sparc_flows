@@ -1,159 +1,127 @@
 from __future__ import division
 import read_params
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import plotc
 import os,sys
 import pyfits
 import warnings
 
-poly=[]
-plotted_pts=[]
-plotted_lines=[]
-shift_pressed = False
-lines_fitted = 0
+class Point():
+    def __init__(self,Line2D):
+        self.x  = Line2D.get_xdata()[0]
+        self.y  = Line2D.get_ydata()[0]
+        self.artist = Line2D
+        
+    def remove(self):
+        self.artist.remove()
+        self.artist=None
 
-np.set_printoptions(precision=3)
+class Poly():
+    def __init__(self):
+        self.points=[]
+        self.fitted_curve=None
+        
+    def fit(self,order=4):
+    
+        #~ If the number of points are not sufficient, remove fitted polynomial if it exists
+        if len(self.points)<order+1: 
+            if self.fitted_curve is not None: self.fitted_curve.remove()
+            self.fitted_curve=None
+            return (None,None)
 
-def line_picker(line, mouseevent):
-    """
-    find the points within a certain distance from the mouseclick in
-    data coords and attach some extra attributes, pickx and picky
-    which are the data points that were picked
-    """
-    if mouseevent.xdata is None:
-        return False, dict()
-    xdata = line.get_xdata()
-    ydata = line.get_ydata()
-    maxd = 0.05
-    d = np.sqrt((xdata - mouseevent.xdata)**2. + (ydata - mouseevent.ydata)**2.)
+        #~ If there are sifficient points, fit the points with a polynomial function        
+        xcoords = [pt.x for pt in self.points]
+        ycoords = [pt.y for pt in self.points]
+        pfit = np.polyfit(xcoords,ycoords,order)
+        
+        #~ Generate points on a fine grid along the fitted polynomial
+        #~ This is to plot a continuous line
+        fit_nu = np.polyval(pfit,abs(k))
+        
+        #~ Update fitted curve
+        if self.fitted_curve is not None: self.fitted_curve.remove()
+        self.fitted_curve,=plt.plot(k,fit_nu,'g')
+        
+        #~ String to format fitted polynomial like p_2*k**2 + p_1*k +  p_0
+        fmtstr=" + ".join(["{}*k**"+str(i) if i>1 else "{}*k" if i==1 else "{}"  for i in range(len(pfit))[::-1]])
+        polystr=fmtstr.format(*pfit).replace("+ -","- ")
+        
+        fitstr=[]
+        for index,p_i in enumerate(pfit[::-1]):
+            fitstr.append("index("+str(index)+") = "+str(p_i))
+        fitstr="\n".join(fitstr)
+        
+        return polystr,fitstr
 
-    ind = np.nonzero(np.less_equal(d, maxd))
-    if len(ind):
-        pickx = np.take(xdata, ind)[0]
-        picky = np.take(ydata, ind)[0]
-        props = dict(line=line,ind=ind[0], pickx=pickx, picky=picky)
-        return True, props
-    else:
-        return False, dict()
+    def remove_match(self,artist):
+        ''' Find and remove the point that was clicked on '''
+        for point in self.points:
+            if point.artist == artist:
+                point.remove()
+                self.poly.points.remove(point)
+                break
+    
+    def clear(self):
+        ''' Refresh the working slate by deleting plots and lines.
+        Points and lines already finalized are untouched. '''
+        for point in self.points:
+            point.remove()
+        if self.fitted_curve is not None:
+            self.fitted_curve.remove()
+            self.fitted_curve=None
+        self.points=[]
 
-def fit_curve():
+class Track_interactions():
+    def __init__(self,figure):
+        self.button_press_event=figure.canvas.mpl_connect('button_press_event', self.onclick)
+        self.key_press_event=figure.canvas.mpl_connect('key_press_event', self.onpress)
+        self.key_release_event=figure.canvas.mpl_connect('key_release_event', self.onrelease)
+        self.pick_event=figure.canvas.mpl_connect('pick_event', self.onpick)
+        self.shift_pressed=False
+        self.poly=Poly()
+        
+    def onpick(self,event):
+        ''' Remove a point when it is clicked on '''
+        self.poly.remove_match(event.artist)
+        self.poly.fit()
+        plt.draw()
+            
+    def onclick(self,event):
+        ''' Add a point at the (x,y) coordinates of click '''
+        if event.button == 1 and self.shift_pressed:
+            pt_artist,=plt.plot([event.xdata],[event.ydata],marker='o',color='b',linestyle='none',picker=5)
+            self.poly.points.append(Point(pt_artist))
+            self.poly.fit()
+            plt.draw()
+        
+    def onpress(self,event):
     
-    global poly
-    global plotted_pts
-    global plotted_lines
-    
-    fit_poly_order = 4
-    if not len(poly): return None
-    xcoords,ycoords = zip(*poly)
-    
-    #~ If the number of points are not sufficient
-    if len(xcoords)<fit_poly_order+1: 
-        if len(plotted_lines)>lines_fitted:
-            plotted_lines[-1].pop(0).remove()
-            del plotted_lines[-1]
-        return
-    
-    if len(plotted_lines)>lines_fitted:
-        plotted_lines[-1].pop(0).remove()
-        del plotted_lines[-1]
-
-    pfit = np.polyfit(xcoords,ycoords,fit_poly_order)
-    
-    global k
-    fit_nu = np.polyval(pfit,abs(k))
-    l=plt.plot(k,fit_nu,'g')
-    
-    plotted_lines.append(l)
-    
-    #~ String to format fitted polynomial like p_2*k**2 + p_1*k +  p_0
-    fmtstr=" + ".join(["{}*k**"+str(i) if i>1 else "{}*k" if i==1 else "{}"  for i in range(len(pfit))[::-1]])
-    polystr=fmtstr.format(*pfit)
-    
-    fitstr=[]
-    for index,p_i in enumerate(pfit[::-1]):
-        fitstr.append("index("+str(index)+") = "+str(p_i))
-    fitstr="\n".join(fitstr)
-    
-    return polystr,fitstr
-
-def onpick(event):
-    if len(event.ind) and len(poly):
-        #~ Remove corresponding point from poly array
-        xdata,ydata=map(np.array,zip(*poly))
-        match=np.where(np.isclose(xdata,event.pickx) & np.isclose(ydata,event.picky))[0]
-        if len(match):
-            match=match[0]
-        else: return
-        event.line.remove()
-        del poly[match]
-        del plotted_pts[match]
-        fit_curve()
+        if event.key == 'c':
+            polystr,fitstr = self.poly.fit()
+            if polystr is None: return
+            print polystr,"\n",fitstr,"\n"
+            self.poly.fitted_curve.set_color("black")
+            plt.draw()
+            self.poly=Poly()
+        
+        elif event.key=="d":
+            self.poly.clear()
+            
+        elif event.key=="shift":
+            self.shift_pressed = True
+        
         plt.draw()
 
-def onclick(event):
-    global poly
-    global shift_pressed
-    if event.button == 1 and shift_pressed:
-        eventx,eventy = event.xdata, event.ydata
-        pt=plt.plot([eventx],[eventy],marker='o',color='b',linestyle='none',picker=line_picker)
-        plotted_pts.append(pt)
-        poly.append((eventx,eventy))
-        fit_curve()
-        plt.draw()
-        
-def onpress(event):
-    
-    global poly
-    global plotted_pts
-    global plotted_lines
-    global lines_fitted
-    
-    if event.key == 'c':
-        polystr,fitstr = fit_curve()
-        if polystr is None: return
-        print polystr
-        print fitstr
-        print
-        poly=[]
-        plotted_lines[-1][0].set_color('black')
-        lines_fitted+=1
-        
-    elif event.key=="d":
-        
-        for obj in plotted_pts:
-            line=obj.pop(0)
-            line.remove()
-        
-        for obj in plotted_lines:
-            line=obj.pop(0)
-            line.remove()
-        
-        plotted_pts=[]
-        plotted_lines=[]
-        poly=[]
-        lines_fitted = 0
-      
-    elif event.key=="shift":
-        global shift_pressed
-        shift_pressed = True
-    
-    plt.draw()
+    def onrelease(self,event):
+        if event.key=='shift':
+            self.shift_pressed = False
 
-def onrelease(event):
-    global shift_pressed
-    if event.key=='shift':
-        shift_pressed = False
 
-codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
 
-try:
-    src=next(f for f in sys.argv if (f.startswith("src=") or f.startswith("source=")))
-    src=int(src.split("=")[-1])
-except StopIteration: src=1
-
-srcloc=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)[src-1]
+src=read_params.parse_cmd_line_params("src",mapto=int,default=1)
 
 data=np.squeeze(pyfits.getdata(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits')))
 
@@ -174,6 +142,7 @@ spectrum = np.fft.fftshift(abs(np.fft.fft2(data)))
 
 #########################################################################################
 
+figure=plt.figure()
 
 plt.pcolormesh(k_edges,nu_edges,spectrum/spectrum.max(),cmap='Oranges',vmax=0.6)
 plt.text(1.4,2.9,"f",fontsize=20)
@@ -185,13 +154,10 @@ plt.text(0.83,5.8,"p5",fontsize=20)
 plt.text(0.7,5.8,"p6",fontsize=20)
 plt.text(0.58,5.8,"p7",fontsize=20)
 
-plt.connect('button_press_event', onclick)
-plt.connect('key_press_event', onpress)
-plt.connect('key_release_event', onrelease)
-plt.connect('pick_event', onpick)
-
 plt.xlim(0,1.5)
 plt.ylim(1.2,6)
+
+_=Track_interactions(figure)
 
 plt.show()
 
