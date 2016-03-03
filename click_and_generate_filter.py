@@ -43,27 +43,39 @@ def fit_curve():
     global plotted_pts
     global plotted_lines
     
-    if not len(poly): return
+    fit_poly_order = 4
+    if not len(poly): return None
     xcoords,ycoords = zip(*poly)
-    if len(xcoords)<3: 
+    
+    #~ If the number of points are not sufficient
+    if len(xcoords)<fit_poly_order+1: 
         if len(plotted_lines)>lines_fitted:
             plotted_lines[-1].pop(0).remove()
             del plotted_lines[-1]
-            
         return
     
     if len(plotted_lines)>lines_fitted:
         plotted_lines[-1].pop(0).remove()
         del plotted_lines[-1]
 
-    pfit = np.polyfit(xcoords,ycoords,2)
+    pfit = np.polyfit(xcoords,ycoords,fit_poly_order)
     
     global k
     fit_nu = np.polyval(pfit,abs(k))
     l=plt.plot(k,fit_nu,'g')
     
     plotted_lines.append(l)
-    return "{0}*k**2 + {1}*k + {2}".format(*pfit)
+    
+    #~ String to format fitted polynomial like p_2*k**2 + p_1*k +  p_0
+    fmtstr=" + ".join(["{}*k**"+str(i) if i>1 else "{}*k" if i==1 else "{}"  for i in range(len(pfit))[::-1]])
+    polystr=fmtstr.format(*pfit)
+    
+    fitstr=[]
+    for index,p_i in enumerate(pfit[::-1]):
+        fitstr.append("index("+str(index)+") = "+str(p_i))
+    fitstr="\n".join(fitstr)
+    
+    return polystr,fitstr
 
 def onpick(event):
     if len(event.ind) and len(poly):
@@ -98,8 +110,11 @@ def onpress(event):
     global lines_fitted
     
     if event.key == 'c':
-        polystr = fit_curve()
+        polystr,fitstr = fit_curve()
+        if polystr is None: return
         print polystr
+        print fitstr
+        print
         poly=[]
         plotted_lines[-1][0].set_color('black')
         lines_fitted+=1
@@ -129,10 +144,6 @@ def onrelease(event):
     global shift_pressed
     if event.key=='shift':
         shift_pressed = False
-
-def fitswrite(filename,array):
-    warnings.filterwarnings('ignore')
-    pyfits.writeto(filename,array,clobber=True)
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
@@ -164,7 +175,15 @@ spectrum = np.fft.fftshift(abs(np.fft.fft2(data)))
 #########################################################################################
 
 
-plt.pcolormesh(k_edges,nu_edges,spectrum/spectrum.max(),cmap='Oranges',vmax=0.3)
+plt.pcolormesh(k_edges,nu_edges,spectrum/spectrum.max(),cmap='Oranges',vmax=0.6)
+plt.text(1.4,2.9,"f",fontsize=20)
+plt.text(1.42,4.28,"p1",fontsize=20)
+plt.text(1.4,5.1,"p2",fontsize=20)
+plt.text(1.33,5.8,"p3",fontsize=20)
+plt.text(1.04,5.78,"p4",fontsize=20)
+plt.text(0.83,5.8,"p5",fontsize=20)
+plt.text(0.7,5.8,"p6",fontsize=20)
+plt.text(0.58,5.8,"p7",fontsize=20)
 
 plt.connect('button_press_event', onclick)
 plt.connect('key_press_event', onpress)
