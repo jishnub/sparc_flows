@@ -58,11 +58,14 @@ plot_time_distance=True
 
 for mode,to_plot in modes.items():
     if to_plot:
-        mode_filter = getattr(modefilters,mode+"_filter")(nt,dt,nx,Lx)
+        mode_filter_function = getattr(modefilters,mode+"_filter")
+        mode_filter = mode_filter_function(nt,dt,nx,Lx)
         mode_filter=mode_filter.transpose(2,1,0)
-        
-        Poly=np.zeros(3)
-        Polylow=np.zeros(3)
+
+        #~ Load filter parameters form file simply to plot lower and upper boundary lines
+        #~ Actual filter computation doesn't depend on what we load here
+        Poly=[]
+        Polylow=[]
         f_low=0
 
         with open('modefilters.f90','r') as mf:
@@ -73,15 +76,16 @@ for mode,to_plot in modes.items():
                 if 'end subroutine '+mode+'_filter' in line.lower(): 
                     mode_match=False
                     break
-                for poly_coeff in xrange(len(Polylow)):
-                    if line.strip().startswith('Polylow('+str(poly_coeff)+')') and mode_match:
-                        Polylow[poly_coeff]=float(line.strip().split("=")[1])
-                for poly_coeff in xrange(len(Poly)):
-                    if line.strip().startswith('Poly('+str(poly_coeff)+')') and mode_match:
-                        Poly[poly_coeff]=float(line.strip().split("=")[1])
+                if line.strip().startswith('Polylow(') and mode_match:
+                    Polylow.append(float(line.strip().split("=")[1]))
+                if line.strip().startswith('Poly(') and mode_match:
+                    Poly.append(float(line.strip().split("=")[1]))
                 if line.lower().strip().startswith('f_low') and mode_match:
                     f_low=float(line.strip().split("=")[1])
-               
+           
+        Poly=np.array(Poly)
+        Polylow=np.array(Polylow)
+        
         plt.figure()
                     
         full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2

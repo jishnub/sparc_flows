@@ -6,6 +6,7 @@ import numpy as np
 import read_params
 import pyfits,os
 from matplotlib.ticker import MaxNLocator,NullFormatter,ScalarFormatter
+from scipy.ndimage.filters import gaussian_filter1d
 import plotc
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
@@ -15,7 +16,8 @@ nx = read_params.get_nx()
 x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 z=np.loadtxt(read_params.get_solarmodel(),usecols=[0]);z=(z-1)*695.8
 
-parentdir = os.path.dirname(read_params.get_directory())
+datadir = read_params.get_directory()
+parentdir = os.path.dirname(datadir)
 
 arrays_to_plot = []
 arrays_to_plot_max_x = []
@@ -26,9 +28,19 @@ modes_list.append('first_bounce_p')
 
 modes_found = []
 
+def smooth_z(arr):
+    return gaussian_filter1d(arr,sigma=2,axis=0)
+    
+def smooth_x(arr):
+    return gaussian_filter1d(arr,sigma=1,axis=1)
+
 for mode in modes_list: 
     try:
-        arrays_to_plot.append(fitsread(os.path.join(parentdir,mode,'update','update_psi_00.fits')))
+        kernel_psi=fitsread(os.path.join(parentdir,mode,'kernel','kernel_psi_01.fits'))
+        kernel_psi = smooth_x(kernel_psi)
+        kernel_psi = smooth_z(kernel_psi)
+        kernel_psi_mean = np.trapz(kernel_psi,x=x,axis=1)/Lx        
+        arrays_to_plot.append(kernel_psi_mean)
         modes_found.append(mode)
     except IOError:
         pass
@@ -38,22 +50,22 @@ if not modes_found:
     exit()
 
 Lregular = 30. # \psi is scaled by Lregular in Mm
-arrays_to_plot.append(fitsread('true_psi.fits')*Lregular)
-arrays_to_plot_max_x=divmod(arrays_to_plot[-1].argmax(),arrays_to_plot[-1].shape[1])
+true_psi=fitsread('true_psi.fits')*Lregular
+psi_max_x_pix=np.unravel_index(true_psi.argmax(),true_psi.shape)[1]
+true_psi = true_psi[:,psi_max_x_pix]
 
-modes_found.append(r"$\psi^{ref}$")
-
-nplots=min(9,len(modes_found)+1) # may not want to plot all modes
+iterated_psi = fitsread(os.path.join(datadir,"model_psi_ls00.fits"))*Lregular
+iterated_psi-=iterated_psi[0,0]
+iterated_psi = iterated_psi[:,psi_max_x_pix]
 
 depth_cutoff = -10
 
-axeslist=[]
+nplots = len(modes_found)+1
 
 for ind,mode in enumerate(modes_found):
-    axeslist.append(plt.subplot(1,nplots,ind+1))
-    kernel = arrays_to_plot[ind][:,arrays_to_plot_max_x[1]]
-    #~ kernel /= kernel.max()
-    plt.plot(kernel,z,color='black',linewidth=2 if ind==nplots-1 else 1)
+    kernel = arrays_to_plot[ind]
+    plt.subplot(1,nplots,ind+1)
+    plt.plot(kernel,z,color='black')
     plt.plot([0]*len(z),z,linestyle='dotted',color='black')
     plt.ylim(depth_cutoff,z.max())
     ax=plt.gca()
@@ -72,34 +84,30 @@ plt.ylabel("Depth (Mm)")
 plt.subplot(1,nplots,nplots//2+1)
 plt.xlabel("Sensitivity Kernel ($s^2\,\mathrm{Mm}^{-3}$)",labelpad=20)
 
-plt.subplot(1,nplots,nplots)
-plt.xlabel(r"$\psi$ (Mm)",labelpad=20)
+ax=plt.subplot(1,nplots,nplots)
+plt.plot(true_psi,z,linewidth=2,label="True",color="black")
+plt.xlabel(r"$\psi$ (Mm)",labelpad=20,color="black")
+plt.ylim(depth_cutoff,z.max())
+ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
+plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+ax.xaxis.get_offset_text().set_size(11)
+ax.yaxis.set_major_formatter(NullFormatter())   
+
+plt.plot(iterated_psi,z,linewidth=2,color="black",linestyle="dashed",label="Iter")
+plt.ylim(depth_cutoff,z.max())
+ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
+plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+ax.xaxis.get_offset_text().set_size(11)
+ax.yaxis.set_major_formatter(NullFormatter())
+ax.grid()
+
+plt.legend(loc="best",fontsize=14)
 
 plotc.apj_2col_format(plt.gcf(),default_fontsize=14)
 plt.gcf().set_size_inches(8,5.3)
 plt.tight_layout()
-plt.subplots_adjust(wspace=0)
+plt.subplots_adjust(wspace=0.2)
 
-ax_index = None
-
-def on_axis_enter(event):
-    global ax_index
-    ax_index = axeslist.index(event.inaxes)
-
-def on_axis_leave(event):
-    global ax_index
-    ax_index = None
-    
-def on_click(event):
-    global ax_index
-    if ax_index is not None:
-        plt.figure()
-        plotc.colorplot(arrays_to_plot[ax_index],x=x,y=z,yr=[depth_cutoff,z.max()])
-        plt.show(block=False)
-
-plt.connect('axes_enter_event', on_axis_enter)
-plt.connect('axes_leave_event', on_axis_leave)
-plt.connect('button_press_event', on_click)
 
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
