@@ -776,7 +776,7 @@ Subroutine solar_data
         sigmaz = 1.4
         do i=1,nx
             
-            c_bump(i,1,k) = 3e-3*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
+            c_bump(i,1,k) = 3e-2*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
                       exp(-(height(k)- (-2.5))**2/(2*sigmaz**2))
         end do
         end do
