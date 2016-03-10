@@ -369,9 +369,9 @@ elif mistype == "model":
         
 
 if save is not None:
-    save_path = os.path.join("plots",save)
+    savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig(save_path)
+    plt.savefig(savepath)
     print "Saved to",savepath
 else:
     print "Not saving plot to file"

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import read_params
 import os
 from matplotlib.ticker import MaxNLocator,MultipleLocator
-from matplotlib import rc,gridspec
+from matplotlib import rc
 import warnings
 import plotc
 
@@ -36,8 +36,8 @@ nu = np.fft.fftshift(np.fft.fftfreq(nt,dt))*1e3
 dnu = nu[1]-nu[0]
 nu_edges = np.linspace(nu[0]-dnu/2,nu[-1]+dnu/2,nt+1)
 
-rc("text",usetex=True)
-rc('font',**{'family':'serif','serif':['Helvetica']})
+#~ rc("text",usetex=True)
+rc('font',**{'family':'serif'})
 
 
 tdfig=None
@@ -45,9 +45,7 @@ specfig=None
 
 save = read_params.parse_cmd_line_params("save",return_list=True)
 if save is not None: tdfig,specfig = save[0],save[1]
-print tdfig,type(tdfig)
-print specfig,type(specfig)
-quit()
+
 ###########################################################################################
 #~ Time distance
 
@@ -90,15 +88,15 @@ ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
 plt.xlabel(r"$kR_\odot$")
 plt.ylabel(r"Frequency (mHz)")
 
-plt.text(600,2.2,r"f",bbox={"facecolor":"white","edgecolor":"black","pad":10},fontsize=14)
-plt.text(620,3.3,r"p$_1$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
-plt.text(700,4.2,r"p$_2$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
-plt.text(620,4.8,r"p$_3$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
-plt.text(547,5.1,r"p$_4$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
-plt.text(480,5.3,r"p$_5$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
-plt.text(400,5.4,r"p$_6$",bbox={"facecolor":"white","edgecolor":"black","pad":6},fontsize=16)
+plt.text(943,3.1,r"f",     fontsize=20)
+plt.text(943,4.35,r"p$_1$",fontsize=20)
+plt.text(860,5.05,r"p$_2$",fontsize=20)
+plt.text(750,5.4,r"p$_3$", fontsize=20)
+plt.text(667,5.67,r"p$_4$",fontsize=20)
+plt.text(587,5.8,r"p$_5$", fontsize=20)
+plt.text(521,6.0,r"p$_6$", fontsize=20)
+plt.text(460,6.2,r"p$_7$", fontsize=20)
 
-plotc.apj_1col_format(plt.gcf())
 plt.tight_layout()
 
 if specfig is not None:

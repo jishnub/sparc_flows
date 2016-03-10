@@ -106,7 +106,6 @@ for ridge in ridges:
     
     lef_ttdiff_cutoff = t[map(int,lef_ttdiff[pixel_ttdiff==pix])]
     rig_ttdiff_cutoff = t[map(int,rig_ttdiff[pixel_ttdiff==pix])]
-
     
     plt.plot(t,data_filtered[:,pix],label="True",color='black')
     plt.plot(t,vzcc_start_filtered[:,pix],label="Iter 0",linestyle='dashed',linewidth=2,color='#555555')

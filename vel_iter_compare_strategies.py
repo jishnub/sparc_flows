@@ -3,6 +3,7 @@ import plotc
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from matplotlib import gridspec
 import numpy as np
 import read_params
 import pyfits
@@ -15,14 +16,8 @@ matplotlib.rcParams['font.family'] = "serif"
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
     
 datadir=read_params.get_directory()
-
-def get_iter_no():
-    updatedir=os.path.join(datadir,"update")
-    # Count the number of misfit_xx files
-    return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
-iterno=get_iter_no()
-
-itercutoff = read_params.parse_cmd_line_params("iter",default=str(iterno-1))
+parentdir = os.path.dirname(datadir)
+strategydir=[os.path.join(parentdir,modeldir) for modeldir in ("f_p1","f_to_p3","f_to_p7_2pixsmooth","f_to_p7_new")]
 
 Lx=read_params.get_xlength()
 nx=read_params.get_nx()
@@ -44,51 +39,59 @@ def forceAspect(ax,aspect=1):
 
 true_vx = fitsread('true_vx.fits')
 true_vz = fitsread('true_vz.fits')
-current_vx = fitsread(os.path.join(datadir,'update','vx_'+itercutoff+'.fits'))
-current_vz = fitsread(os.path.join(datadir,'update','vz_'+itercutoff+'.fits'))
 
-
-warnings.filterwarnings("ignore", message="Unicode equal comparison failed")
-
-yr_plot = [-5,None]
-
-axlist = []
 cblist = []
+axlist=[]
 def add_subplot(sp_index,array,title=""):
-    ax=plt.subplot(sp_index)
+    row_ind,col_ind=sp_index
+    ax=plt.subplot(2,5,row_ind*5+col_ind+1)
     array_max = abs(array).max()
     qm=ax.pcolorfast(x_plot,z_plot,array,vmax=array_max,vmin=-array_max,cmap="RdBu_r")
-    cb=plt.colorbar(mappable=qm,orientation="horizontal",shrink=0.8,pad=0.25,ticks=MaxNLocator(5))
-    plt.title(title,y=1.01,fontsize=18)
-    axlist.append(ax)
+    cb=plt.colorbar(mappable=qm,orientation="horizontal",shrink=0.8,pad=0.2,ticks=MaxNLocator(5))
+    plt.title(title,y=1.01,fontsize=22)
     cblist.append(cb)
-
-add_subplot(221,true_vx,title="True $v_x$")
-add_subplot(222,current_vx,title="Iterated $v_x$")
-add_subplot(223,true_vz,title="True $v_z$")
-add_subplot(224,current_vz,title="Iterated $v_z$")
-
-for ax in axlist:
+    axlist.append(ax)
     ax.set_xlim(-Lx/15,Lx/15)
-    ax.set_ylim(-5,z.max())
-    ax.set_xlabel("x (Mm)",fontsize=18)
+    ax.set_ylim(-5,z_plot.max())
+    ax.set_xlabel("x (Mm)",fontsize=20)
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
-    ax.tick_params(axis='both', labelsize=16)
+    ax.tick_params(axis='both', labelsize=18)
+    plt.setp(ax.get_yticklabels(),visible=False)
 
-axlist[0].set_ylabel("Depth (Mm)",fontsize=18)
-plt.setp(axlist[1].get_yticklabels(),visible=False)
-axlist[2].set_ylabel("Depth (Mm)",fontsize=18)
-plt.setp(axlist[3].get_yticklabels(),visible=False)
+add_subplot((0,0),true_vx,title="True $v_x$")
+add_subplot((1,0),true_vz,title="True $v_z$")
+
+#######################################################################################################
+
+itercutoff = [15,35,35,35]
+
+
+for strategy_index,datadir in enumerate(strategydir):
+
+    current_vx = fitsread(os.path.join(strategydir[strategy_index],'update','vx_'+str(itercutoff[strategy_index])+'.fits'))
+    current_vz = fitsread(os.path.join(strategydir[strategy_index],'update','vz_'+str(itercutoff[strategy_index])+'.fits'))
+
+    add_subplot((0,strategy_index+1),current_vx,title="Iterated $v_x$ \#$"+str(strategy_index+1)+"$")
+    add_subplot((1,strategy_index+1),current_vz,title="Iterated $v_z$ \#$"+str(strategy_index+1)+"$")
+
+
+axlist[0].set_ylabel("Depth (Mm)",fontsize=22)
+axlist[1].set_ylabel("Depth (Mm)",fontsize=22)
+plt.setp(axlist[0].get_yticklabels(),visible=True)
+plt.setp(axlist[1].get_yticklabels(),visible=True)
     
 for cb in cblist: 
     cb.ax.set_ylabel("$\mathrm{m}/\mathrm{s}$",rotation=90,fontsize=16)
     cb.ax.tick_params(axis="x",labelsize=16)
-    
-plt.gcf().set_size_inches(8,6)
+
+#################################################################################
+
+fig=plt.gcf()
+fig.set_size_inches(14,9)
 plt.tight_layout()
-plt.subplots_adjust(wspace=0,hspace=0.3)
-    
+plt.subplots_adjust(wspace=0.)
+
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
@@ -99,7 +102,3 @@ else:
     print "Not saving plot to file"
 
 plt.show()
-    
-    
-
-
