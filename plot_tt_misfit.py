@@ -3,6 +3,7 @@ import numpy as np
 import plotc
 import pyfits as pf
 import os,re,sys
+from matplotlib import rc
 import matplotlib.patches as patches
 from matplotlib.ticker import MaxNLocator
 import read_params
@@ -94,6 +95,8 @@ for iteration_no in xrange(0,100):
                 ttdiff_ridges[mode]["misfits"].append(np.loadtxt(ttfile))
 
 #~ The actual plotting stuff
+rc('text', usetex=True)
+rc('font',**{'family':'serif','serif':['Times'],'size':24})
 
 modes_to_plot=min(8,len(ridge_filters))
 
@@ -102,7 +105,9 @@ subplot_layout=plotc.layout_subplots(len(ridge_filters[:modes_to_plot]))[:2]
 tdfig,tdiffaxes=plt.subplots(*subplot_layout)
 tdiffaxes=np.array(list([tdiffaxes])).flatten()
 
-c=['olivedrab','black','blue','dimgray','red','sienna','black','tomato','grey','teal']
+c=['black','#555555','#888888']
+
+iters_to_plot = sorted(read_params.parse_cmd_line_params("iter",return_list=True,default=[],mapto=int))
 
 for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     num_iterations=min(itercutoff,len(ttdiff_ridges[mode]["iter_no"]))
@@ -110,11 +115,18 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     if num_iterations > 4: plot_every = int(np.ceil(np.sqrt(num_iterations)))
     if num_iterations > 10: plot_every = int(num_iterations//2)
     
-    iters_to_plot = [ttdiff_ridges[mode]["iter_no"][i] for i in xrange(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
+    iters_to_plot_ridge = [ttdiff_ridges[mode]["iter_no"][i] for i in xrange(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
+    iters_to_plot_temp = iters_to_plot
+    if max(iters_to_plot)>iters_to_plot_ridge[-1]:
+        for entry in iters_to_plot:
+            if entry>iters_to_plot_ridge[-1]: break
+        iters_to_plot_temp[iters_to_plot.index(entry):]=[iters_to_plot_ridge[-1]]
+    iters_to_plot_ridge = iters_to_plot_temp
+     
     
-    linestyles = itertools.cycle(('solid','dashed','dotted'))
+    linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
     
-    for color_index,iter_index in enumerate(iters_to_plot):
+    for color_index,iter_index in enumerate(iters_to_plot_ridge):
         
         index_of_iteration=ttdiff_ridges[mode]["iter_no"].index(iter_index)
         td=ttdiff_ridges[mode]["misfits"][index_of_iteration]
@@ -130,11 +142,11 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
         #~ Points to the left
         skip_pix = 1
         ls = next(linestyles)
-        ax.plot(xcoords_left[::skip_pix],td[left_pix[::skip_pix],1],color=c[color_index],
+        ax.plot(xcoords_left[::skip_pix],td[left_pix[::skip_pix],1],color=c[color_index//3],
                     label="iter "+str(iter_index),linestyle=ls,linewidth=2)
 
         #~ Points to the right
-        ax.plot(xcoords_right[::skip_pix],td[right_pix[::skip_pix],1],color=c[color_index],linestyle=ls,linewidth=2)
+        ax.plot(xcoords_right[::skip_pix],td[right_pix[::skip_pix],1],color=c[color_index//3],linestyle=ls,linewidth=2)
 
         #~ Zero misfit line
         ax.axhline(y=[0],ls='-',color='black')
@@ -158,7 +170,7 @@ for ax_ind,ax in enumerate(tdiffaxes):
     #~ Rectangle with border
     ax.axvline(x=perturbation_left_limit,ls='dotted',color='black')
     ax.axvline(x=perturbation_right_limit,ls='dotted',color='black')
-    ax.axvspan(perturbation_left_limit,perturbation_right_limit,color='paleturquoise')
+    ax.axvspan(perturbation_left_limit,perturbation_right_limit,color='#CCCCCC')
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
     ax.xaxis.set_tick_params(which='major', labelsize=16)
@@ -168,22 +180,25 @@ if modes_to_plot<np.prod(subplot_layout):
     # This means that there are empty subplots
     # Place legend in empty spot
     handles,labels = tdiffaxes[0].get_legend_handles_labels()
-    tdiffaxes[-1].legend(handles,labels,loc="center")
+    tdiffaxes[-1].legend(handles,labels,loc="center",fontsize=18)
 else:
     for ax in tdiffaxes[:modes_to_plot]: ax.legend(loc="best")
 
 tdfig.tight_layout()
 plt.subplots_adjust(wspace=0.3)
 
-plotc.apj_2col_format(plt.gcf())
+#~ plotc.apj_2col_format(plt.gcf())
+
+plt.gcf().set_size_inches(12,8)
+plt.tight_layout()
 
 #~ Get filename to save to
 save = read_params.parse_cmd_line_params("save")
 
 if save is not None:
-    save_path = os.path.join("plots",save)
+    savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
-    plt.savefig(save_path)
+    plt.savefig(savepath)
     print "Saved to",savepath
 else:
     print "Not saving plot to file"
