@@ -10,7 +10,8 @@ from matplotlib.ticker import MaxNLocator,NullFormatter,ScalarFormatter
 from scipy.ndimage.filters import gaussian_filter1d
 import plotc
 
-rc("font",family="serif")
+rc("text",usetex=True)
+rc("font",**dict(family="serif",serif="Times"))
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
 
@@ -83,40 +84,42 @@ for ind,mode in enumerate(modes_found):
     plt.ylim(depth_cutoff,z.max())
     ax=plt.gca()
     ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
-    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    #~ ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.xaxis.set_major_formatter(ScalarFormatter())
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.tick_params(axis="both",labelsize=15)
     plt.title(mode)
-    ax.xaxis.get_offset_text().set_size(11)
+    ax.xaxis.get_offset_text().set_size(13)
     if ind>0: ax.yaxis.set_major_formatter(NullFormatter())        
     ax.grid()
 
 plt.subplot(1,nplots,1)
-plt.ylabel("Depth $(\mathrm{Mm})$",fontsize=20)
+plt.ylabel("Depth $(\mathrm{Mm})$",fontsize=18)
 
 plt.subplot(1,nplots,nplots//2+1)
-plt.xlabel("Sensitivity Kernel $(s^2\,\mathrm{Mm}^{-3})$",labelpad=20,fontsize=20)
+plt.xlabel("Sensitivity Kernel $(s^2\,\mathrm{Mm}^{-3})$",labelpad=20,fontsize=18)
 
 ax=plt.subplot(1,nplots,nplots)
 plt.plot(true_psi,z,linewidth=2,label="True",color="#777777")
-plt.xlabel(r"$\psi\;(\mathrm{Mm})$",labelpad=20,fontsize=20)
+plt.xlabel(r"$\psi\;(\mathrm{Mm})$",labelpad=20,fontsize=18)
 plt.ylim(depth_cutoff,z.max())
-ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
+
+plt.tick_params(labelsize=15)
 plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-ax.xaxis.get_offset_text().set_size(11)
-ax.yaxis.set_major_formatter(NullFormatter())   
+ax.xaxis.get_offset_text().set_size(13)
+ 
 
 
-plt.plot(iterated_psi_1,z,linewidth=2,color="black",linestyle="dotted",label="#1")
-plt.plot(iterated_psi_2,z,linewidth=2,color="black",linestyle="dashdot",label="#2")
-plt.plot(iterated_psi_3,z,linewidth=2,color="black",linestyle="dashed",label="#3")
+plt.plot(iterated_psi_1,z,linewidth=2,color="black",linestyle="dotted",label="$\#1$")
+plt.plot(iterated_psi_2,z,linewidth=2,color="black",linestyle="dashdot",label="$\#2$")
+plt.plot(iterated_psi_3,z,linewidth=2,color="black",linestyle="dashed",label="$\#3$")
 plt.ylim(depth_cutoff,z.max())
 ax.xaxis.set_major_locator(MaxNLocator(3,prune='upper'))
-ax.xaxis.get_offset_text().set_size(11)
-ax.yaxis.set_major_formatter(NullFormatter())
-xaxis_formatter = ScalarFormatter(useMathText=True)
+xaxis_formatter = ScalarFormatter()
 xaxis_formatter.set_scientific(True)
 xaxis_formatter.set_powerlimits((0,0))
 ax.xaxis.set_major_formatter(xaxis_formatter)
+ax.yaxis.set_major_formatter(NullFormatter())  
 
 plt.legend(loc="lower left",fontsize=12)
 
