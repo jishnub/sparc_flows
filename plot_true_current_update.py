@@ -1,7 +1,8 @@
 from __future__ import division
 import plotc
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator,ScalarFormatter
+import matplotlib
+from matplotlib.ticker import MaxNLocator,ScalarFormatter,FuncFormatter
 from matplotlib import rc
 import numpy as np
 import read_params
@@ -28,16 +29,32 @@ contvar=read_params.get_continuity_variable()
 Lx=read_params.get_xlength()
 nx=read_params.get_nx()
 x=np.linspace(-Lx/2,Lx/2,num=nx,endpoint=False)
+dx = x[1]-x[0]
+x_plot = np.append(x-dx/2,x[-1]+dx/2)
 
 Rsun=695.8
-z=np.loadtxt(os.path.join(codedir,read_params.get_solarmodel()),usecols=[0])
+z=np.loadtxt(read_params.get_solarmodel(),usecols=[0])
 z=(z-1)*Rsun
+z_pixels = np.arange(len(z))
+z_plot = np.interp(z_pixels[:-1]+0.5,z_pixels,z)
+z_plot = np.append(z[0]-(z[1]-z[0])/2,np.append(z_plot,z[-1]+(z[-1]-z[-2])/2))
 
 #~ Check if specific iter is to be plotted
 iter_to_plot=read_params.parse_cmd_line_params("iter",zfill=2,default=iterm1)
 
 rc('text', usetex=True)
 rc('font',**{'family':'serif','serif':['Times']})
+
+def to_percent(y, position):
+    # Ignore the passed in position. This has the effect of scaling the default
+    # tick locations.
+    s = str(100 * y)
+
+    # The percent symbol needs escaping in latex
+    if matplotlib.rcParams['text.usetex'] is True:
+        return s + r'$\%$'
+    else:
+        return s + '%'
 
 if flows:
     if enf_cont and (contvar == 'psi'):
@@ -259,15 +276,15 @@ if sound_speed_perturbed:
     else:
         gl=plotc.gridlist(1,3)
   
-    xr_plot = [-Lx/8,Lx/8]
-    yr_plot = [-10,z[-1]]
-  
+    xlim_plot = [-Lx/8,Lx/8]
+    ylim_plot = [-10,z[-1]]
+    
     true_lndeltac = (true_model-oneD_stratification)/oneD_stratification
     ax1=plt.subplot(next(gl))
-    cp=plotc.colorplot(true_lndeltac,ax=ax1,x=x,y=z,cmap='Greys',
-    xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
-    cb1=cp.colorbar
-    cb1.ax.xaxis.set_major_locator(MaxNLocator(3))
+    qm=ax1.pcolormesh(x_plot,z_plot,true_lndeltac,cmap='Greys',rasterized=True)
+    ax1.set_xlim(*xlim_plot)
+    ax1.set_ylim(*ylim_plot)
+    cb1=plt.colorbar(mappable=qm,orientation="horizontal",shrink=0.8,pad=0.2,ticks=MaxNLocator(5),format=FuncFormatter(to_percent))  
     plt.ylabel("Depth (Mm)",fontsize=20)
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"True $\delta \ln c$",fontsize=20,y=1.01)
@@ -276,11 +293,10 @@ if sound_speed_perturbed:
     for label in cb1.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
     
     current_lndeltac = (current_model-oneD_stratification)/oneD_stratification
-    cp=plotc.colorplot(current_lndeltac,x=x,y=z,sp=next(gl),cmap='Greys',vmin=0,
-    xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8},
-    subplot_properties={'sharey':ax1})
-    ax2=cp.axis;cb2=cp.colorbar
-    cb2.ax.xaxis.set_major_locator(MaxNLocator(3))
+    ax2=plt.subplot(next(gl),sharey=ax1)
+    qm=ax2.pcolormesh(x_plot,z_plot,current_lndeltac,cmap='Greys',vmin=0,rasterized=True)
+    cb2=plt.colorbar(mappable=qm,orientation="horizontal",shrink=0.8,pad=0.2,ticks=MaxNLocator(4),format=FuncFormatter(to_percent))  
+    ax2.set_xlim(*xlim_plot)
     plt.xlabel("x (Mm)",fontsize=20,labelpad=10)
     plt.title(r"Iterated $\delta \ln c$",fontsize=20,y=1.01)
     plt.tick_params(axis='both', which='major', labelsize=14)
@@ -288,33 +304,32 @@ if sound_speed_perturbed:
     for label in cb2.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
     
     #~ Misfit
-    ax3=plt.subplot(next(gl),sharey=ax1)
-    misfit_z_0 = np.trapz(abs(true_lndeltac),x=x)
-    misfit_z = np.trapz(abs(true_lndeltac-current_lndeltac),x=x)
+    misfit_z_0 = np.trapz(true_lndeltac**2,x=x)
+    misfit_z = np.trapz((true_lndeltac-current_lndeltac)**2,x=x)
     misfit_z /= misfit_z_0.max()
     misfit_z_0/= misfit_z_0.max()
-    qm = ax3.pcolormesh(current_lndeltac)
+    
+    ax3=plt.subplot(next(gl),sharey=ax1)
+    qm=ax3.pcolormesh(x_plot,z_plot,current_lndeltac,cmap='Greys',vmin=0,rasterized=True)
+    cb3=plt.colorbar(mappable=qm,orientation="horizontal",shrink=0.8,pad=0.2,ticks=MaxNLocator(4),format=FuncFormatter(to_percent))  
     plt.cla()
-    plt.plot(misfit_z,z,label="iter "+iter_to_plot,color='black')
-    plt.plot(misfit_z_0,z,label="iter 0",color='black',linestyle='dashed')
+    ax3.plot(misfit_z_0,z,linestyle="dashed",color="black",linewidth=2,label="Iter 0")
+    ax3.plot(misfit_z,z,linestyle="solid",color="black",linewidth=2,label="Iter "+str(iter_to_plot))
+    ax3.set_ylim(*ylim_plot)
+    plt.xlabel("",fontsize=20,labelpad=10)
+    plt.title(r"Model Misfit",fontsize=20,y=1.01)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+    ax3.xaxis.set_major_locator(MaxNLocator(5,prune='both'))
+    for label in cb3.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
     plt.legend(loc="lower right")
-    plt.ylim(*yr_plot)
-    plt.tick_params(axis='x', which='major', labelsize=14)
-    #~ plt.tick_params(axis='y', which='major', label1On=False)
-    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
-    plt.title("Misfit",fontsize=20,y=1.01)
-    #~ Fake hidden colorbar
-    cb3=plt.colorbar(mappable=qm,orientation="horizontal")
-    ax3.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
-    ax3.yaxis.set_major_locator(MaxNLocator(5,prune='both'))
-    ax3.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax3.grid()
     
     
     if plot_update and update is not None:
         ax4=plt.subplot(next(gl),sharey=ax1)
         cp=plotc.colorplot(update,x=x,y=z,ax=ax4,centerzero=True,
-        xr=xr_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
-        ax4.set_ylim(*yr_plot)
+        xr=xlim_plot,colorbar_properties={'orientation':'horizontal','shrink':0.8})
+        ax4.set_ylim(*ylim_plot)
         cb4=cp.colorbar
         cb4.ax.xaxis.set_major_locator(MaxNLocator(3))
         for label in cb4.ax.xaxis.get_ticklabels(): label.set_fontsize(14)
@@ -325,7 +340,7 @@ if sound_speed_perturbed:
         ax4.xaxis.set_major_locator(MaxNLocator(4,prune='both'))
     
     #~ plt.subplots_adjust(wspace=0)
-    plt.gcf().set_size_inches(12,6)
+    plt.gcf().set_size_inches(12,5)
     plt.tight_layout()
     cb3.ax.set_visible(False)
 

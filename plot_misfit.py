@@ -9,6 +9,16 @@ import matplotlib.pyplot as plt
 import itertools
 from matplotlib import rc
 
+rc('text', usetex=True)
+rc('font',**{'family':'serif','serif':['Times']})
+
+nx=read_params.get_nx()
+nz=read_params.get_nz()
+Lx=read_params.get_xlength()
+
+x=np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+z=np.loadtxt(read_params.get_solarmodel(),usecols=[0]);z=(z-1)*695.8
+
 flows = read_params.if_flows()
 sound_speed_perturbed = read_params.if_soundspeed_perturbed()
 
@@ -50,6 +60,8 @@ np.set_printoptions(linewidth=200,precision=4)
 
 #~ Get filename to save to
 save = read_params.parse_cmd_line_params("save")
+
+
 
 def spaced(a): 
     b=a[:-4]+" "+a[-4:]
@@ -99,14 +111,12 @@ if mistype == "data_sourcewise":
     plt.gcf().text(0.02, 0.5, 'Mean misfit per receiver ($s^2$)', va='center', rotation='vertical',fontsize=25)
 
 elif mistype == "data_summed":
-    markers = iter(('o', 'v', '8','s','<', 7, '*', 'h', '^', 'D', 'd'))
-    linestyles = itertools.cycle(('solid','dashed','dotted'))
-    modemisfit = np.zeros((len(ridges),num_misfit_files))
+    linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
+    modemisfit = np.zeros((len(ridges),num_misfit_files+1))
 
-    rc('text', usetex=True)
-    rc('font',**{'family':'serif','serif':['Times']})
+    
 
-    plt.subplot(131)
+    plt.subplot(121)
 
     for ridgeno,ridge in enumerate(ridges[:4]):
         
@@ -114,7 +124,7 @@ elif mistype == "data_summed":
         
         for src in xrange(1,num_source+1):
             
-            for iterno in xrange(num_misfit_files):
+            for iterno in xrange(num_misfit_files+1):
             
                 ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
                             'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
@@ -127,63 +137,60 @@ elif mistype == "data_summed":
                     pass
                 
         modemisfit[ridgeno] /= nsources_found            
-
-        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
-        ls=next(linestyles),label=modes[ridge][:-4])
+        plt.semilogy(modemisfit[ridgeno],color='black',ls=next(linestyles),label=modes[ridge][:-4],linewidth=2)
             
     plt.tick_params(axis='both', which='major', labelsize=14)    
     plt.xlim(-0.5,num_misfit_files+5)
     plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Mean misfit',fontsize=20)  
+    plt.ylabel('Mean data misfit',fontsize=20)  
     plt.legend(ncol=2)
 
-    plt.subplot(132)
-    for ridgeno,ridge in enumerate(ridges[4:]):
-        
-        nsources_found = 0
-        
-        for src in xrange(1,num_source+1):
-            
-            for iterno in xrange(num_misfit_files):
-            
-                ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
-                            'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
-                try:
-                    tt=np.loadtxt(ttfile)
-                    npix = tt.shape[0]
-                    modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
-                    nsources_found+=1
-                except IOError:
-                    pass
-                
-        modemisfit[ridgeno] /= nsources_found            
-
-        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
-        ls=next(linestyles),label=modes[ridge][:-4])
-            
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.xlim(-0.5,num_misfit_files+5)
-    plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Mean Misfit',fontsize=20)
-    plt.legend(ncol=2)
+    #~ plt.subplot(132)
+    #~ for ridgeno,ridge in enumerate(ridges[4:]):
+        #~ 
+        #~ nsources_found = 0
+        #~ 
+        #~ for src in xrange(1,num_source+1):
+            #~ 
+            #~ for iterno in xrange(num_misfit_files):
+            #~ 
+                #~ ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
+                            #~ 'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
+                #~ try:
+                    #~ tt=np.loadtxt(ttfile)
+                    #~ npix = tt.shape[0]
+                    #~ modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
+                    #~ nsources_found+=1
+                #~ except IOError:
+                    #~ pass
+                #~ 
+        #~ modemisfit[ridgeno] /= nsources_found            
+#~ 
+        #~ plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
+        #~ ls=next(linestyles),label=modes[ridge][:-4])
+            #~ 
+    #~ plt.tick_params(axis='both', which='major', labelsize=14)
+    #~ plt.xlim(-0.5,num_misfit_files+5)
+    #~ plt.xlabel("Iteration",fontsize=20)
+    #~ plt.ylabel('Mean Misfit',fontsize=20)
+    #~ plt.legend(ncol=2)
     
    
-    total_misfit = np.zeros(num_misfit_files)
-    for fileno,misfitfile in enumerate(misfitfiles):
+    total_misfit = np.zeros(num_misfit_files+1)
+    for fileno,misfitfile in enumerate(misfitfiles[:num_misfit_files+1]):
         total_misfit[fileno] = np.sum(np.loadtxt(misfitfile,usecols=[2]))
         
-    plt.subplot(133)
+    plt.subplot(122)
     
-    plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid')
+    plt.semilogy(total_misfit,color='black',ls='solid',lw=2)
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.xlim(-0.5,num_misfit_files+5)
     plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Net misfit',fontsize=20)
+    plt.ylabel('Total data misfit',fontsize=20)
     
-    plt.gcf().set_size_inches(12,4)
-           
+    plt.gcf().set_size_inches(9,4)
     plt.tight_layout()
-    
+    plt.subplots_adjust(wspace=0.4)
     
 elif mistype == "data_freq":
     
@@ -235,7 +242,6 @@ elif mistype == "data_freq":
     
     plotc.apj_2col_format(plt.gcf())
     plt.tight_layout()
-
 
 elif mistype == "model":
     
@@ -337,7 +343,7 @@ elif mistype == "model":
         model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_00.fits")))
         model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
         
-        for iterno in xrange(num_misfit_files):
+        for iterno in xrange(num_misfit_files+1):
             model_c_file = "model_c_"+str(iterno).zfill(2)+".fits"
             try:  
                 itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update",model_c_file)))
@@ -351,31 +357,27 @@ elif mistype == "model":
             
             modelmisfit_list.append(modelmisfit)
         
-        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$c$",color='black')
+        plt.plot(modelmisfit_list,linestyle='solid',label="$c$",color='black',lw=2)
         
     plt.grid()
-    plt.legend(loc="best")
+    plt.legend(loc="best",fontsize=18)
     
     plt.xlim(-0.5,num_misfit_files+0.5)
     plt.ylim(0,1.1)
-    plt.xlabel("Iteration number")
-    plt.ylabel("Model misfit")
-        
+    plt.xlabel("Iteration number",fontsize=20)
+    plt.ylabel("Model misfit",fontsize=20)
+    plt.tick_params(axis="both",labelsize=14)
     plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
     
-    plotc.apj_1col_format(plt.gcf())
+    plt.gcf().set_size_inches(4,4)
     plt.tight_layout()
 
 elif mistype == "data_model":
     
-    markers = iter(('o', 'v', '8','s','<', 7, '*', 'h', '^', 'D', 'd'))
-    linestyles = itertools.cycle(('solid','dashed','dotted'))
-    modemisfit = np.zeros((len(ridges),num_misfit_files))
+    linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
+    modemisfit = np.zeros((len(ridges),num_misfit_files+1))
 
-    rc('text', usetex=True)
-    rc('font',**{'family':'serif','serif':['Times']})
-
-    plt.subplot(141)
+    plt.subplot(131)
 
     for ridgeno,ridge in enumerate(ridges[:4]):
         
@@ -383,7 +385,7 @@ elif mistype == "data_model":
         
         for src in xrange(1,num_source+1):
             
-            for iterno in xrange(num_misfit_files):
+            for iterno in xrange(num_misfit_files+1):
             
                 ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
                             'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
@@ -397,59 +399,27 @@ elif mistype == "data_model":
                 
         modemisfit[ridgeno] /= nsources_found            
 
-        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
-        ls=next(linestyles),label=modes[ridge][:-4])
+        plt.semilogy(modemisfit[ridgeno],color='black',ls=next(linestyles),label=modes[ridge][:-4],lw=2)
             
-    plt.tick_params(axis='both', which='major', labelsize=14)    
-    plt.xlim(-0.5,num_misfit_files+5)
-    plt.xlabel("Iteration",fontsize=20)
+    plt.tick_params(axis='both', labelsize=14)    
+    plt.xlim(0,num_misfit_files)
+    plt.xlabel("Iteration number",fontsize=20)
     plt.ylabel('Mean data misfit',fontsize=20)  
     plt.legend(ncol=2)
 
-    plt.subplot(142)
-    for ridgeno,ridge in enumerate(ridges[4:]):
-        
-        nsources_found = 0
-        
-        for src in xrange(1,num_source+1):
-            
-            for iterno in xrange(num_misfit_files):
-            
-                ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
-                            'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
-                try:
-                    tt=np.loadtxt(ttfile)
-                    npix = tt.shape[0]
-                    modemisfit[ridgeno,iterno] += sum((tt[:,1]/60)**2)/npix
-                    nsources_found+=1
-                except IOError:
-                    pass
-                
-        modemisfit[ridgeno] /= nsources_found            
-
-        plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
-        ls=next(linestyles),label=modes[ridge][:-4])
-            
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.xlim(-0.5,num_misfit_files+5)
-    plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Mean data misfit',fontsize=20)
-    plt.legend(ncol=2)
-    
-   
-    total_misfit = np.zeros(num_misfit_files)
-    for fileno,misfitfile in enumerate(misfitfiles):
+    total_misfit = np.zeros(num_misfit_files+1)
+    for fileno,misfitfile in enumerate(misfitfiles[:num_misfit_files+1]):
         total_misfit[fileno] = np.sum(np.loadtxt(misfitfile,usecols=[2]))
         
-    plt.subplot(143)
+    plt.subplot(132)
     
-    plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid')
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.xlim(-0.5,num_misfit_files+5)
-    plt.xlabel("Iteration",fontsize=20)
-    plt.ylabel('Net data misfit',fontsize=20)
+    plt.semilogy(total_misfit,color='black',ls='solid',lw=2)
+    plt.tick_params(axis='both', labelsize=14)
+    plt.xlim(0,num_misfit_files)
+    plt.xlabel("Iteration number",fontsize=20)
+    plt.ylabel('Total data misfit',fontsize=20)
     
-    plt.subplot(144)
+    plt.subplot(133)
     
     if flows:
         # vx
@@ -538,18 +508,23 @@ elif mistype == "data_model":
         plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
         
     if sound_speed_perturbed:
-        try:  
-            truemodel=np.squeeze(pyfits.getdata("true_c.fits"))
-        except IOError:
-            print "True c model doesn't exist"
-            quit()
+        
+        oneD_stratification = np.tile(np.loadtxt(read_params.get_solarmodel(),usecols=[1]).reshape(nz,1),(1,nx))
+        def lndeltac(model): return (model-oneD_stratification)/oneD_stratification
+        
+        true_c=np.squeeze(pyfits.getdata("true_c.fits"))
+        true_lndeltac = lndeltac(true_c)
+        model_c_0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_00.fits")))
+        model_lndeltac_0 = lndeltac(model_c_0)
         
         modelmisfit_list = []
         
-        model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_c_00.fits")))
-        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        def twoDint(arr):
+            return np.trapz(np.trapz(arr,x=z,axis=0),x=x)
         
-        for iterno in xrange(num_misfit_files):
+        model_0_misfit=twoDint((true_lndeltac-model_lndeltac_0)**2)
+        
+        for iterno in xrange(num_misfit_files+1):
             model_c_file = "model_c_"+str(iterno).zfill(2)+".fits"
             try:  
                 itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update",model_c_file)))
@@ -557,26 +532,24 @@ elif mistype == "data_model":
                 print model_c_file,"doesn't exist"
                 continue
         
-            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            model_lndeltac_iter = lndeltac(itermodel)
+            modelmisfit=twoDint((true_lndeltac-model_lndeltac_iter)**2)
             
-            modelmisfit/=model0_misfit
+            modelmisfit/=model_0_misfit
             
             modelmisfit_list.append(modelmisfit)
         
-        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$c$",color='black')
-        
-    plt.grid()
-    plt.legend(loc="best")
-    
-    plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.xlim(-0.5,num_misfit_files+0.5)
+        plt.plot(modelmisfit_list,linestyle='solid',color='black',lw=2)
+        print "Final model misfit",modelmisfit_list[-1]
+    plt.tick_params(axis='both', labelsize=14)
+    plt.xlim(0,num_misfit_files)
     plt.ylim(0,1.1)
     plt.xlabel("Iteration number",fontsize=20)
     plt.ylabel("Model misfit",fontsize=20)
         
     plt.gca().yaxis.set_major_locator(MaxNLocator(7,prune='both'))
     
-    plt.gcf().set_size_inches(16,4)
+    plt.gcf().set_size_inches(12,4)
     plt.tight_layout()
     
     
