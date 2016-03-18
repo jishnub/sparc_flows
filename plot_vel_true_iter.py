@@ -22,7 +22,7 @@ def get_iter_no():
     return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
 iterno=get_iter_no()
 
-itercutoff = read_params.parse_cmd_line_params("iter",default=str(iterno-1))
+itercutoff = read_params.parse_cmd_line_params("iter",default=str(iterno-1).zfill(2))
 
 Lx=read_params.get_xlength()
 nx=read_params.get_nx()

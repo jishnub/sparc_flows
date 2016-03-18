@@ -1,5 +1,5 @@
-#PBS -N  ls_f_p7_2px
-#PBS -l nodes=3:ppn=24
+#PBS -N  ls_lowsmooth
+#PBS -l nodes=node6:ppn=24+node7:ppn=24+node10:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
 #PBS -l walltime=12:00:00

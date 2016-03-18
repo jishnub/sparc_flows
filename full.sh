@@ -1,6 +1,6 @@
 #!/bin/bash
-#PBS -N  full_f_p7_2px
-#PBS -l nodes=1:ppn=24
+#PBS -N  full_lowsmooth
+#PBS -l nodes=node7:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full
 #PBS -l walltime=12:00:00
