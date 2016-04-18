@@ -11,6 +11,7 @@ from matplotlib import rc
 
 def fitsread(fitsfile): return np.squeeze(pyfits.getdata(fitsfile))
 rc("font",family="serif")
+rc("text",usetex=True)
 
 datadir = read_params.get_directory()
 parentdir = os.path.dirname(datadir)
@@ -28,7 +29,7 @@ number_of_sources = len(mp)
 
 #~ First panel, compare different strategies
 linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
-strategylabel = iter(["#"+str(i) for i in xrange(1,5)])
+strategylabel = iter(["$\#$"+str(i) for i in xrange(1,5)])
 itercutoff=35
 ax=plt.subplot(131)
 for directory in strategydir:
@@ -41,11 +42,11 @@ for directory in strategydir:
     plt.semilogy(total_misfit,color='black',ls=next(linestyles),linewidth=2,label=next(strategylabel))
 
 ax.xaxis.set_major_locator(MaxNLocator(5))
-plt.tick_params(axis='both', which='major', labelsize=14)
-plt.xlabel("Iteration",fontsize=20)
-plt.ylabel('Total misfit',fontsize=20)
+plt.tick_params(axis='both', which='major', labelsize=16)
+plt.xlabel("Iteration",fontsize=18)
+plt.ylabel('Total misfit',fontsize=18)
 plt.legend()
-plt.tick_params(axis="both",labelsize=14)
+plt.tick_params(axis="both",labelsize=16)
 ax.grid()
 
 #~ Second panel, different ridges for one strategy
@@ -78,11 +79,11 @@ for ridgeno,ridge in enumerate(ridges[:4]):
     plt.semilogy(modemisfit[ridgeno],color='black',ls=next(linestyles),label=modes[ridge][:-4],linewidth=2)
    
 ax.xaxis.set_major_locator(MaxNLocator(5))
-plt.tick_params(axis='both', which='major', labelsize=14)    
-plt.xlabel("Iteration",fontsize=20)
-plt.ylabel('Mean misfit',fontsize=20)  
+plt.tick_params(axis='both', which='major', labelsize=16)    
+plt.xlabel("Iteration",fontsize=18)
+plt.ylabel('Mean misfit',fontsize=18)  
 plt.legend(ncol=2)
-plt.tick_params(axis="both",labelsize=14)
+plt.tick_params(axis="both",labelsize=16)
 ax.grid()
 
 
@@ -129,23 +130,24 @@ plt.plot(t,data_filtered[:,pix],label="True",color='black')
 plt.plot(t,vzcc_start_filtered[:,pix],label="Iter 0",linestyle='dashed',linewidth=2,color='#555555')
 plt.plot(t,vzcc_iter_filtered[:,pix],label="Iter "+iter_to_plot,linestyle='dashed',linewidth=2,color='#333333',marker='o')
 ax.yaxis.set_major_locator(MaxNLocator(4,prune='both'))
-yaxis_formatter = ScalarFormatter(useMathText=True)
+yaxis_formatter = ScalarFormatter(useMathText=False)
+#~ yaxis_formatter = ScalarFormatter(useMathText=True)
 yaxis_formatter.set_scientific(True)
 yaxis_formatter.set_powerlimits((0,0))
 ax.yaxis.set_major_formatter(yaxis_formatter)
-ax.xaxis.set_major_locator(MaxNLocator(6))
+ax.xaxis.set_major_locator(MaxNLocator(5))
 
-plt.ylabel("Wave velocity\n(arbitrary units)",fontsize=20)
-plt.tick_params(axis="both",labelsize=14)
+plt.ylabel("Wave velocity\n(arbitrary units)",fontsize=18)
+plt.tick_params(axis="both",labelsize=16)
     
 xlim_left = lef_ttdiff_cutoff
 xlim_right = rig_ttdiff_cutoff
 plt.xlim(xlim_left,xlim_right)
 plt.legend(loc='best')
 
-plt.xlabel("Time (min)",fontsize=20)
+plt.xlabel("Time (min)",fontsize=18)
 
-plt.gcf().set_size_inches(12,5)
+plt.gcf().set_size_inches(12,4)
 plt.tight_layout()
 
 save = read_params.parse_cmd_line_params("save")

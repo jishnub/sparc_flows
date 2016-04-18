@@ -44,7 +44,7 @@ def filterx(kern):
     nx,ny,nz=kern.shape
     
     x=np.fft.fftfreq(nx)*nx
-    smooth_x = 4
+    smooth_x = 10
     x = np.exp(-x**2./(2.*smooth_x**2.))
     
     filtx=np.fft.rfft(x)

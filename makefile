@@ -20,8 +20,8 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 FC= mpif90
 FC77= mpif77
 
-FFLAGS= -O3 -DDOUBLE_PRECISION ##-p -g ##-check all ##-fpe0 -traceback -debug #-check bounds
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
+FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
+LIBS1 = -L/home/jishnu/heasoft-6.17/heacore/cfitsio/ -lfftw3 -lcfitsio
 
 COMMAND1=	sparc
 

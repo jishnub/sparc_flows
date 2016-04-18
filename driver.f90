@@ -54,11 +54,13 @@ Program driver
 
     ! Initializing the computation
     ! --------------------------------------------
-
+    
     call Initialize_all    
     
 !~     call adjoint_source_filt(520)
 !~     stop
+
+    Lregular = 30.0D8/diml
 
     if (COMPUTE_DATA) then
 
@@ -67,59 +69,76 @@ Program driver
         end if
         
         if (FLOWS) then
-            Rchar = 15. *10.**8/diml
+            Rchar = 15D8/diml
             con= (xlength/diml)/Rchar * 2
-            kay = 2.*pi/(2.*Rchar)
-            z0 = 1.-2.3*10**8./diml
-            sigmaz = 0.912*10.**8./diml
+            kay = 2*pi/(2*Rchar)
+            z0 = 1.-2.3D8/diml
+            sigmaz = 0.912D8/diml
             rand2 = 240.*100./dimc * 1./kay
-            call ddz(rho0,gradrho0_z,1)
-            do k=1,nz
-                do i=1,nx
-                    signt = 1.0
-                    if (x(i) .lt. 0.5) signt = -1.0
-                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                     call bessel(0,rand1,bes(0))
-                     call bessel(1,rand1,bes(1))
-                     call bessel(2,rand1,bes(2))
-                     
-!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
-                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -bes(1)/Rchar) * &
-                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
+!~             call ddz(rho0,gradrho0_z,1)
+            
+!~             print "(F25.1,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15)",&
+!~                     diml,dimc,dimrho,Rchar,con,kay,z0,sigmaz,rand2
 
-!~                     vx = d/dz(\rho c \psi)/\rho
-                    v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
-                             gradrho0_z(i,1,k)/rho0(i,1,k)) * &
-                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
+!            do k=1,nz
+
+!                do i=1,nx
+!                    signt = sign(1.D0,x(i)-0.5D0)
+!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
                     
-                enddo
-            enddo
+!                    bes(0) = BesJN(0,rand1)
+!                    bes(1) = BesJN(1,rand1)
+!                    bes(2) = BesJN(2,rand1)
+
+                     
+!!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
+!                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -2*bes(1)/Rchar) * &
+!                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
+
+!!~                     vx = d/dz(\rho c \psi)/\rho
+!                    v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
+!                             gradrho0_z(i,1,k)/rho0(i,1,k)) * &
+!                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))  
+                    
+!                enddo
+!            enddo
             
             allocate(psivar(nx,dim2(rank),nz))
 
             do k=1,nz
                 do i=1,nx
                     rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                    call bessel(1,rand1,bes(1))
-                    signt = 1.0
-                    if (x(i) .lt. 0.5) signt = -1.0
+                    bes(1) = BesJN(1,rand1)
+                    signt = sign(1.D0,x(i)-0.5D0)
                     psivar(i,1,k) = bes(1) * rand2 * exp(-abs(x(i)-0.5)*con &
                     - (z(k) -z0)**2./(2.*sigmaz**2.)) * signt/c2(i,1,k)**0.5
 !~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
                 enddo
             enddo
-            print *,'The fiducial value psi_0 should be (roughly)',diml/30E8*maxval(psivar)
-            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/30E8,nz)
-!~             Multiply \psi by 30 to obtain \psi in Mm units
+
+            call fourier_smooth_x(psivar,70,psivar)
+                    
+            psivar = rho0*(c2**0.5)*psivar
+            
+            call ddz(psivar, v0_x, 1)
+            v0_x = -v0_x/rho0
+
+            call ddx(psivar, v0_z, 1)
+            v0_z = v0_z/rho0 
+            
+            psivar = psivar/(rho0*(c2**0.5))
+            
+!~          Save psi in Mm
+            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
         
             deallocate(psivar)
             
             
 
             if (contrib=="01") then
-                print *,"max vx",maxval(v0_x)*dimc*10.**(-2.),"max vz",maxval(v0_z)*dimc*10.**(-2.)," m/s"
-                call writefits_3d('true_vz.fits',v0_z*dimc*10.**(-2.),nz)
-                call writefits_3d('true_vx.fits',v0_x*dimc*10.**(-2.),nz)
+                print *,"max vx",maxval(v0_x)*dimc*1D-2,"max vz",maxval(v0_z)*dimc*1D-2," m/s"
+                call writefits_3d('true_vz.fits',v0_z*dimc*1D-2,nz)
+                call writefits_3d('true_vx.fits',v0_x*dimc*1D-2,nz)
             endif
 
             
@@ -159,24 +178,22 @@ Program driver
             
             if (iteration) then
                 
-                ! These logical variables are defined in params.i
+!~                  These logical variables are defined in params.i
                 if (psi_cont .and. enf_cont) then
-                
-                    Lregular = 30.0E8/diml
+                    
                     allocate(psivar(nx,dim2(rank),nz))
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
                     
-                    psivar = rho0*Lregular*(psivar-psivar(1,1,1))*c2**0.5
-
-                    psivar(:,:,1:10) = 0.0
-                    psivar(:,:,nz-9:nz) = 0.0
+                    psivar = rho0*(psivar-psivar(1,1,1))*c2**0.5
+                    !psivar(:,:,1:10) = 0.0
+                    !psivar(:,:,nz-9:nz) = 0.0
                     
                     if (cutoff_switch) then
-                    xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
-                    do i=1,nx
-                        xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
-                        psivar(i,:,:) = psivar(i,:,:)*xcutoff
-                    end do
+                        xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
+                        do i=1,nx
+                            xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
+                            psivar(i,:,:) = psivar(i,:,:)*xcutoff
+                        end do
                     end if
                     
 !~                     call writefits_3d("psivar_used.fits",psivar,nz)
@@ -194,7 +211,6 @@ Program driver
                         call ddxkern(psivar, v0_z, 1)
                         v0_z = v0_z/rho0 
                     endif
-                
                 elseif (enf_cont .and. (vx_cont)) then
                     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
                     v0_x = v0_x/dimc * 10.**2
@@ -247,7 +263,7 @@ Program driver
             endif
         endif
     endif
-!~     stop
+!~      stop
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS 
 
 
@@ -1112,6 +1128,7 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     call ddz(rho0*vz,dzrhovz,1)
     call ddx(rho0*vx,dxrhovx,1)
     call ddz(rho0,dzrho,1)
+    
     
     cont=(dxrhovx + dzrhovz)/c_speed/dzrho
     
@@ -2354,18 +2371,56 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 END SUBROUTINE ADJOINT_SOURCE_FILT
 
 !================================================================================
- subroutine bessel(order,arg,outp)
-! use ifport
- implicit none
- integer order
- real*8 arg,outp
+! subroutine bessel(order,arg,outp)
+!! use ifport
+! implicit none
+! integer, intent(in) :: order
+! real*8, intent(in) :: arg
+! real*8, intent(out) :: outp
 
- if (order==0) outp=dbesj0(arg)
- if (order==1) outp=dbesj1(arg)
+! outp = BesJN(order,arg)
  
- end subroutine bessel
+! end subroutine bessel
 
 !================================================================================
+
+SUBROUTINE FOURIER_SMOOTH_X(input_arr,nk,output_arr)
+    use initialize
+    implicit none
+    integer, intent(in) :: nk
+    real*8, dimension(nx,1,nz), intent(in) :: input_arr
+    real*8, dimension(nx,1,nz), intent(out) :: output_arr
+    real*8 psi_row(nx),sigmak_smooth,smoothing_function(nx/2+1),k_smooth
+    complex*16 psi_fft(nx/2+1)
+    integer zind,xind
+    integer*8 plan_fwd,plan_inv    
+    
+    call dfftw_plan_dft_r2c_1d(plan_fwd,nx,psi_row,psi_fft,FFTW_ESTIMATE)
+    call dfftw_plan_dft_c2r_1d(plan_inv,nx,psi_fft,psi_row,FFTW_ESTIMATE)
+    
+    sigmak_smooth = 2*pi*nk/(xlength/1D8)
+    do xind=1,nx/2+1
+        k_smooth = 2*pi*(xind-1)/(xlength/1D8)
+        smoothing_function(xind) = exp(-k_smooth**2/(2*sigmak_smooth**2))
+!~         print *,"k",k_smooth,"smoothing fn",exp(-k_smooth**2/(2*sigmak_smooth**2))
+    end do
+    
+    do zind=1,nz
+        psi_row = input_arr(:,1,zind)
+        call dfftw_execute_dft_r2c(plan_fwd, psi_row, psi_fft)
+        
+        psi_fft=psi_fft*smoothing_function
+        call dfftw_execute_dft_c2r(plan_inv,psi_fft,psi_row)
+        output_arr(:,1,zind) = psi_row/nx
+    end do
+    
+    call dfftw_destroy_plan(plan_fwd);
+    call dfftw_destroy_plan(plan_inv);
+
+END SUBROUTINE FOURIER_SMOOTH_X
+
+!================================================================================
+
 
 
 

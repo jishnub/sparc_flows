@@ -8,7 +8,11 @@ import read_params
 import pyfits
 import os
 
+
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
+
+rc("text",usetex=True)
+rc('font',**{'family':'serif'})
 
 datadir=read_params.get_directory()
 
@@ -25,13 +29,12 @@ vx=fitsread('true_vx.fits')
 vz=fitsread('true_vz.fits')
 
 qv=plotc.quiver2D(vx,vz,x=x,y=z,every=[2,2],xr=[-40,40],yr=[-5,None],
-scale=8000,key=False,key_properties={'suffix':' m/s','fmt':'{:2.0f}','scale':250},rasterized=False,color='#777777',
-usetex=True)
+scale=8000,key=False,key_properties={'suffix':' m/s','fmt':'{:2.0f}','scale':250},rasterized=False,color='#777777')
 
 ax=qv.axis
 
-plt.xlabel("Horizontal Distance (Mm)")
-plt.ylabel("Depth (Mm)")
+plt.xlabel("Horizontal Distance (Mm)",fontsize=20)
+plt.ylabel("Depth (Mm)",fontsize=20)
 
 excite_depth=read_params.get_excitedepth()/1e8
 obs_depth = read_params.get_obs_depth()/1e8
@@ -64,7 +67,8 @@ ax.text(rec_x,0.4,"Receiver",horizontalalignment='center',verticalalignment='bot
 
 if not os.path.exists("plots"): os.makedirs("plots")
 
-plotc.apj_1col_format(plt.gcf())
+plt.gcf().set_size_inches(6,4)
+plt.tick_params(axis="both",labelsize=18)
 plt.tight_layout()
 
 save = read_params.parse_cmd_line_params("save")

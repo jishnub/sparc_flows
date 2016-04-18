@@ -4,7 +4,7 @@ import pyfits
 import matplotlib.pyplot as plt
 import read_params
 import os
-from matplotlib.ticker import MaxNLocator,MultipleLocator
+from matplotlib.ticker import MaxNLocator,MultipleLocator,ScalarFormatter
 from matplotlib import rc
 import warnings
 import plotc
@@ -36,8 +36,8 @@ nu = np.fft.fftshift(np.fft.fftfreq(nt,dt))*1e3
 dnu = nu[1]-nu[0]
 nu_edges = np.linspace(nu[0]-dnu/2,nu[-1]+dnu/2,nt+1)
 
-#~ rc("text",usetex=True)
-rc('font',**{'family':'serif'})
+rc("text",usetex=True)
+rc('font',**{'family':'serif','serif':["Times"]})
 
 
 tdfig=None
@@ -48,19 +48,23 @@ if save is not None: tdfig,specfig = save[0],save[1]
 
 ###########################################################################################
 #~ Time distance
-
-datamax = abs(data).max()/50
+fig = plt.figure()
+datamax = abs(data).max()/40
 plt.pcolormesh(x_edges,t_edges,data,cmap="Greys",vmax=datamax,vmin=-datamax,rasterized=True)
+cb=plt.colorbar(format='%.1e')
+#~ cb.ax.yaxis.get_offset_text().set_position((3.5,0))
 plt.xlim(x_edges[0],x_edges[-1])
 plt.ylim(t_edges[0],t_edges[-1])
-plt.xlabel("x (Mm)")
-plt.ylabel("Time (hours)")
+plt.xlabel("x (Mm)",fontsize=20)
+plt.ylabel("Time (hours)",fontsize=20)
 
 ax=plt.gca()
 ax.xaxis.set_major_locator(MaxNLocator(5))
 ax.yaxis.set_major_locator(MultipleLocator(1))
 
-plotc.apj_1col_format(plt.gcf())
+plt.tick_params(axis="both",labelsize=18)
+
+fig.set_size_inches(6,4)
 plt.tight_layout()
 
 if tdfig is not None:
@@ -85,8 +89,8 @@ plt.ylim(0,8)
 ax.xaxis.set_major_locator(MaxNLocator(5,prune="lower"))
 ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
 
-plt.xlabel(r"$kR_\odot$")
-plt.ylabel(r"Frequency (mHz)")
+plt.xlabel(r"$\mathrm{k\,R_\odot}$",fontsize=20,labelpad=5)
+plt.ylabel(r"Frequency (mHz)",fontsize=20)
 
 plt.text(943,3.1,r"f",     fontsize=20)
 plt.text(943,4.35,r"p$_1$",fontsize=20)
@@ -97,6 +101,8 @@ plt.text(587,5.8,r"p$_5$", fontsize=20)
 plt.text(521,6.0,r"p$_6$", fontsize=20)
 plt.text(460,6.2,r"p$_7$", fontsize=20)
 
+plt.tick_params(axis="both",labelsize=18)
+fig.set_size_inches(6,4)
 plt.tight_layout()
 
 if specfig is not None:
