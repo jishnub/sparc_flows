@@ -97,7 +97,7 @@ if flows:
         
         psi_max_row_index,psi_max_col_index = divmod(true_model.argmax(),nx)
         curpsi_max_row_index,curpsi_max_col_index = divmod(current_model.argmax(),nx)
-        Lregular = read_params.get_Lregular()/1e8 # cm to Mm
+        #~ Lregular = read_params.get_Lregular()/1e8 # cm to Mm
         
         plt.subplot(121)
         plt.plot(x,true_model[curpsi_max_row_index,:],label="True model")
@@ -111,8 +111,10 @@ if flows:
         plt.legend(loc='best')
         
         plt.subplot(122)
-        plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
-        plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
+        #~ plt.plot(z,true_model[:,curpsi_max_col_index]*Lregular,label="True model")
+        #~ plt.plot(z,current_model[:,curpsi_max_col_index]*Lregular,label="Iterated model",
+        plt.plot(z,true_model[:,curpsi_max_col_index],label="True model")
+        plt.plot(z,current_model[:,curpsi_max_col_index],label="Iterated model",
         linestyle='dashed',linewidth=2)
         plt.xlim(-10,2.5)
         plt.xlabel("Depth (Mm)",fontsize=20)

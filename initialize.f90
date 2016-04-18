@@ -35,7 +35,7 @@ MODULE INITIALIZE
 	   height(nz), visc(nz), cq(nz)
 
    parameter(normx=1.0/DBLE(nx), normy = 1.0/DBLE(ny))
-   parameter(rsun = 6.95989467700E10, pi = 3.14159265358979) ! rsun in cm
+   parameter(rsun = 6.95989467700D10, pi = 3.141592653589793D0) ! rsun in cm
    real*8  stretch(nz), unstretch(nz), stretchx, stretchy, decay_coeff_x(nx/2+1)
    real*8 decay_coeff_y(ny/2+1), delta_width
    logical initcond, generate_wavefield, linesearch
@@ -749,13 +749,13 @@ Subroutine solar_data
   
 ! dimc = 10 km/s
 
-  dimc = 10.0**6. !data(q,2)
+  dimc = 1D6
 
 ! dimrho = 10^-3 g/cc
  
-  dimrho = 10.0**(-3.0) !data(q,3)
+  dimrho = 1D-3 !data(q,3)
   diml = rsun
-  dimb = (4.0*pi*dimc**2.0*dimrho)**0.5
+  dimb = (4D0*pi*dimc**2*dimrho)**0.5
 
   do k =1,nz
     z(k) = data(k,1)
@@ -769,7 +769,7 @@ Subroutine solar_data
     rhoq(k) = data(k,3)/dimrho
   enddo
 
-  height = (z-1.)*695.98994
+  height = (z-1.)*rsun
     if (sound_speed_perturbation) then
         do k=1,nz_kern
         sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional

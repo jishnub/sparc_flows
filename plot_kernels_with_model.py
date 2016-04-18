@@ -8,7 +8,6 @@ import pyfits,os
 from matplotlib import rc
 from matplotlib.ticker import MaxNLocator,NullFormatter,ScalarFormatter
 from scipy.ndimage.filters import gaussian_filter1d
-import plotc
 
 rc("text",usetex=True)
 rc("font",**dict(family="serif",serif="Times"))
@@ -55,26 +54,27 @@ if not modes_found:
     print "No modes found"
     exit()
 
-Lregular = 30. # \psi is scaled by Lregular in Mm
-true_psi=fitsread('true_psi.fits')*Lregular
+true_psi=fitsread('true_psi.fits')
 psi_max_x_pix=np.unravel_index(true_psi.argmax(),true_psi.shape)[1]
 true_psi = true_psi[:,psi_max_x_pix]
 
-iterated_psi_1 = fitsread(os.path.join(strategydir[0],"model_psi_ls00.fits"))*Lregular
+iterated_psi_1 = fitsread(os.path.join(strategydir[0],"model_psi_ls00.fits"))
 iterated_psi_1-=iterated_psi_1[0,0]
 iterated_psi_1 = iterated_psi_1[:,psi_max_x_pix]
 
-iterated_psi_2 = fitsread(os.path.join(strategydir[1],"model_psi_ls00.fits"))*Lregular
+iterated_psi_2 = fitsread(os.path.join(strategydir[1],"model_psi_ls00.fits"))
 iterated_psi_2-=iterated_psi_2[0,0]
 iterated_psi_2 = iterated_psi_2[:,psi_max_x_pix]
 
-iterated_psi_3 = fitsread(os.path.join(strategydir[2],"model_psi_ls00.fits"))*Lregular
+iterated_psi_3 = fitsread(os.path.join(strategydir[2],"model_psi_ls00.fits"))
 iterated_psi_3-=iterated_psi_3[0,0]
 iterated_psi_3 = iterated_psi_3[:,psi_max_x_pix]
 
 depth_cutoff = -8
 
 nplots = len(modes_found)+1
+
+rho=np.loadtxt(read_params.get_solarmodel(),usecols=[2])
 
 for ind,mode in enumerate(modes_found):
     kernel = arrays_to_plot[ind]

@@ -8,6 +8,7 @@ import read_params
 import pyfits
 import os
 
+
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
 
 rc("text",usetex=True)
