@@ -14,10 +14,9 @@ def fitsread(f):
         arr=pyfits.getdata(f)
     except IOError:
         raise IOError
-    # If it is 2D, make it 3D. This adds an extra dimension at the end.
-    # Bring it to the middle to match the general trend
-    # Dimension will be (nz,ny,nx) after this
-    if len(arr.shape)==2: arr=np.atleast_3d(arr).transpose(0,2,1)
+    # If it is 2D, make it 3D.
+    # Dimension will be (nz,1,nx) after this
+    if len(arr.shape)==2: arr=arr[:,np.newaxis,:]
     # Change dimension to (nx,ny,nz)
     return arr.transpose(2,1,0)
 
@@ -30,6 +29,7 @@ def fitswrite(f,arr):
         pyfits.writeto(f,arr,clobber=True)
 
 def get_iter_no():
+    datadir = read_params.get_directory()
     updatedir=os.path.join(datadir,"update")
     # Count the number of misfit_xx files
     return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))-1
@@ -37,24 +37,20 @@ def get_iter_no():
 def get_number_of_sources():
     # Count the number of lines in master.pixels
     # Safest to use loadtxt, since it removes newline correctly
+    datadir = read_params.get_directory()
     return len(np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1))
 
-def filterx(kern):
-    temp=np.zeros_like(kern)
-    nx,ny,nz=kern.shape
+def filterx(kern,nk):
     
-    x=np.fft.fftfreq(nx)*nx
-    smooth_x = 10
-    x = np.exp(-x**2./(2.*smooth_x**2.))
+    Lx = read_params.get_xlength()
+    nx = read_params.get_nx()
+    k = np.fft.rfftfreq(nx,1./nx)
+    sigmak = nk # retain an arbitrary number of wavenumbers
+    filt_k = np.exp(-k**2/(2*sigmak**2))
     
-    filtx=np.fft.rfft(x)
-    filtx=np.atleast_3d(filtx).transpose(1,0,2)
+    filt_k = filt_k[:,np.newaxis,np.newaxis]
     
-    temp=np.fft.rfft(kern,axis=0)
-    temp*=filtx
-    temp=np.fft.irfft(temp,axis=0).real
-    
-    kern[:]=temp[:]
+    return np.fft.irfft(np.fft.rfft(kern,axis=0)*filt_k,axis=0).real
 
 def filterz(arr,algo='spline',sp=1.0):
     nx,ny,nz=arr.shape
@@ -105,13 +101,15 @@ def filterz(arr,algo='spline',sp=1.0):
 def antisymmetrize(arr):   arr[:]=0.5*(arr[:]-arr[::-1])
 def symmetrize(arr):   arr[:]=0.5*(arr[:]+arr[::-1])
 
-def updatedir(filename): return os.path.join(datadir,'update',filename)
+def updatedir(filename): 
+    datadir = read_params.get_directory()
+    return os.path.join(datadir,'update',filename)
 
 def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape)) 
 
 def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pix=0.3):
     kern = totkern/hess
-    filterx(kern)
+    kern = filterx(kern,70)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
@@ -122,10 +120,10 @@ def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pi
 
 ########################################################################
 
-datadir=read_params.get_directory()
-iterno=get_iter_no()
-
 def main():
+    
+    datadir=read_params.get_directory()
+    iterno=get_iter_no()
 
     args=sys.argv[1:]
     optimization_algo=filter(lambda x: x.startswith('algo='),args)
@@ -464,8 +462,9 @@ def main():
 
 
     #~ Update epslist
+    epslist_path = os.path.join(datadir,"epslist.npz")
     try:
-        epslist=np.load('epslist.npz')
+        epslist=np.load(epslist_path)
         iter_done_list = epslist.files
         if str(iterno) in iter_done_list:
             ls_iter = epslist[str(iterno)]
@@ -488,7 +487,7 @@ def main():
     #~ np.set_printoptions(precision=5)
     #~ print "Updated epslist in grad"
     #~ print epslist[str(iterno)]
-    np.savez('epslist.npz',**epslist)
+    np.savez(epslist_path,**epslist)
 
 
 ########################################################################

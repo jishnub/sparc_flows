@@ -110,6 +110,8 @@ def get_iter_status():
     iterno = len(misfit_files)-1
     return misfit_files,misfit_all_files,ls_files,ls_all_files,iterno
 
+epslist_path=os.path.join(datadir,'epslist.npz')
+
 for query in xrange(100000):
 
     #~ print "Query",query
@@ -163,7 +165,7 @@ for query in xrange(100000):
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
         try: 
-            epslist=np.load("epslist.npz")
+            epslist=np.load(epslist_path)
             iters_list = epslist.files
             
             if str(iterno) in iters_list:
@@ -225,8 +227,8 @@ for query in xrange(100000):
             print "Using arbitary step sizes"
             eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
         #~ Run grad
-        print "Running grad with eps",eps
         gradcmd = grad_command(algo="cg",eps=eps)
+        print "Running",gradcmd
         status=subprocess.call(gradcmd.split())
         assert status==0,"Error in running grad"
         
@@ -269,7 +271,7 @@ for query in xrange(100000):
         misfit_diff_changes_sign = len(misfit_diff_sign_change_locs)>0
         
         #~ Update epslist
-        epslist=np.load('epslist.npz')
+        epslist=np.load(epslist_path)
         if str(iterno) in epslist.files:
             ls_details = epslist[str(iterno)]
             ls_details[1] = misfit
@@ -278,7 +280,7 @@ for query in xrange(100000):
         epslist = {i:epslist[i] for i in epslist.files}
         epslist.update({str(iterno):ls_details})
         #~ print epslist[str(iterno)]
-        np.savez('epslist.npz',**epslist)
+        np.savez(epslist_path,**epslist)
 
         #~ Copy best linesearch, or remove prev linesearch file
         if misfit_diff_changes_sign:

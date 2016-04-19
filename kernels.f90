@@ -491,9 +491,10 @@ SUBROUTINE PRODUCE_KERNELS
  enddo
 
 
-
+ print *,"Writing out hessian"
  call writefits_3d(adjustl(trim(directory_rel))//'hessian_'//contrib//'.fits', hessian, nz_kern)
 
+ print *,"Flow kernels"
  if (FLOW_KERNELS) then
 
   ! Mm^-3 km^-1 
@@ -512,8 +513,10 @@ SUBROUTINE PRODUCE_KERNELS
                    (rho0*c2**0.5*psivar)*stepskern*timestep * dimen
 !~  without a leading minus sign, the kernel is gradient in param space.
 !~  with a leading minus sign, it is the negative of the gradient.
+  
   end if
 
+  print *,"Velocity kernels"
   do i=1,3
    kernelv(:,:,:,i) = - 2.0 * kernelv(:,:,:,i) * rho0 * stepskern * timestep * dimen ! the other time-unit
   enddo
@@ -531,6 +534,7 @@ SUBROUTINE PRODUCE_KERNELS
 
  endif
 
+ print *,"Magnetic kernels"
  if (MAGNETIC_KERNELS) then
 
   dimen =  (diml * 10.0**(-8.))**(-3.) * dimb**(-1.) * 1000.
@@ -561,6 +565,7 @@ SUBROUTINE PRODUCE_KERNELS
 !
  if (test_in_2d) dimen = (diml * 10.0**(-8.) * xlength * 10.0**(-8.))**(-1.) *UNKNOWN_FACTOR
 
+ print *,"Density kernels"
  if (DENSITY_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED DENSITY KERNELS ARE Mm^-3 s^2'
   kernelrho = - rho0 * kernelrho * stepskern * timestep * dimen
@@ -568,6 +573,7 @@ SUBROUTINE PRODUCE_KERNELS
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_rho_'//contrib//'.fits', kernelrho, nz_kern)
  endif
 
+ print *,"Sound speed kernels"
  if (SOUND_SPEED_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED SOUND-SPEED KERNELS ARE s^2 Mm^-3'
   kernelc2 = - kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
@@ -581,6 +587,7 @@ SUBROUTINE PRODUCE_KERNELS
 
  endif
 
+ 
  if (rank ==0) then
   print *,'Removing forward and adjoint data'
   call system('rm -rf '//directory//'forward_src'//contrib//'_ls'//jobno//'/*partial*')
