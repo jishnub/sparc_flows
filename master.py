@@ -18,7 +18,7 @@ num_linesearches = 6
 data_command = "qsub data_forward.sh"
 full_command = "qsub full.sh"
 ls_command = "qsub linesearch.sh"
-def grad_command(algo="cg",eps=[0.1*i for i in xrange(1,num_linesearches+1)]):
+def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
     return "python grad.py algo="+algo+" "+str(eps_str)
@@ -228,7 +228,15 @@ for query in xrange(100000):
             eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
         #~ Run grad
         gradcmd = grad_command(algo="cg",eps=eps)
-        print "Running",gradcmd
+        def exp_notation(a):
+            b=a.split()
+            for index,word in enumerate(b):
+                try:
+                    b[index] = "{:2.1E}".format(float(word))
+                except ValueError: pass
+            return ' '.join(b)
+            
+        print "Running",exp_notation(gradcmd)
         status=subprocess.call(gradcmd.split())
         assert status==0,"Error in running grad"
         
