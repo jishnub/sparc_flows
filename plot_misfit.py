@@ -239,6 +239,15 @@ elif mistype == "data_freq":
 
 elif mistype == "model":
     
+    nx=read_params.get_nx()
+    Lx=read_params.get_xlength()
+    x=np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+    z = np.loadtxt(read_params.get_solarmodel(),usecols=[0])
+    z = (z-1)*695.8
+    
+    def integrate_2D(arr):
+        return np.trapz(np.trapz(arr,x=x,axis=1),x=z)
+    
     if flows:
         # vx
         try:  
@@ -250,7 +259,8 @@ elif mistype == "model":
         modelmisfit_list = []
         
         model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vx_00.fits")))
-        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        #~ model0_misfit=np.sum((truemodel-model0)**2)
+        model0_misfit=integrate_2D((truemodel-model0)**2)
         
         for iterno in xrange(num_misfit_files):
             try:  
@@ -259,14 +269,14 @@ elif mistype == "model":
                 print "vx_"+str(iterno).zfill(2)+".fits doesn't exist"
                 continue
         
-            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            modelmisfit=integrate_2D((truemodel-itermodel)**2)
 
             
             modelmisfit/=model0_misfit
             
             modelmisfit_list.append(modelmisfit)
         
-        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='solid',marker='^',label="$v_x$",color='black')
+        plt.plot(modelmisfit_list,linestyle='solid',marker='^',label="$v_x$",color='black')
 
 
         # vz
@@ -278,23 +288,23 @@ elif mistype == "model":
         
         modelmisfit_list = []
         model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_00.fits")))
-        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        model0_misfit=integrate_2D((truemodel-model0)**2)
         
         for iterno in xrange(num_misfit_files):    
             try:  
                 itermodel=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","vz_"+str(iterno).zfill(2)+".fits")))
             except IOError:
                 print "vz_"+str(iterno).zfill(2)+".fits doesn't exist"
-                continue
+                pass
         
-            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            modelmisfit=integrate_2D((truemodel-itermodel)**2)
 
             
             modelmisfit/=model0_misfit
             
             modelmisfit_list.append(modelmisfit)
         
-        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dashed',marker='o',label="$v_z$",color='black')
+        plt.plot(modelmisfit_list,linestyle='dashed',marker='o',label="$v_z$",color='black')
         
         # Vector potential
         try:  
@@ -309,7 +319,7 @@ elif mistype == "model":
         
         model0=np.squeeze(pyfits.getdata(os.path.join(datadir,"update","model_psi_00.fits")))
         model0-=model0[0,0]
-        model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
+        model0_misfit=integrate_2D((truemodel-model0)**2)
         
         for iterno in xrange(num_misfit_files):    
             try:  
@@ -319,11 +329,11 @@ elif mistype == "model":
                 print "model_psi_"+str(iterno).zfill(2)+".fits doesn't exist"
                 continue
         
-            modelmisfit=np.sqrt(np.sum((truemodel-itermodel)**2))
+            modelmisfit=integrate_2D((truemodel-itermodel)**2)
             modelmisfit/=model0_misfit
             modelmisfit_list.append(modelmisfit)
         
-        plt.plot(range(len(modelmisfit_list)),modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
+        plt.plot(modelmisfit_list,linestyle='dotted',marker='s',label=r"$\psi$",color='black')
         
     if sound_speed_perturbed:
         try:  

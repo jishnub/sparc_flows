@@ -116,26 +116,28 @@ for query in xrange(100000):
 
     #~ print "Query",query
     qstat=subprocess.check_output(["qstat"]).split()
-    #~ print qstat
-    something_running = False
-    for part in qstat:
-        if part.endswith(id_text):
-            #~ print "Query at",time.strftime(" %d %b, %X", time.localtime()),":",\
-                    #~ part,"running, moving on without doing anything"
-            something_running = True
+    
+    job_id_indices = [qstat.index(i) for i in filter(lambda x:x.endswith("daahpc1") or x.endswith("daahpc2"),qstat)]
+    job_names = [qstat[i+1] for i in job_id_indices]
+    job_statuses = [qstat[i+4] for i in job_id_indices]
+    
+    job_running = False
+    for job_name,job_status in zip(job_names,job_statuses):
+        if job_name.endswith(id_text) and (job_status=="R" or job_status=="Q"):
+            job_running = True
             break
-            
-    if something_running: 
+    
+    if job_running:
         time.sleep(60)
         continue
-    #~ else: print "Nothing running, moving on"
+            
     
     if not os.path.exists(os.path.join(datadir,"forward_src01_ls00","data.fits")):
         #~ no iterations done
         print colored("Running data_forward","blue")
         status=subprocess.call(data_command.split())
         assert status==0,"Error in running data forward"
-        time.sleep(30)
+        time.sleep(60)
         continue
         
     misfit_files,misfit_all_files,ls_files,ls_all_files,iterno = get_iter_status()
@@ -148,7 +150,7 @@ for query in xrange(100000):
         print colored("Starting with iterations, running full for the first time","blue")
         status=subprocess.call(full_command.split())
         assert status==0,"Error in running full"
-        time.sleep(30)
+        time.sleep(60)
         continue
         
     elif len(misfit_files)>len(ls_files):
@@ -245,7 +247,7 @@ for query in xrange(100000):
         status=subprocess.call(ls_command.split())
         assert status==0,"Error in running linesearch"
         running_ls = True
-        time.sleep(30)
+        time.sleep(60)
         continue
         
     elif iterno>=0 and len(misfit_files)==len(ls_files):
@@ -308,7 +310,7 @@ for query in xrange(100000):
             status=subprocess.call(full_command.split())
             running_full=True
             assert status==0,"Error in running full"
-            time.sleep(30)
+            time.sleep(60)
         else:
             if misfit_diff[0]>0: print "Linesearch strictly increasing"
             elif misfit_diff[0]<0: print "Linesearch strictly decreasing"

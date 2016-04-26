@@ -185,6 +185,7 @@ Program driver
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
                     
                     psivar = rho0*(psivar-psivar(1,1,1))*c2**0.5
+                    psivar = psivar/(diml/1.0D8) ! Mm to cm, and non-dimensionalize
                     !psivar(:,:,1:10) = 0.0
                     !psivar(:,:,nz-9:nz) = 0.0
                     
@@ -246,6 +247,7 @@ Program driver
                     endif
                     
                 end if
+!~                 stop
                     
                 if (enf_cont .and. psi_cont) deallocate(psivar)
                 
