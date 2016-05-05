@@ -116,7 +116,7 @@ Program driver
                 enddo
             enddo
 
-            call fourier_smooth_x(psivar,70,psivar)
+!            call fourier_smooth_x(psivar,70,psivar)
                     
             psivar = rho0*(c2**0.5)*psivar
             

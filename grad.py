@@ -109,7 +109,7 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
 def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pix=0.3):
     kern = totkern/hess
-    kern = filterx(kern,70)
+    kern = filterx(kern,30)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
