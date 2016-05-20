@@ -16,9 +16,9 @@ MODULE INITIALIZE
 
 
 
-!  INCLUDE THE LOCATION OF THE mpif.h FILE 
+!  INCLUDE THE LOCATION OF THE mpif.h FILE
 !  INCLUDE '/usr/lpp/ppe.poe/include/thread64/mpif.h'
-   
+
 ! ----------------------------
 
    integer time,step_rk,dimfive,option, indexglob
@@ -40,11 +40,10 @@ MODULE INITIALIZE
    real*8 decay_coeff_y(ny/2+1), delta_width
    logical initcond, generate_wavefield, linesearch
 
-   ! MPI Related definitions  
+   ! MPI Related definitions
 
    integer  numtasks, rank, status(MPI_STATUS_SIZE)
-
-   ! Domain distribution 
+   ! Domain distribution
    !
    integer, dimension(:), allocatable :: dim2, ystart, fwd_recvtypes, fwd_sendtypes
    integer, dimension(:), allocatable :: dim1, inv_recvtypes, inv_sendtypes, dimz
@@ -58,7 +57,7 @@ MODULE INITIALIZE
   ! external transp
 
    ! END OF MPI DEFINITIONS
-  
+
    ! Common to all calculations
    ! div - divergence of the velocity vector
    ! vr - forcing applied on the RHS of the radial momentum equation
@@ -66,12 +65,12 @@ MODULE INITIALIZE
    ! p0, rho0, T0, c_speed, and g  - pressure, density, temperature, sound speed
    ! and gravity of the background solar state
    ! c2 = c_speed^2, rhoinv = 1/rho0
-   ! gradp, gradvr - radial velocity and pressure gradients in 3-space 
+   ! gradp, gradvr - radial velocity and pressure gradients in 3-space
    ! omega - vorticities vector
    ! a - array that contains the 5 variables in the calculation: density, radial
    ! velocity, latitudinal velocity, longitudinal velocity and pressure in that order
    ! temp_step, scr - scratch space arrays used in the time evolution algorithm
-  
+
    real*8, allocatable, dimension(:,:,:) :: div, vr, c2, omega_r,spongexyz
    real*8, allocatable, dimension(:,:) :: forcing
    real*8, allocatable, dimension(:,:,:) :: p0, gradp0_z, c_speed, rho0, gradrho0_z, rhoinv, c2rho0, c2div_v0 ,reduction
@@ -93,7 +92,7 @@ MODULE INITIALIZE
    real*8 x0, x1, x2, x3, x4, x5, x6
    real*8, dimension(:,:), allocatable :: z_i, z_iplus1, LC0, LC1, LC2, LC3, LC4, LC5, LC6
 
-   !-----Flow stuf------! 
+   !-----Flow stuf------!
    real*8, allocatable, target, dimension(:,:,:,:) :: omega,v0,gradrho,omega0,advect0
    real*8, allocatable, dimension(:,:,:) :: flow_x, flow_y, flow_z, div_v0, psivar
 
@@ -101,9 +100,9 @@ MODULE INITIALIZE
 		gradrho_y, gradrho_z, advect0_x, advect0_y, advect0_z, &
 		omega_x, omega_y, omega_z
 
- 
+
    !-----Magnetic field stuff-----!
-  
+
    real*8 dimb!, reduction(nz)
    real*8, allocatable, dimension(:,:,:) :: box, boy, boz, gradp0_x, gradp0_y, dzbx, dzflux2, &
 		curlbox, curlboy, curlboz, curlbx, curlby, curlbz, gradrho0_x, gradrho0_y,&
@@ -142,7 +141,7 @@ MODULE INITIALIZE
    real*8, allocatable, dimension(:,:) :: damping_rates,kay2d
 
    !------KERNEL STUFF-----!
- 
+
    integer bcx, bcy, bcz, source_x, source_y, nmasters
    integer*8 :: fftw_time_fwd, fftw_time_inv
    logical :: PROC_HAS_ADJOINT, COMPUTE_DATA, COMPUTE_SYNTH
@@ -191,7 +190,7 @@ Contains
       enddo
 
    else
- 
+
     do i=1,nx
      x(i) = DBLE(i-1.0)/DBLE(nx)
     enddo
@@ -212,11 +211,11 @@ Contains
 
    endif
 
-  
+
    do i=1,nx/2+1
       decay_coeff_x(i) = 1.0/(1.0 + exp((i-nx/3.0)*1.))*normx
    enddo
- 
+
    do i=1,ny/2+1
       decay_coeff_y(i) = 1.0/(1.0 + exp((i-ny/3.0)*1.))*normy
    enddo
@@ -230,7 +229,7 @@ Contains
 	ystart(0:numtasks-1), fwd_sdispls(0:numtasks-1), fwd_rdispls(0:numtasks-1),&
 	inv_sdispls(0:numtasks-1), inv_rdispls(0:numtasks-1), fwd_z_send(0:numtasks-1),&
         inv_z_send(0:numtasks-1), fwd_z_recv(0:numtasks-1), inv_z_recv(0:numtasks-1),&
-        fwd_z_displs(0:numtasks-1)) 
+        fwd_z_displs(0:numtasks-1))
 
    dim1 = nx/numtasks
    dim2 = ny/numtasks
@@ -255,7 +254,7 @@ Contains
    ! Fwd transpose
    ! Sent packets are of dimensions dim1(receiver_rank), dim2(rank), nz
    ! Received packets are of dimensions dim2(sender_rank), dim1(rank), nz
-   
+
 
    fwd_sprev = 1
    fwd_rprev = 1
@@ -280,13 +279,13 @@ Contains
     fwd_prev_z = fwd_prev_z + dimz(j)
 
     if (j .NE. 0) ystart(j) = ystart(j-1) + dim2(j-1)
-   enddo 
+   enddo
 
 
    ! Inv transpose
    ! Sent packets are of dimensions dim2(receiver_rank), dim1(rank), nz
    ! Received packets are of dimensions dim1(sender_rank), dim2(rank), nz
-   
+
    inv_sprev = 1
    inv_rprev = 1
 
@@ -304,14 +303,14 @@ Contains
       inv_rdispls(j) = inv_rprev
       inv_rprev = inv_rprev + dim1(j)
 
-   enddo 
+   enddo
 
    ! The size of the fourth dimension
 
    dimfive = 5
    if (magnetic) dimfive = 8
    if (displ) dimfive = 6
-  
+
 
    if (kernel_mode) call read_parameters
 
@@ -340,7 +339,7 @@ Contains
 
       deallocate(in,co1)
 
-      !-----   
+      !-----
 
       allocate(a(nx,dim2(rank),nz,dimfive), temp_step(nx,dim2(rank),nz,dimfive),&
                             scr(nx,dim2(rank),nz,dimfive))
@@ -350,10 +349,10 @@ Contains
       scr =0.0
       temp_step = 0.0
 
-    
 
-      if (magnetic) then 
-   !        if (.not. displ) 
+
+      if (magnetic) then
+   !        if (.not. displ)
          if (displ) allocate(scratch(nx,dim2(rank),nz,5))
 
          allocate(box(nx,dim2(rank),nz), boy(nx, dim2(rank), nz), boz(nx, dim2(rank), nz),&
@@ -368,7 +367,7 @@ Contains
          if (USE_PML) &
          allocate(scrpml(nx,dim2(rank),nzpml,6),pmlvars(nx,dim2(rank),nzpml,6),&
          psipml(nx,dim2(rank),nzpml,6))
-    
+
       else
          !if (.not. displ) allocate(a(nx,dim2(rank),nz,5), temp_step(nx,dim2(rank),nz,5),&
          !!scr(nx,dim2(rank),nz,5), scrpml(nx,dim2(rank),nzpml,2), pmlvars(nx,dim2(rank),nzpml,2),&
@@ -378,7 +377,7 @@ Contains
          psipml(nx,dim2(rank),nzpml,2), scratch(nx, dim2(rank),nz,2))
 
       endif
-      
+
       allocate(gradp(nx,dim2(rank),nz,3),g(nz), gamma(nz), source_dep(nz),&
            c2(nx,dim2(rank),nz), div(nx,dim2(rank),nz),&
       dvxdx(nx,dim2(rank),nz), forcing(nx,dim2(rank)), dvydy(nx,dim2(rank),nz),&
@@ -418,7 +417,7 @@ Contains
 
             RHSpsivy => scrpmly(:,:,:,1)
             RHS_psi_gradp_y => scrpmly(:,:,:,2)
-            
+
          endif
 
       endif
@@ -468,7 +467,7 @@ Contains
        stretch(k) = 1.0/unstretch(k)
       enddo
 
-    
+
       ! Non-dimensional form, for the calculations
       deltat = timestep*dimc/diml
 
@@ -495,7 +494,7 @@ Contains
       gradp_z => gradp(:,:,:,3)
 
       if (.not. displ) then
-    
+
          rho => temp_step(:,:,:,1)
          v_x => temp_step(:,:,:,2)
          v_y => temp_step(:,:,:,3)
@@ -509,8 +508,8 @@ Contains
          RHSv_y  => scr(:,:,:,3) ! Latitudinal momentum
          RHSv_z  => scr(:,:,:,4) ! Longitudinal momentum
          RHSp  => scr(:,:,:,5) ! Pressure eqn.
-       
-       
+
+
       elseif (displ) then
 
          xi_x => temp_step(:,:,:,1) ! Continuity eqn.
@@ -533,12 +532,12 @@ Contains
 
          p => scratch(:,:,:,2)
          rho => scratch(:,:,:,1)
-       
+
       endif
 
-      if (magnetic) then 
+      if (magnetic) then
 
-      box = 0.0 
+      box = 0.0
       boy = 0.0
       boz = 0.0
 
@@ -561,18 +560,18 @@ Contains
 
          psidzbx => psipml(:,:,:,3)
          psidzby => psipml(:,:,:,4)
-         psiinductionbx => psipml(:,:,:,5) 
+         psiinductionbx => psipml(:,:,:,5)
          psiinductionby => psipml(:,:,:,6)
 
       endif
 
       if (displ) then
-         bx => scratch(:,:,:,3) 
-         by => scratch(:,:,:,4) 
-         bz => scratch(:,:,:,5) 
+         bx => scratch(:,:,:,3)
+         by => scratch(:,:,:,4)
+         bz => scratch(:,:,:,5)
       endif
 
-      endif 
+      endif
 
    else
       call INIT_KERNEL ()
@@ -587,11 +586,11 @@ end Subroutine Initialize_all
 !==============================================================================
 
 SUBROUTINE INIT_KERNEL
- 
+
   implicit none
   integer i,j, rem1, rem2, rem3, fwd_sprev, fwd_rprev, inv_sprev, inv_rprev
   real*8, allocatable, dimension(:,:,:) :: in
-  complex*16, allocatable, dimension(:,:,:) :: co1 
+  complex*16, allocatable, dimension(:,:,:) :: co1
   real*8, allocatable, dimension(:,:,:,:) ::inn4
   complex*16, allocatable, dimension(:,:,:,:) :: fft_data
   real*8 unstretchkern(nz_kern)
@@ -599,7 +598,7 @@ SUBROUTINE INIT_KERNEL
    ! Fwd transpose
    ! Sent packets are of dimensions dim1(receiver_rank), dim2(rank), nz
    ! Received packets are of dimensions dim2(sender_rank), dim1(rank), nz
-   
+
    fwd_sprev = 1
    fwd_rprev = 1
 !   fwd_prev_z = 1
@@ -623,13 +622,13 @@ SUBROUTINE INIT_KERNEL
  !   fwd_prev_z = fwd_prev_z + dimz(j)
 
     if (j .NE. 0) ystart(j) = ystart(j-1) + dim2(j-1)
-   enddo 
+   enddo
 
 
    ! Inv transpose
    ! Sent packets are of dimensions dim2(receiver_rank), dim1(rank), nz_kern
    ! Received packets are of dimensions dim1(sender_rank), dim2(rank), nz_kern
-   
+
    inv_sprev = 1
    inv_rprev = 1
 
@@ -637,7 +636,7 @@ SUBROUTINE INIT_KERNEL
 
     inv_sendtypes(j) = transp(ny,dim2(j),dim1(rank),nz_kern)
     inv_recvtypes(j) = datatype(nx,dim1(j),dim2(rank),nz_kern)
-  
+
 !    inv_z_send(j) = datatype_z(nx,nx,dim2(j),dimz(rank))
  !   inv_z_recv(j) = datatype_z(nx,nx,dim2(rank),dimz(j))
 
@@ -647,10 +646,10 @@ SUBROUTINE INIT_KERNEL
     inv_rdispls(j) = inv_rprev
     inv_rprev = inv_rprev + dim1(j)
 
-  enddo 
+  enddo
 
- 
-  
+
+
   allocate(f_xi_x(nx,dim2(rank),nz_kern), f_xi_y(nx,dim2(rank),nz_kern), &
 	   f_xi_z(nx,dim2(rank),nz_kern),  &
 	   kernelc2(nx,dim2(rank),nz_kern), kernelrho(nx,dim2(rank),nz_kern), kernelp(nx,dim2(rank),nz_kern), &
@@ -702,12 +701,12 @@ SUBROUTINE INIT_KERNEL
 
    deallocate(in,co1)
 
-    !-----   
+    !-----
 
 !   allocate(inn4(nx, dim2(rank), nz_kern, nt_kern))
 !  call dfftw_plan_guru_dft_r2c(fftw_time_fwd, 1, nt_kern, nx*dim2(rank)*nz_kern,  nx*dim2(rank)*nz_kern, 1, &
 !			nx*dim2(rank)*nz_kern,1,1,inn4, fft_data, FFTW_ESTIMATE)
-                                
+
 !  call dfftw_plan_guru_dft_c2r(fftw_time_inv, 1, nt_kern, nx*dim2(rank)*nz_kern,  nx*dim2(rank)*nz_kern, 1, &
 !			nx*dim2(rank)*nz_kern,1,1, fft_data, inn4,  FFTW_ESTIMATE)
 
@@ -731,14 +730,14 @@ Subroutine solar_data
 
   implicit none
   integer k,q,i
-  real*8 data(nz,6),temp,sigmax,sigmaz
+  real*8 data(nz,12),temp,sigmax,sigmaz
 
-  ! Data in the file is arranged as 
+  ! Data in the file is arranged as
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
   ! In CGS Units
 
   ! solar mass: 1.9891d33 g
- 
+
   open(7,file = file_data,form = 'formatted',status = 'old')
   do k = 1,nz
     read(7,*) data(k,:)
@@ -746,28 +745,34 @@ Subroutine solar_data
   close(7)
 
   q = 1
-  
+
 ! dimc = 10 km/s
 
   dimc = 1D6
 
 ! dimrho = 10^-3 g/cc
- 
+
   dimrho = 1D-3 !data(q,3)
   diml = rsun
   dimb = (4D0*pi*dimc**2*dimrho)**0.5
 
   do k =1,nz
     z(k) = data(k,1)
-    c_speed(:,:,k) = data(k,2)/dimc  !*0.01
-    c2(:,:,k) = (data(k,2)/dimc)**2.0 !c_speed(4,5,k)**2.0
-    rho0(:,:,k) = data(k,3)/dimrho
+    c_speed(:,:,k) = data(k,2)/dimc  ! smoothed c
+!~     c_speed(:,:,k) = data(k,11)/dimc  !*0.01
+!~     c2(:,:,k) = (data(k,2)/dimc)**2.0 !c_speed(4,5,k)**2.0
+
+     rho0(:,:,k) = data(k,3)/dimrho
+   !  rho0(:,:,k) = data(k,7)/dimrho
     p0(:,:,k) = data(k,4)/(dimrho*dimc**2.0)
     g(k) = data(k,5)*diml/dimc**2.0
     gamma(k) = data(k,6)
     cq(k) =data(k,2)/dimc
-    rhoq(k) = data(k,3)/dimrho
+!~     cq(k) =data(k,11)/dimc
+     rhoq(k) = data(k,3)/dimrho
+   !  rhoq(k) = data(k,7)/dimrho
   enddo
+  c2 = c_speed**2.0 !smoothed c2
 
   height = (z-1.)*rsun
     if (sound_speed_perturbation) then
@@ -775,7 +780,7 @@ Subroutine solar_data
         sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional
         sigmaz = 1.4
         do i=1,nx
-            
+
             c_bump(i,1,k) = 3e-3*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
                       exp(-(height(k)- (-2.5))**2/(2*sigmaz**2))
         end do
@@ -783,17 +788,17 @@ Subroutine solar_data
         c_speed = c_speed*(1+c_bump)
         c2 = c_speed**2
     end if
- 
+
 end Subroutine solar_data
 
 !==========================================================================
 
 SUBROUTINE PARSE_OPTIONS
  implicit none
- 
+
 
  ! USE_PML OPTIONS ARE ALL EVEN
- ! 
+ !
 
  if ((.not. magnetic) .and. (.not. flows)) then
    if ((.not. TEST_IN_2D) .and. (.not. USE_PML) .and. (.not. displ)) option = 1
@@ -934,12 +939,12 @@ Subroutine kernel_back ()
   real*8 data(nz,6),temp
 
 
-  ! Data in the file is arranged as 
+  ! Data in the file is arranged as
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
   ! In CGS Units
 
   ! solar mass: 1.9891d33 g
- 
+
   open(7,file = file_data,form = 'formatted',status = 'old')
   do k = 1,nz
     read(7,*) data(k,:)
@@ -952,7 +957,7 @@ Subroutine kernel_back ()
   dimc = 10.0**6. !data(q,2)
 
 ! dimrho = 10^-3 g/cc
- 
+
   dimrho = 10.0**(-3.0) !data(q,3)
   diml = rsun
   dimb = (4.0*pi*dimc**2.0*dimrho)**0.5
@@ -990,7 +995,7 @@ SUBROUTINE READ_PARAMETERS
  generate_wavefield = .false.
  cadforcing_step = FLOOR(cadforcing/timestep)
  maxtime = floor((solartime*3600. + 2.0/nupeak)/timestep) + 2
- maxtime = cadforcing_step * floor(maxtime/cadforcing_step*1.) 
+ maxtime = cadforcing_step * floor(maxtime/cadforcing_step*1.)
  forcing_length = floor(maxtime/cadforcing_step*1.) + 1
 
  call getarg(1,contrib)
@@ -1008,20 +1013,20 @@ SUBROUTINE READ_PARAMETERS
  allocate(forward(nmasters), adjoint(nmasters), kernels(nmasters))
 
 ! do i=1,nmasters
-!  call convert_to_string(i,contribs,2) 
+!  call convert_to_string(i,contribs,2)
 !  inquire(file=directory//'status',exist=lexist)
 !  if (.not. lexist .and. (rank==0)) call system('mkdir '//directory//'status')
 !  inquire(file=directory//'status/forward'//contribs,exist=forward(i))
 !  inquire(file=directory//'status/adjoint'//contribs,exist=adjoint(i))
 !  inquire(file=directory//'status/kernel'//contribs,exist=kernels(i))
 ! enddo
- 
+
 if (lexist1) then
 
  open(22, file = 'Instruction_src'//contrib//'_ls'//jobno, form='formatted', status='unknown', action='read')
   read(22,"(A)") calculation_type
 !  read(22,"(A)") directory_rel
- ! read(22,"(A)") contrib 
+ ! read(22,"(A)") contrib
 
   if (adjustl(trim(calculation_type)) == 'spectral') then
     COMPUTE_ADJOINT = .FALSE.
@@ -1039,9 +1044,9 @@ if (lexist1) then
 !    do while (forward(i) .and. (i .le. nmasters))
 ! 	i = i+1
 !    enddo
-!    if (i .le. nmasters) then 
+!    if (i .le. nmasters) then
 !      call convert_to_string(i,contrib,2)
-!      call getarg(1, contrib) 
+!      call getarg(1, contrib)
       inquire(file=directory//'forward_src'//contrib//'_ls'//jobno,exist=lexist)
       if (.not. lexist .and. (rank==0)) call system('mkdir '&
                 //directory//'forward_src'//contrib//'_ls'//jobno)
@@ -1049,7 +1054,7 @@ if (lexist1) then
 !      print *,'All forward calculations processed'
 !      stop
 !    endif
-     
+
     directory_rel = directory//'forward_src'//contrib//'_ls'//jobno//'/'
 
 
@@ -1062,7 +1067,7 @@ if (lexist1) then
      COMPUTE_ADJOINT = .TRUE.
      !i = 1
 
-!      call getarg(1, contrib) 
+!      call getarg(1, contrib)
 !      do while (adjoint(i) .and. (i .le. nmasters))
 ! 	i = i+1
 !     enddo
@@ -1092,7 +1097,7 @@ if (lexist1) then
 elseif (.not. lexist1) then
 
   CONSTRUCT_KERNELS = .true.
- 
+
 
 !     i = 1
 !      do while (kernels(i) .and. (i .le. nmasters))
@@ -1100,7 +1105,7 @@ elseif (.not. lexist1) then
 !     enddo
 !     if (i .le. nmasters) then
 !      call convert_to_string(i,contrib,2)
-!      call getarg(1, contrib) 
+!      call getarg(1, contrib)
       inquire(file=directory//'kernel',exist=lexist)
       if (.not. lexist .and. (rank==0)) call system('mkdir '//directory//'kernel')
 !     elseif (i .gt. nmasters) then
@@ -1112,18 +1117,18 @@ elseif (.not. lexist1) then
 
 endif
 
-!if (.not. CONSTRUCT_KERNELS) then 
+!if (.not. CONSTRUCT_KERNELS) then
 
 
 !  if (rank==0) print *,'Reading information file: '//adjustl(trim(directory_rel))//'information'
 
 !  open(44,file=adjustl(trim(directory_rel))//'information',form='formatted',status='unknown',position='rewind')
 
- 
+
 !  read(44,*) forcing_length
-!  read(44,*) timeline 
+!  read(44,*) timeline
 !  read(44,*) final_time
-  
+
 !endif
 
  if (test_in_2d) then
@@ -1172,7 +1177,7 @@ END SUBROUTINE READ_PARAMETERS
 !================================================================================
 
 SUBROUTINE distmat(n,m,f)
- 
+
  implicit none
  integer m, n, i, j, i2, j2
  real*8 f(n,m), sig
@@ -1187,7 +1192,7 @@ SUBROUTINE distmat(n,m,f)
        f(i,j) = (i2**2 + j2**2)**0.5 * sig
    enddo
  enddo
- 
+
 END SUBROUTINE distmat
 
 !================================================================================

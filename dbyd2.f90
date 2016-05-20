@@ -83,6 +83,7 @@
         endif
         C1 = d2i*7.0/9.0
         C2 = d2i/36.0
+        print *,1
 !~ C-------------------------------------------------------------
 !~ C       Generate right hand side and store in A
 !~ C       First do interior
@@ -155,6 +156,7 @@
        const=1./(alpha2-beta1*gamma2)
        up1=(alpha1*alpha2-beta1)*const
        if (mod(ibc,2).ne.0) then
+          print *,"shape of a",shape(a)
           do 80 i=1,n1
          a(i,1)=(alpha2*a(i,1)-beta1*a(i,2))*const
  80       continue
@@ -164,13 +166,14 @@
          a(i,n2)=(alpha2*a(i,n2)-beta1*a(i,n2-1))*const
  85       continue
        endif
-!~ c       
+
        IF (MOD(IBC,2).EQ.0) THEN
           UPPR(1) = 0.0
        ELSE
 !~ c       fifth order bc.
           uppr(1)=up1
        ENDIF
+
 !~ c       
        uppr(2)=alpha2
 !~ c       
