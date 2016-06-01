@@ -9,7 +9,7 @@ def get_directory():
             if line.startswith("!"): continue
             if ("parameter" in line.lower()) and ("directory" in line.lower()):
                 return line.split()[-1].split("'")[1].rstrip("/")
-                
+
 def get_xlength():
     codedir=os.path.dirname(os.path.abspath(__file__))
     paramsfile = os.path.join(codedir,"params.i")
@@ -39,6 +39,16 @@ def get_dt_simulation():
             if line.startswith("!"): continue
             if ("parameter" in line.lower()) and ("timestep" in line.lower()):
                 return float(line.split()[-1].split(")")[0]) # seconds
+
+def get_total_simulation_time():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile.readlines():
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("solartime" in line.lower()):
+                return float(line.split()[3].split(")")[0]) # hours
 
 def get_ridge_filter():
     codedir=os.path.dirname(os.path.abspath(__file__))
@@ -120,7 +130,7 @@ def if_continuity_enforced():
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
     return None
-                
+
 def get_continuity_variable():
     codedir=os.path.dirname(os.path.abspath(__file__))
     paramsfile = os.path.join(codedir,"params.i")
@@ -159,7 +169,7 @@ def if_flows():
 def get_modes_used():
     ridge_filters_driver=get_ridge_filter()
     datadir = get_directory()
-    paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]    
+    paramsfiles=[os.path.splitext(f)[1][1:] for f in fnmatch.filter(os.listdir(datadir),'params.[0-9]')]
     ridge_filters=[ridge for ridge in ridge_filters_driver if ridge in paramsfiles]
     return ridge_filters
 
@@ -173,10 +183,10 @@ def get_Lregular():
             if psi_cont_check and "Lregular" in line:
                 if "Lregular" != line.strip().split()[0]: continue
                 return float(line.strip().split("=")[-1].rstrip("/diml"))
-            if "elseif (enf_cont .and. (vx_cont)) then" in line.lower(): 
+            if "elseif (enf_cont .and. (vx_cont)) then" in line.lower():
                 psi_cont_check=False
                 break
-    
+
 def get_cutoff_dist():
     codedir=os.path.dirname(os.path.abspath(__file__))
     paramsfile = os.path.join(codedir,"params.i")
@@ -186,14 +196,14 @@ def get_cutoff_dist():
         for line in paramsfile.readlines():
             line=line.strip()
             if line.startswith("!"): continue
-            
+
             if ("parameter" in line.lower()) and ("cutoff_switch" in line.lower()):
                 switch= line.split("=")[-1].split(")")[0].strip()
                 if switch.upper() == '.TRUE.': switch =True
                 elif switch.upper() == '.FALSE.': switch = False
             if ("parameter" in line.lower()) and ("cutoff_dist" in line.lower()):
                 val= float(line.split("=")[-1].split(")")[0].strip())
-                
+
     return switch,val
 
 
@@ -203,8 +213,8 @@ def get_cutoff_dist():
 
 def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=None):
     cmd_line_param = filter(lambda x: x.startswith(key+"="),sys.argv)
-        
-    if len(cmd_line_param)!=0: 
+
+    if len(cmd_line_param)!=0:
         retval=cmd_line_param[0].split("=")[-1]
         retval = retval.strip().lstrip('[').rstrip(']').split(',')
         if zfill is not None: retval=map(lambda x: x.zfill(zfill), retval)
@@ -212,7 +222,7 @@ def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=No
         retval = [None if element=='None' else element for element in retval]
         if not return_list and len(retval)==1:
             retval=retval[0]
-            
+
     else: retval=default
-    
+
     return retval

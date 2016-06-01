@@ -1,16 +1,16 @@
 ! --------------------------------------------------------------------------
 ! 'params.i' : SIMULATION PARAMETERS
 ! --------------------------------------------------------------------------
-! MPI Version of the Cartesian Solar Wave Simulator. 
+! MPI Version of the Cartesian Solar Wave Simulator.
 ! Copyright 2008, Shravan Hanasoge
-!  
+!
 ! W. W. Hansen Experimental Physics Laboratory
 ! Stanford University, Stanford
 ! CA 94305, USA
-! Email: shravan@stanford.edu 
+! Email: shravan@stanford.edu
 !
 ! Also see: http://soi.stanford.edu/
-!									    
+!
 ! --------------------------------------------------------------------------
 !
 
@@ -27,7 +27,7 @@ real*8 xlength, ylength, timestep
 parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
-! DIRECTORY INFORMATION 
+! DIRECTORY INFORMATION
 !
 ! ENTER THE LOCATION OF THE BACKGROUND MODEL (i.e. the quiet Sun model)
 character (LEN = *), PARAMETER :: file_data = 'solar_deep_smoothed'
@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep_smoothed'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/f_to_p1_512_4hr_hsmooth30_smoothed_dzrho/'
+character (LEN = *), PARAMETER :: directory = '/home/jishnu/cluster_backup/scratch/jishnu/flows/f_to_p7/'
 
 ! THE FORCING FUNCTION
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
@@ -52,7 +52,7 @@ parameter( cadforcing = 30.0)
 logical, parameter :: DAMP_WAVES = .falsE.
 
 
-! TYPE OF SIMULATION (DEFAULT IS QUIET OR SOURCE/SOUND-SPEED ANOMALIES):: FLOWS OR MAGNETIC FIELDS 
+! TYPE OF SIMULATION (DEFAULT IS QUIET OR SOURCE/SOUND-SPEED ANOMALIES):: FLOWS OR MAGNETIC FIELDS
 logical, parameter :: sound_speed_perturbation = .False.
 logical, parameter :: magnetic = .falsE.
 logical, parameter :: FLOWS = .True.
@@ -127,7 +127,7 @@ parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
 real*8 solartime
-parameter(solartime = 4.0)
+parameter (solartime = 4.0)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well
@@ -141,7 +141,7 @@ real *8 outputcad
 parameter (outputcad = 30.0)
 
 ! NUMBER OF ZEROES IN THE OUTPUT FILENAME
-integer TIMESTAMP_SIZE 
+integer TIMESTAMP_SIZE
 parameter (timestamp_size = 6)
 
 ! WAVE EXCIATION DEPTH RELATIVE TO PHOTOSPHERE
