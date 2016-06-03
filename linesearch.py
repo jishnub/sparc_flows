@@ -18,7 +18,7 @@ with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
 no_of_ls_per_src=int(sys.argv[1])
 total_no_of_jobs=nsrc*no_of_ls_per_src
 
-if procno>=total_no_of_jobs: 
+if procno>=total_no_of_jobs:
     print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
     quit()
 
@@ -34,40 +34,40 @@ updatedir=os.path.join(datadir,"update")
 iter_no = len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))-1
 
 def compute_forward(linesearch_no,src):
-    
+
     Spectral = os.path.join(codedir,"Spectral")
     Instruction = os.path.join(codedir,"Instruction_src"+src+"_ls"+linesearch_no)
     forward = os.path.join(datadir,"forward_src"+src+"_ls"+linesearch_no)
-    
+
     shutil.copyfile(Spectral,Instruction)
-    
+
     #~ Check if process has already run. If process has run correctly, there should be a corresponding vz_cc_iter().fits file
     #~ If it doesn't exist then run the linesearch.
     #~ if not os.path.exists(os.path.join(forward,"vz_cc_iter"+str(iter_no).zfill(2)+".fits")):
-    
+
     mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" "+linesearch_no
 
     t0=time.time()
     with open(os.path.join(datadir,forward,"out_linesearch_"+linesearch_no),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-        
+
     assert fwd==0,"Error in running linesearch for lsno "+str(linesearch_no)
     t1=time.time()
-    
-    shutil.copyfile(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_iter"+str(iter_no).zfill(2)+".fits"))
-    
+
+    # shutil.copyfile(os.path.join(forward,"vz_cc.fits"),os.path.join(forward,"vz_cc_iter"+str(iter_no).zfill(2)+".fits"))
+
     partialfiles=glob.glob(os.path.join(forward,"*partial*"))
     for f in partialfiles: os.remove(f)
-    
+
     fullfiles=glob.glob(os.path.join(forward,"*full*"))
     for f in fullfiles: os.remove(f)
 
     return t1-t0
-    
+
     #~ else: return 0
-    
-    
+
+
 evaltime=compute_forward(ls_no,src)
 evaltime=divmod(evaltime,60)
 print "Finished running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno,"in",evaltime[0],"mins",evaltime[1],"secs"

@@ -1,5 +1,5 @@
 from __future__ import division,print_function
-import traveltimes
+import modefilters
 import numpy as np
 import pyfits
 import read_params
@@ -11,6 +11,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk
 from scipy import signal,linalg,fftpack,integrate,interpolate
+import fnmatch
 
 Lx = read_params.get_xlength()
 nx = read_params.get_nx()
@@ -36,7 +37,7 @@ class MainWindow(Gtk.Window):
         self.figure = plt.figure()
 
         Gtk.Window.__init__(self, title="Traveltimes")
-        self.set_size_request(400, 150)
+        self.set_size_request(400, 180)
         self.set_resizable(False)
 
         self.timeout_id = None
@@ -54,11 +55,12 @@ class MainWindow(Gtk.Window):
             align_list[-1].add(hbox_list[-1])
 
         align_and_hbox()
+        align_list[-1].set_padding(0,0,10,0)
 
         self.src_label = Gtk.Label("Source")
         hbox_list[-1].pack_start(self.src_label,expand=True,fill=False,padding=0)
 
-        adjustment_src = Gtk.Adjustment(value=1, lower=1, upper=8,
+        adjustment_src = Gtk.Adjustment(value=abs(masterpixels).argmin()+1, lower=1, upper=8,
                                         step_incr=1, page_incr=0, page_size=0)
         self.src = Gtk.SpinButton()
         self.src.set_adjustment(adjustment_src)
@@ -69,17 +71,29 @@ class MainWindow(Gtk.Window):
 
         self.source_x = masterpixels[self.src.get_value_as_int()-1]
 
+        self.src_position_label = Gtk.Label("Source located at {:2.0f} Mm".format(self.source_x))
+        hbox_list[-1].pack_start(self.src_position_label,expand=True,fill=False,padding=0)
+
+        align_and_hbox()
+        align_list[-1].set_padding(0,0,10,0)
 
         self.iter_label = Gtk.Label("Iter no")
         hbox_list[-1].pack_start(self.iter_label,expand=True,fill=False,padding=0)
 
-        adjustment_iter = Gtk.Adjustment(value=0, lower=0, upper=8,
+        # Get total number of available iterations
+        total_iters = len(fnmatch.filter(os.listdir(os.path.join(datadir,"tt")),"iter[0-9][0-9]"))
+
+        adjustment_iter = Gtk.Adjustment(value=0, lower=0, upper=total_iters -1,
                                         step_incr=1, page_incr=0, page_size=0)
         self.iter_no = Gtk.SpinButton()
         self.iter_no.set_adjustment(adjustment_iter)
         self.iter_no.set_numeric(True)
         self.iter_no.set_snap_to_ticks(True)
+        self.iter_no.connect("value-changed",self.on_iter_changed)
         hbox_list[-1].pack_start(self.iter_no,expand=True,fill=False,padding=0)
+
+        self.total_iter_no_label = Gtk.Label("Total no of iterations: {:2d}".format(total_iters))
+        hbox_list[-1].pack_start(self.total_iter_no_label,expand=True,fill=False,padding=0)
 
         self.get_data_and_vzcc()
 
@@ -103,7 +117,7 @@ class MainWindow(Gtk.Window):
         align_list[-1].set_padding(0,0,10,0)
 
         ridge_filters = ["f"]
-        ridge_filters.extend(["p"+str(i) for i in xrange(8)])
+        ridge_filters.extend(["p"+str(i) for i in xrange(1,8)])
         self.ridge_filters_list = Gtk.ComboBoxText()
         self.ridge_filters_list.set_entry_text_column(0)
         for ridge in ridge_filters: self.ridge_filters_list.append_text(ridge)
@@ -131,7 +145,10 @@ class MainWindow(Gtk.Window):
         self.pixel_label = Gtk.Label("Pixel:")
         hbox_list[-1].pack_start(self.pixel_label,expand=False,fill=False,padding=0)
 
-        adjustment_pix = Gtk.Adjustment(value=0, lower=0, upper=nx-1,
+        starting_x = masterpixels[self.src.get_value_as_int()-1]+20
+        starting_pixel = int((starting_x/Lx+0.5)*nx)
+
+        adjustment_pix = Gtk.Adjustment(value=starting_pixel, lower=0, upper=nx-1,
                                         step_incr=1, page_incr=0, page_size=0)
         self.pixel = Gtk.SpinButton()
         self.pixel.set_adjustment(adjustment_pix)
@@ -143,7 +160,7 @@ class MainWindow(Gtk.Window):
         self.x_label = Gtk.Label("x (Mm):")
         hbox_list[-1].pack_start(self.x_label,expand=False,fill=False,padding=0)
 
-        adjustment_x = Gtk.Adjustment(value=x[0], lower=x[0], upper=x[-1],
+        adjustment_x = Gtk.Adjustment(value=starting_x, lower=x[0], upper=x[-1],
                                         step_incr=x[1]-x[0], page_incr=0, page_size=0)
         self.xcoord = Gtk.SpinButton()
         self.xcoord.set_adjustment(adjustment_x)
@@ -161,8 +178,6 @@ class MainWindow(Gtk.Window):
         self.all_pixels_tt_button = Gtk.Button.new_with_label("All pixels travel time")
         hbox_list[-1].pack_start(self.all_pixels_tt_button,expand=True,fill=True,padding=0)
         self.all_pixels_tt_button.connect("clicked",self.on_compute_all_pressed)
-
-
 
     def on_pixel_changed(self,pixel):
         # Check if within params range
@@ -196,8 +211,12 @@ class MainWindow(Gtk.Window):
                     self.ridge_filters_list.get_active_text()+"mode_filter.fits")
         try:
             self.mode_filter = np.squeeze(pyfits.getdata(filter_file_path)).astype(float)
+            # print("Loaded filter from",os.path.basename(filter_file_path))
         except IOError:
-            self.mode_filter = None
+            modefilter_function = getattr(modefilters,
+                    self.ridge_filters_list.get_active_text()+"mode_filter")
+            self.mode_filter = np.squeeze(modefilter_function(self.nt,dt,nx,Lx)).T
+            # print ("Loaded filter from modefilters.so",self.ridge_filters_list.get_active_text()+"mode_filter")
     #
     # def on_data_file_browse(self,button):
     #     dialog = Gtk.FileChooserDialog("Please choose data.fits", self,
@@ -264,34 +283,37 @@ class MainWindow(Gtk.Window):
     def on_src_changed(self,src):
         self.source_x = masterpixels[self.src.get_value_as_int()-1]
         self.get_data_and_vzcc()
+        self.src_position_label.set_text("Source located at {:2.0f} Mm".format(self.source_x))
 
     def on_iter_changed(self,widget):
-        self.get_data_and_vzcc()
+        self.get_data_and_vzcc(data=False)
 
-    def get_data_and_vzcc(self):
+    def get_data_and_vzcc(self,data=True):
         # Load data
-        try:
-            src_file_path = os.path.join(datadir,"tt","data","data"+
-                            str(self.src.get_value_as_int()).zfill(2)+".fits")
-            self.data_file = fitsread(src_file_path)
-            self.nt = self.data_file.shape[0]
-            self.time_coordinates = np.arange(self.nt)*dt
-        except IOError:
-            self.data_file = None
+        if data:
+            try:
+                src_file_path = os.path.join(datadir,"tt","data","data"+
+                                str(self.src.get_value_as_int()).zfill(2)+".fits")
+                self.data_file = fitsread(src_file_path)
+                self.nt = self.data_file.shape[0]
+                self.time_coordinates = np.arange(self.nt)*dt
+            except IOError:
+                self.data_file = None
 
         # Load vzcc
         try:
             vzcc_file_path = os.path.join(datadir,"tt",
                             "iter"+str(self.iter_no.get_value_as_int()).zfill(2),
-                            "vzcc_src"+str(self.src.get_value_as_int()).zfill(2)+".fits")
+                            "vz_cc_src"+str(self.src.get_value_as_int()).zfill(2)+".fits")
             self.vzcc_file = fitsread(vzcc_file_path)
+
         except IOError:
             self.vzcc_file = None
 
     def filter_data_vzcc(self):
         if self.mode_filter is not None:
-            data_filtered = np.fft.ifft2(np.fft.fft2(self.data_file)*self.mode_filter)
-            vzcc_filtered = np.fft.ifft2(np.fft.fft2(self.vzcc_file)*self.mode_filter)
+            data_filtered = np.fft.ifft2(np.fft.fft2(self.data_file)*self.mode_filter).real
+            vzcc_filtered = np.fft.ifft2(np.fft.fft2(self.vzcc_file)*self.mode_filter).real
         else:
             data_filtered = self.data_file
             vzcc_filtered = self.vzcc_file
@@ -304,9 +326,18 @@ class MainWindow(Gtk.Window):
 
         data_filtered,vzcc_filtered = self.filter_data_vzcc()
 
+        distance_Mm = abs(self.xcoord.get_value() - self.source_x)
+        if distance_Mm<self.params_dist["min"]:
+            print("Distance",distance_Mm,"is too low to compute travel time")
+            return
+        elif distance_Mm>self.params_dist["max"]:
+            print("Distance",distance_Mm,"is too high to compute travel time")
+            return
+
+        print(pixel)
         u0 = data_filtered[:,pixel]
         u = vzcc_filtered[:,pixel]
-        distance_Mm = abs(self.xcoord.get_value() - self.source_x)
+
         vel_Mm_per_min = self.mode_speeds[self.ridge_filters_list.get_active()]
         timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))
         timefin_index = timest_index + 40
@@ -316,21 +347,25 @@ class MainWindow(Gtk.Window):
         t_low_index = loc - halftime
         t_high_index = loc + halftime
 
-        tt_han = compute_tt_hanasoge(u0,u,t_low_index,t_high_index)
-        print("tt difference",tt_han,"seconds")
-        tt_gb = compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
-        print("tt difference",tt_gb,"seconds")
+        tt_han = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
+        print("Hanasoge",tt_han,"seconds")
+        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
+        print("Smoothed",tt_han_smoothed,"seconds")
+        tt_sparc = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
+        print("Sparc",tt_sparc,"seconds")
+        tt_gb = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
+        print("Gizon Birch",tt_gb,"seconds")
 
         plt.cla()
-        plt.plot(t/60,u0,label="data",color="blue")
-        plt.plot(t/60,u,label="vzcc",color="red")
+        plt.plot(self.t/60,u0,label="data",color="blue")
+        plt.plot(self.t/60,u,label="vzcc",color="red")
         plt.axvline(t_low_index*dt_min,ls="dotted",color="black")
         plt.axvline(t_high_index*dt_min,ls="dotted",color="black")
         plt.xlim(timest_index*dt_min,timefin_index*dt_min)
-        plt.xlabel("Time (min)")
-        plt.ylabel("Wave displacement")
-        plt.legend(loc="best")
-        plt.show(block=False)
+        plt.xlabel("Time (min)",fontsize=16)
+        plt.ylabel("Wave displacement",fontsize=16)
+        plt.legend(loc="best",fontsize=14)
+        plt.show()
 
     def on_compute_all_pressed(self,button):
         if self.data_file is None or self.vzcc_file is None: return
@@ -339,6 +374,9 @@ class MainWindow(Gtk.Window):
 
         tt_hanasoge_list = []
         tt_gb_list = []
+        tt_sparc_list = []
+        tt_hanasoge_smoothed_10s = []
+        tt_hanasoge_smoothed_5s = []
         pixel_x_list = []
 
         for pixel in xrange(nx):
@@ -360,49 +398,131 @@ class MainWindow(Gtk.Window):
             t_low_index = loc - halftime
             t_high_index = loc + halftime
 
-            tt = compute_tt_hanasoge(u0,u,t_low_index,t_high_index)
+            tt = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
             tt_hanasoge_list.append(tt)
-            tt = compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
+            tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
+            tt_hanasoge_smoothed_10s.append(tt)
+            tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,
+                                    t_high_index,interpolation_factor=6)
+            tt_hanasoge_smoothed_5s.append(tt)
+            tt = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
+            tt_sparc_list.append(tt)
+            tt = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
             tt_gb_list.append(tt)
             pixel_x_list.append(pixel_x)
 
+        pixel_x_list = np.array(pixel_x_list)
+        tt_gb_list = np.array(tt_gb_list)
+        tt_sparc_list = np.array(tt_sparc_list)
+        tt_hanasoge_list = np.array(tt_hanasoge_list)
+        tt_hanasoge_smoothed_10s = np.array(tt_hanasoge_smoothed_10s)
+        tt_hanasoge_smoothed_5s = np.array(tt_hanasoge_smoothed_5s)
+
+        color = iter(['r','b','g','chocolate'])
+
         plt.cla()
-        plt.plot(pixel_x_list,tt_hanasoge_list,'o',label="Hanasoge")
-        plt.plot(pixel_x_list,tt_gb_list,'o',label="Hanasoge")
-        plt.legend(loc="best")
-        plt.xlabel("x (Mm)")
-        plt.ylabel(r"$\Delta \tau$ (sec)")
+        # p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        # ,tt_hanasoge_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        # ,color=next(color),marker='o',label="Hanasoge")
+        #
+        # plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        # ,tt_hanasoge_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        # ,color=p[0].get_color(),marker='o')
+
+        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,tt_sparc_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,color=next(color),marker='o',label="Sparc")
+
+        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,tt_sparc_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,color=p[0].get_color(),marker='o')
+
+        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,tt_hanasoge_smoothed_10s[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,color=next(color),marker='o',label="Sparc interpolated, 10s cadence")
+
+        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,tt_hanasoge_smoothed_10s[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,color=p[0].get_color(),marker='o')
+
+        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,tt_hanasoge_smoothed_5s[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,color=next(color),marker='o',label="Sparc interpolated, 5s cadence")
+
+        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,tt_hanasoge_smoothed_5s[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,color=p[0].get_color(),marker='o')
+
+        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])],
+        tt_gb_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
+        ,color=next(color),marker='o',label="Gizon-Birch (2002)")
+
+        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])],
+        tt_gb_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
+        ,color=p[0].get_color(),marker='o')
+
+        plt.legend(loc="best",fontsize=14)
+        plt.xlabel("x (Mm)",fontsize=16)
+        plt.ylabel(r"$\Delta \tau$ (sec)",fontsize=16)
+        plt.title("x = {:2.1f} Mm, distance = {:2.1f} Mm".format(
+            self.xcoord.get_value(),self.xcoord.get_value()-self.source_x))
         plt.show()
 
+    def compute_tt_quadratic_fit(self,u0, u,t_low_index,t_high_index):
+        u0 = u0[t_low_index:t_high_index+1]
+        u  =  u[t_low_index:t_high_index+1]
+        cc=signal.correlate(u,u0).real
+        cc_max_index = cc.argmax()
+        t = np.arange(-len(u)+1,len(u))*dt
 
-def compute_tt_hanasoge(u0, u,t_low_index,t_high_index):
-    u0 = u0[t_low_index:t_high_index+1]
-    u  =  u[t_low_index:t_high_index+1]
-    cc=signal.correlate(u0,u)
-    cc_max_index = corr.argmax()
-    t = np.arange(-len(u)+1,len(u))*dt
+        t_wavepacket = t[cc_max_index-1:cc_max_index+2]
+        cc_wavepacket = cc[cc_max_index-1:cc_max_index+2]
 
-    t_wavepacket = t[cc_max_index-1:cc_max_index+2]
-    cc_wavepacket = cc[cc_max_index-1:cc_max_index+2]
+        p = np.polyfit(t_wavepacket,cc_wavepacket,2)
 
-    # interpolate to generate more points
-    # s = interpolate.UnivariateSpline(t_wavepacket,cc_wavepacket,s=0)
-    # t_wavepacket_fine = np.linspace(t_wavepacket[0],t_wavepacket[-1],len(t)*100)
-    # cc_wavepacket = s[t_wavepacket]
+        return -p[1]/(2*p[0])
 
-    p = np.polyfit(t_wavepacket,cc_wavepacket)
+    def compute_tt_quadratic_fit_smoothed(self,u0, u,t_low_index,t_high_index,
+                    interpolation_factor=3):
+        u0 = u0[t_low_index:t_high_index+1]
+        u  =  u[t_low_index:t_high_index+1]
 
-    return -p[1]/(2*p[0])
+        t_fine = np.linspace(self.t[t_low_index],self.t[t_high_index],
+                    (t_high_index-t_low_index+1)*interpolation_factor)
+        s0 = interpolate.InterpolatedUnivariateSpline(self.t[t_low_index:t_high_index+1],u0)
+        u0 = s0(t_fine)
+        s = interpolate.InterpolatedUnivariateSpline(self.t[t_low_index:t_high_index+1],u)
+        u = s(t_fine)
 
-def compute_tt_gizonbirch(u0,u,t_low_index,t_high_index):
+        cc=signal.correlate(u,u0).real
+        cc_max_index = cc.argmax()
+        t = np.arange(-len(u)+1,len(u))*dt/interpolation_factor
 
-    window = np.zeros_like(u)
-    window[t_low_index:t_high_index] = 1
+        t_wavepacket = t[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
+        cc_wavepacket = cc[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
 
-    u0dot = fftpack.diff(u0)
+        p = np.polyfit(t_wavepacket,cc_wavepacket,2)
 
-    return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
-            integrate.simps(window*u0dot**2,dx=dt))
+        return -p[1]/(2*p[0])
+
+    def compute_tt_sparc(self,u0, u,t_low_index,t_high_index):
+        import traveltimes
+        u0 = u0[t_low_index:t_high_index+1]
+        u = u[t_low_index:t_high_index+1]
+
+        tau = traveltimes.compute_tt_hanasoge(u0, u, dt)
+
+        return tau
+
+    def compute_tt_gizonbirch(self,u0,u,t_low_index,t_high_index):
+
+        window = np.zeros(u.shape,dtype=float)
+        window[t_low_index:t_high_index+1] = 1
+
+        u0dot = fftpack.diff(u0,period=self.nt*dt)
+
+        return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
+                integrate.simps(window*u0dot**2,dx=dt))
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f)).astype(float)
 
