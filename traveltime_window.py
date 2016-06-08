@@ -22,6 +22,12 @@ codedir = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda:0)))
 masterpixels = np.loadtxt(os.path.join(datadir,"master.pixels"),ndmin=1)
 solartime = read_params.get_total_simulation_time()
 
+def get_resource_path(rel_path):
+    dir_of_py_file = os.path.dirname(inspect.getsourcefile(lambda:0))
+    rel_path_to_resource = os.path.join(dir_of_py_file, rel_path)
+    abs_path_to_resource = os.path.abspath(rel_path_to_resource)
+    return abs_path_to_resource
+
 class MainWindow(Gtk.Window):
 
     def __init__(self):
@@ -39,6 +45,7 @@ class MainWindow(Gtk.Window):
         Gtk.Window.__init__(self, title="Traveltimes")
         self.set_size_request(400, 180)
         self.set_resizable(False)
+        self.set_icon_from_file(get_resource_path("sun.ico"))
 
         self.timeout_id = None
 
@@ -129,7 +136,7 @@ class MainWindow(Gtk.Window):
 
         hbox_list[-1].pack_start(self.ridge_filters_list,expand=False,fill=False,padding=10)
 
-        self.params_dist = {"min":0,"max":Lx/2}
+        self.params_dist = {"min":20,"max":100}
         self.params_label = Gtk.Label("Min dist: {:.1f}, max dist: {:.1f}".
                                     format(self.params_dist["min"],self.params_dist["max"]))
         self.on_filter_change(self.ridge_filters_list)
@@ -142,7 +149,7 @@ class MainWindow(Gtk.Window):
         align_and_hbox()
         align_list[-1].set_padding(0,0,10,0)
 
-        self.pixel_label = Gtk.Label("Pixel:")
+        self.pixel_label = Gtk.Label("Pixel:  ")
         hbox_list[-1].pack_start(self.pixel_label,expand=False,fill=False,padding=0)
 
         starting_x = masterpixels[self.src.get_value_as_int()-1]+20
@@ -202,8 +209,8 @@ class MainWindow(Gtk.Window):
             self.params_dist["max"] = params[1]
 
         except IOError:
-            self.params_dist["min"] = 0
-            self.params_dist["max"] = Lx/2
+            self.params_dist["min"] = 20
+            self.params_dist["max"] = 100
 
         self.params_label.set_text("Min dist: {:.1f}, max dist: {:.1f}".
                                     format(self.params_dist["min"],self.params_dist["max"]))
@@ -348,13 +355,20 @@ class MainWindow(Gtk.Window):
         t_high_index = loc + halftime
 
         tt_han = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
-        print("Hanasoge",tt_han,"seconds")
-        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
-        print("Smoothed",tt_han_smoothed,"seconds")
+        # print("Hanasoge",tt_han,"seconds")
         tt_sparc = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
         print("Sparc",tt_sparc,"seconds")
+        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
+        print("Smoothed, 10s cadence",tt_han_smoothed,"seconds")
+        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index,
+                                            interpolation_factor=6)
+        print("Smoothed, 5s cadence",tt_han_smoothed,"seconds")
         tt_gb = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
         print("Gizon Birch",tt_gb,"seconds")
+        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index)
+        print("Gizon Birch, 10s",tt_gb_interp,"seconds")
+        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
+        print("Gizon Birch, 5s",tt_gb_interp,"seconds")
 
         plt.cla()
         plt.plot(self.t/60,u0,label="data",color="blue")
@@ -372,11 +386,13 @@ class MainWindow(Gtk.Window):
 
         data_filtered,vzcc_filtered = self.filter_data_vzcc()
 
-        tt_hanasoge_list = []
-        tt_gb_list = []
-        tt_sparc_list = []
-        tt_hanasoge_smoothed_10s = []
-        tt_hanasoge_smoothed_5s = []
+        tt_hanasoge_30s = []
+        tt_gb_30s = []
+        tt_gb_interp_10s = []
+        tt_gb_interp_5s = []
+        tt_sparc_30s = []
+        tt_hanasoge_interp_10s = []
+        tt_hanasoge_interp_5s = []
         pixel_x_list = []
 
         for pixel in xrange(nx):
@@ -390,6 +406,15 @@ class MainWindow(Gtk.Window):
             timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))
             timefin_index = timest_index + 40
 
+            if timest_index>self.nt:
+                print("Pixel {:3d}, starting index {:3d} is greater than nt {:3d}"
+                .format(pixel,timest_index,self.nt))
+                continue
+            if timefin_index>self.nt:
+                print("Pixel {:3d}, ending index {:3d} is greater than nt {:3d}\nChoosing nt instead"
+                        .format(pixel,timest_index,self.nt))
+                timefin_index = self.nt
+
             u0 = data_filtered[:,pixel]
             u = vzcc_filtered[:,pixel]
 
@@ -399,67 +424,49 @@ class MainWindow(Gtk.Window):
             t_high_index = loc + halftime
 
             tt = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
-            tt_hanasoge_list.append(tt)
+            tt_hanasoge_30s.append(tt)
             tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
-            tt_hanasoge_smoothed_10s.append(tt)
+            tt_hanasoge_interp_10s.append(tt)
             tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,
                                     t_high_index,interpolation_factor=6)
-            tt_hanasoge_smoothed_5s.append(tt)
+            tt_hanasoge_interp_5s.append(tt)
             tt = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
-            tt_sparc_list.append(tt)
+            tt_sparc_30s.append(tt)
             tt = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
-            tt_gb_list.append(tt)
+            tt_gb_30s.append(tt)
+            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index)
+            tt_gb_interp_10s.append(tt)
+            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,
+                                                    interpolation_factor=6)
+            tt_gb_interp_5s.append(tt)
             pixel_x_list.append(pixel_x)
 
         pixel_x_list = np.array(pixel_x_list)
-        tt_gb_list = np.array(tt_gb_list)
-        tt_sparc_list = np.array(tt_sparc_list)
-        tt_hanasoge_list = np.array(tt_hanasoge_list)
-        tt_hanasoge_smoothed_10s = np.array(tt_hanasoge_smoothed_10s)
-        tt_hanasoge_smoothed_5s = np.array(tt_hanasoge_smoothed_5s)
+        tt_gb_30s = np.array(tt_gb_30s)
+        tt_gb_interp_10s = np.array(tt_gb_interp_10s)
+        tt_gb_interp_5s = np.array(tt_gb_interp_5s)
+        tt_sparc_30s = np.array(tt_sparc_30s)
+        tt_hanasoge_30s = np.array(tt_hanasoge_30s)
+        tt_hanasoge_interp_10s = np.array(tt_hanasoge_interp_10s)
+        tt_hanasoge_interp_5s = np.array(tt_hanasoge_interp_5s)
 
-        color = iter(['r','b','g','chocolate'])
+        color = iter(['r','maroon','indianred','b','steelblue','royalblue'])
 
         plt.cla()
-        # p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        # ,tt_hanasoge_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        # ,color=next(color),marker='o',label="Hanasoge")
-        #
-        # plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        # ,tt_hanasoge_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        # ,color=p[0].get_color(),marker='o')
 
-        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,tt_sparc_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,color=next(color),marker='o',label="Sparc")
+        def plot_tt(arr,**kwargs):
+            left_region = (pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])
+            p = plt.plot(pixel_x_list[left_region],arr[left_region],color=next(color),marker='.',**kwargs)
 
-        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,tt_sparc_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,color=p[0].get_color(),marker='o')
+            right_region = (pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])
+            plt.plot(pixel_x_list[right_region],arr[right_region],color=p[0].get_color(),marker='.')
 
-        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,tt_hanasoge_smoothed_10s[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,color=next(color),marker='o',label="Sparc interpolated, 10s cadence")
-
-        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,tt_hanasoge_smoothed_10s[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,color=p[0].get_color(),marker='o')
-
-        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,tt_hanasoge_smoothed_5s[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,color=next(color),marker='o',label="Sparc interpolated, 5s cadence")
-
-        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,tt_hanasoge_smoothed_5s[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,color=p[0].get_color(),marker='o')
-
-        p = plt.plot(pixel_x_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])],
-        tt_gb_list[(pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])]
-        ,color=next(color),marker='o',label="Gizon-Birch (2002)")
-
-        plt.plot(pixel_x_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])],
-        tt_gb_list[(pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])]
-        ,color=p[0].get_color(),marker='o')
+        plot_tt(tt_sparc_30s,label="Sparc, 30s")
+        plot_tt(tt_hanasoge_interp_10s,label="Sparc,interp: 10s")
+        plot_tt(tt_hanasoge_interp_5s,label="Sparc,interp: 5s")
+        plot_tt(tt_gb_30s,label="GB02, 30s")
+        plot_tt(tt_gb_interp_10s,label="GB02,interp: 10s")
+        plot_tt(tt_gb_interp_5s,label="GB02,interp: 5s")
 
         plt.legend(loc="best",fontsize=14)
         plt.xlabel("x (Mm)",fontsize=16)
@@ -524,9 +531,33 @@ class MainWindow(Gtk.Window):
         return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
                 integrate.simps(window*u0dot**2,dx=dt))
 
+    def compute_tt_gizonbirch_interpolated(self,u0,u,t_low_index,t_high_index,
+                                            interpolation_factor=3):
+
+        t_fine = np.linspace(self.t[0],self.t[-1],self.t.size*interpolation_factor)
+        s0 = interpolate.InterpolatedUnivariateSpline(self.t,u0)
+        u0 = s0(t_fine)
+        s = interpolate.InterpolatedUnivariateSpline(self.t,u)
+        u = s(t_fine)
+
+        window = np.zeros(u.shape,dtype=float)
+        window[t_low_index*interpolation_factor:(t_high_index+1)*interpolation_factor] = 1
+
+        u0dot = fftpack.diff(u0,period=self.nt*dt)
+
+        return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
+                integrate.simps(window*u0dot**2,dx=dt))
+
+def close_plot_and_exit(*args):
+    plt.close('all')
+    Gtk.main_quit(args)
+
 def fitsread(f): return np.squeeze(pyfits.getdata(f)).astype(float)
 
+
+
 win1 = MainWindow()
-win1.connect("delete-event", Gtk.main_quit)
+win1.connect("delete-event", close_plot_and_exit)
+win1.connect('destroy', Gtk.main_quit)
 win1.show_all()
 Gtk.main()
