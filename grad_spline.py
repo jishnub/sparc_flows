@@ -168,28 +168,13 @@ def main():
 
     num_src=get_number_of_sources()
 
+    ############################################################################
+
+    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
 
     ############################################################################
     # Spline
     ############################################################################
-
-    x_cutoff = 50; z_cutoff = -6 # Mm
-    xspline_index = abs(x)<x_cutoff
-    xspline_index_int = np.where(xspline_index)[0]
-    xspline = x[xspline_index]
-    zspline_index = z>z_cutoff
-    zspline_index_int = np.where(zspline_index)[0]
-    zspline = z[zspline_index]
-
-    xspline_index_mgrid = np.array([xspline_index_int for _ in zspline_index_int])
-    zspline_index_mgrid = np.array([[zj]*len(xspline_index_int) for zj in zspline_index_int])
-    spline_ind_1D = np.ravel_multi_index([zspline_index_mgrid.flatten(),
-                                xspline_index_mgrid.flatten()],(nz,nx))
-
-    xspline_coord_mgrid = np.array([xspline for _ in zspline_index_int])
-    zspline_coord_mgrid = np.array([[zj]*len(xspline) for zj in zspline])
-
-    coeff_surf_cutoff_ind = 10
 
     def coeff_to_model(coeffs):
         model = interpolate.bisplev(xspline,zspline,(tx_ref,tz_ref,coeffs,kx_ref,kz_ref))
@@ -197,34 +182,33 @@ def main():
         model_fullsize.put(spline_ind_1D,model.T.flatten())
         return model_fullsize
 
-    def model_to_coeff(model):
-        model_spline = model[zspline_index][:,xspline_index]
-        return interpolate.bisplrep(xspline_coord_mgrid.flatten(),
-                        zspline_coord_mgrid.flatten(),model_spline.flatten(),kx=3,ky=2,s=1e-4)
+    with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
 
-    # Check if the reference model coefficients exist, create if not present, load otherwise
-    true_coeffs_path = os.path.join(datadir,"true_psi_coeffs.npz")
-    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
-    if os.path.exists(true_coeffs_path):
-        with np.load(true_coeffs_path) as f:
-            tx_ref = f["tx"]
-            tz_ref = f["tz"]
-            c_ref_above_surface = f["c_upper"]
-            c_ref_below_surface = f["c_lower"]
-            kx_ref = f["kx"]
-            kz_ref = f["kz"]
-            spl_c_shape_xz_2D = (len(tx_ref)-kx_ref-1,len(tz_ref)-kz_ref-1)
-    else:
-        tx_ref,tz_ref,c_ref,kx_ref,kz_ref = model_to_coeff(psi_true)
+        x_cutoff = f["x_cutoff"]; z_cutoff = f["z_cutoff"] # Mm
+        xspline_index = abs(x)<x_cutoff
+        xspline_index_int = np.where(xspline_index)[0]
+        xspline = x[xspline_index]
+        zspline_index = z>z_cutoff
+        zspline_index_int = np.where(zspline_index)[0]
+        zspline = z[zspline_index]
+
+        xspline_index_mgrid = np.array([xspline_index_int for _ in zspline_index_int])
+        zspline_index_mgrid = np.array([[zj]*len(xspline_index_int) for zj in zspline_index_int])
+        spline_ind_1D = np.ravel_multi_index([zspline_index_mgrid.flatten(),
+                                    xspline_index_mgrid.flatten()],(nz,nx))
+
+        xspline_coord_mgrid = np.array([xspline for _ in zspline_index_int])
+        zspline_coord_mgrid = np.array([[zj]*len(xspline) for zj in zspline])
+
+        coeff_surf_cutoff_ind = f["coeff_surf_cutoff_ind"]
+
+        tx_ref = f["tx"]
+        tz_ref = f["tz"]
+        c_ref_above_surface = f["c_upper"]
+        c_ref_below_surface = f["c_lower"]
+        kx_ref = f["kx"]
+        kz_ref = f["kz"]
         spl_c_shape_xz_2D = (len(tx_ref)-kx_ref-1,len(tz_ref)-kz_ref-1)
-        c_ref_above_surface = c_ref.copy().reshape(spl_c_shape_xz_2D)
-        c_ref_below_surface = c_ref.copy().reshape(spl_c_shape_xz_2D)
-        c_ref_below_surface[:,coeff_surf_cutoff_ind:] = 0
-        c_ref_above_surface[:,:coeff_surf_cutoff_ind] = 0
-        c_ref_below_surface = c_ref_below_surface.flatten()
-        c_ref_above_surface = c_ref_above_surface.flatten()
-        np.savez(true_coeffs_path,tx=tx_ref,tz=tz_ref,kx=kx_ref,kz=kz_ref,
-        c_upper=c_ref_above_surface,c_lower=c_ref_below_surface)
 
     ############################################################################
     # Gradient computation
@@ -300,7 +284,8 @@ def main():
 
     plt.figure()
     for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-        plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),color="cornsilk")
+        plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
+        facecolor="honeydew",edgecolor="lightsage")
         plt.axvline(i,ls="dotted",color="black")
     plt.plot(grad_spline,'o-',markersize=3)
     plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
@@ -467,7 +452,8 @@ def main():
             plt.plot(c_ref_above_surface+c_ref_below_surface,'o-',markersize=3)
             plt.plot(c_ref_above_surface+c_model_below_surface,'o-',markersize=3)
             for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-                plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),color="cornsilk")
+                plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
+                facecolor="honeydew",edgecolor="lightsage")
                 plt.axvline(i,ls="dotted",color="black")
             plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
             plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
