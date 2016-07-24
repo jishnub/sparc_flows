@@ -48,8 +48,9 @@ Program driver
     logical saved, iteration, init_variables, tempbool
     character*1 ci
     real*8 tau,dt
+    real*8 u_dh13(nz),v0_dh13
 
-20  format(8f12.4)
+    20  format(8f12.4)
 
 
     ! Initializing the computation
@@ -57,8 +58,8 @@ Program driver
 
     call Initialize_all
 
-!~     call adjoint_source_filt(520)
-!~     stop
+    !  call adjoint_source_filt(520)
+    !  stop
 
     Lregular = 30.0D8/diml
 
@@ -69,89 +70,91 @@ Program driver
         end if
 
         if (FLOWS) then
-!~             Rchar = 15D8/diml
-!~             con= (xlength/diml)/Rchar
-!~             kay = 2*pi/(2*Rchar)
-!~             z0 = 1.-2.3D8/diml
-!~             sigmaz = 0.912D8/diml
-!~             rand2 = 240.*100./dimc * 1./kay
-!~             call ddz(rho0,gradrho0_z,1)
+            Rchar = 15D8/diml
+            con= (xlength/diml)/Rchar
+            kay = 2*pi/(30E8/diml)
+            z0 = 1.-2.3D8/diml
+            sigmaz = 0.912D8/diml
+            v0_dh13 = 240*100./dimc
+            rand2 = 240.*100./dimc * 1./kay
+            call ddz(rho0,gradrho0_z,1)
 
-!~             print "(F25.1,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15)",&
-!~                     diml,dimc,dimrho,Rchar,con,kay,z0,sigmaz,rand2
+            !    print "(F25.1,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15)",&
+            !            diml,dimc,dimrho,Rchar,con,kay,z0,sigmaz,rand2
 
-!            do k=1,nz
-
-!                do i=1,nx
-!                    signt = sign(1.D0,x(i)-0.5D0)
-!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-
-!                    bes(0) = BesJN(0,rand1)
-!                    bes(1) = BesJN(1,rand1)
-!                    bes(2) = BesJN(2,rand1)
-
-
-!!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
-!                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -2*bes(1)/Rchar) * &
-!                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!!~                     vx = d/dz(\rho c \psi)/\rho
-!                    v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
-!                             gradrho0_z(i,1,k)/rho0(i,1,k)) * &
-!                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!                enddo
-!            enddo
+            !  do k=1,nz
+             !
+            !      do i=1,nx
+            !          signt = sign(1.D0,x(i)-0.5D0)
+            !          rand1=abs((x(i)-0.5)*xlength/diml)*kay
+             !
+            !          bes(0) = BesJN(0,rand1)
+            !          bes(1) = BesJN(1,rand1)
+            !          bes(2) = BesJN(2,rand1)
+             !
+             !
+            !             !  vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
+            !          v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -2*bes(1)/Rchar) * &
+            !           exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
+             !
+            !             ! vx = d/dz(\rho c \psi)/\rho
+            !          v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
+            !                   gradrho0_z(i,1,k)/rho0(i,1,k)) * &
+            !                   exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
+             !
+            !      enddo
+            !  enddo
 
             allocate(psivar(nx,dim2(rank),nz))
+            psivar = 0
 
-!            do k=1,nz
-!                do i=1,nx
-!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-!                    bes(1) = BesJN(1,rand1)
-!                    signt = sign(1.D0,x(i)-0.5D0)
-!                    psivar(i,1,k) = bes(1) * rand2 * &
-!                    exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2*sigmaz**2.)) &
-!                    * signt/c2(i,1,k)**0.5
-!!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
-!                enddo
-!            enddo
+            do k=1,nz
+                u_dh13(k) = rand2*exp(-(z(k) -z0)**2./(2*sigmaz**2.))
+                do i=1,nx
+                   rand1=abs((x(i)-0.5)*xlength/diml)*kay
+                   bes(1) = BesJN(1,rand1)
+                   signt = sign(1.D0,x(i)-0.5D0)
+                   psivar(i,1,k) = u_dh13(k)*bes(1) * &
+                   exp(-abs(x(i)-0.5)*con) * signt/c_speed(i,1,k)
+                   !~  At this stage \psi is dimensionless.
+                   !  Multiply it by an appropriate length scale.
+                enddo
+            enddo
 
-!            call fourier_smooth_x(psivar,90,psivar)
 
-!            psivar = rho0*(c2**0.5)*psivar
+            !    call fourier_smooth_x(psivar,90,psivar)
 
-!            call ddz(psivar, v0_x, 1)
-!            v0_x = -v0_x/rho0
+           psivar = (rho0*c_speed)*psivar*(diml/1.0D8)
 
-!            call ddx(psivar, v0_z, 1)
-!            v0_z = v0_z/rho0
+           call ddz(psivar, v0_x, 1)
+           v0_x = -v0_x/rho0/(diml/1D8)*dimc/1D2 ! m/s
 
-!            psivar = psivar/(rho0*(c2**0.5))
+           call ddx(psivar, v0_z, 1)
+           v0_z = v0_z/rho0/(diml/1D8)*dimc/1D2 ! m/s
 
-!~          Save psi in Mm
-!~             if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
+           psivar = psivar/(rho0*c_speed)
 
-            call readfits('true_psi_smoothed.fits',psivar,nz)
-            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
+           !   Save psi in Mm
+
+           if (contrib=="01") then
+               call writefits_3d(true_psi_filename,psivar,nz)
+               print *,"Max psi",maxval(abs(psivar))
+               print *,"max vx",maxval(abs(v0_x)),"max vz",maxval(abs(v0_z))," m/s"
+               call writefits_3d(true_vz_filename,v0_z,nz)
+               call writefits_3d(true_vx_filename,v0_x,nz)
+           endif
+
+            ! call readfits(true_psi_filename,psivar,nz)
+            ! psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
             deallocate(psivar)
 
-            call readfits('true_vx_smoothed.fits',v0_x,nz)
+            ! call readfits(true_vx_filename,v0_x,nz)
             v0_x = v0_x*1D2/dimc
 
-            call readfits('true_vz_smoothed.fits',v0_z,nz)
+            ! call readfits(true_vz_filename,v0_z,nz)
             v0_z = v0_z*1D2/dimc
 
-
-
-            if (contrib=="01") then
-                print *,"max vx",maxval(v0_x)*dimc*1D-2,"max vz",maxval(v0_z)*dimc*1D-2," m/s"
-                call writefits_3d('true_vz.fits',v0_z*dimc*1D-2,nz)
-                call writefits_3d('true_vx.fits',v0_x*dimc*1D-2,nz)
-            endif
-
-
-            !~             CONTINUITY
+            !~ CONTINUITY
             call continuity_check(v0_x,v0_z)
 
 
@@ -187,7 +190,7 @@ Program driver
 
             if (iteration) then
 
-!~                  These logical variables are defined in params.i
+                ! These logical variables are defined in params.i
                 if (psi_cont .and. enf_cont) then
 
                     allocate(psivar(nx,dim2(rank),nz))
@@ -206,7 +209,7 @@ Program driver
                         end do
                     end if
 
-!~                     call writefits_3d("psivar_used.fits",psivar,nz)
+                    ! call writefits_3d("psivar_used.fits",psivar,nz)
 
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -256,7 +259,8 @@ Program driver
                     endif
 
                 end if
-!~                 stop
+
+
 
                 if (enf_cont .and. psi_cont) deallocate(psivar)
 
@@ -274,7 +278,8 @@ Program driver
             endif
         endif
     endif
-!~      stop
+
+    !   stop
     if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS
 
 
@@ -668,8 +673,8 @@ SUBROUTINE DETERMINE_STATUS(init, nsteps_given)
 
     dx = (x(2) - x(1)) * xlength*10.**(-8)
     xdist = (x-0.5)*xlength*10.**(-8) - xloc
-    sincx = sin(0.1*pi*xdist)/(0.1*pi*xdist)
-    ! sincx = sin(0.43*pi*xdist)/(0.43*pi*xdist)
+    ! sincx = sin(0.1*pi*xdist)/(0.1*pi*xdist)
+    sincx = sin(0.43*pi*xdist)/(0.43*pi*xdist)
     sincx(minloc(abs(xdist))) = 1.0
     do j=1,dim2(rank)
       vr(:,j,1) = exp(-xdist**2./(400.*dx**2.))*sincx
@@ -999,6 +1004,7 @@ SUBROUTINE COMPUTE_TT(u0, u, tau, dt, nt)
  times(1) = t(loc-1)
  times(2) = t(loc)
  times(3) = t(loc+1)
+
  mat(:,1) = 1
  mat(:,2) = times
  mat(:,3) = times**2.
@@ -1055,7 +1061,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
     call integrate_time(window*u0dot**2,denominator,dt)
 
     tau=numerator/denominator
-    print *,tau*60.,dt*60.
+    ! print *,tau*60.,dt*60.
 
 
 END SUBROUTINE COMPUTE_TT_GIZONBIRCH
@@ -1130,6 +1136,7 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     use initialize
     use derivatives
     use all_modules
+    use kernels
     implicit none
     real*8, intent(in),dimension(nx,1,nz) :: vx,vz
     real*8, dimension(nx,1,nz) :: cont
@@ -1137,9 +1144,15 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
 
     allocate(dxrhovx(nx,1,nz),dzrhovz(nx,1,nz),dzrho(nx,1,nz))
 
-    call ddz(rho0*vz,dzrhovz,1)
-    call ddx(rho0*vx,dxrhovx,1)
-    call ddz(rho0,dzrho,1)
+    if (.not. CONSTRUCT_KERNELS) then
+        call ddz(rho0*vz,dzrhovz,1)
+        call ddx(rho0*vx,dxrhovx,1)
+        call ddz(rho0,dzrho,1)
+    else
+        call ddzkern(rho0*vz,dzrhovz,1)
+        call ddxkern(rho0*vx,dxrhovx,1)
+        call ddzkern(rho0,dzrho,1)
+    endif
 
 
     cont=(dxrhovx + dzrhovz)/c_speed/dzrho
@@ -1933,9 +1946,9 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     enddo
     close(356)
 
-    distances = abs((x-0.5)*xlength*10.0**(-8.) - x00)
-    signed= ((x-0.5)*xlength*10.0**(-8.) - x00)
-    idiff = floor(x00/((x(2)-x(1))*xlength*10.0**(-8.)))
+    distances = abs((x-0.5)*xlength/1D8 - x00)
+    signed= ((x-0.5)*xlength/1D8 - x00)
+    idiff = floor(x00/((x(2)-x(1))*xlength/1D8))
     print *,nt
     open(44,file=directory//'forward_src'//contrib//'_ls'//jobno//'/timeline',action='read')
     do i=1,nt
@@ -2041,7 +2054,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         p1mode(:,1,i) = p1mode(:,1,i) * filt(i)!* UNKNOWN
     enddo
 
-
     inquire(file=directory//'filter.params.2', exist=lexist)
     if (lexist) then
 
@@ -2061,14 +2073,14 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     tempdat = filtdat
 
     vel = 0
-    vel(0) = 0.44
-    vel(1) = 0.60
-    vel(2) = 0.75
-    vel(3) = 0.9
-    vel(4) = 1.2
-    vel(5) = 1.4
-    vel(6) = 1.7
-    vel(7) = 1.9
+    vel(0) = 0.5D0
+    vel(1) = 0.75D0
+    vel(2) = 0.95D0
+    vel(3) = 1.15D0
+    vel(4) = 1.2D0
+    vel(5) = 1.4D0
+    vel(6) = 1.7D0
+    vel(7) = 1.9D0
 
     !RIDGE FILTERS
     do pord=0,8
@@ -2126,6 +2138,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                 filter = all_pmode
                 call writefits_3d('first_bounce_pmode_filter.fits',all_pmode,nt)
             end if
+
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
             call dfftw_execute(invplantemp)
@@ -2134,22 +2147,22 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             con = 2.0*pi
 
 
-!~             inquire(file='wavespeed',exist=ws_exist)
-!~             if (ws_exist) then
-!~                 open(3378,file="wavespeed",action="read")
-!~                     do i=1,nmasters
-!~                     call convert_to_string(i, contribmatch, 2)
-!~                     if (contribmatch == contrib) then
-!~                     read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),&
-!~                     vel(5),vel(6),vel(7) ,vel(8), vel(9),vel(10)
-!~                     else
-!~                         read(3378,*)
-!~                     end if
-!~                     end do
-!~                 close(3378)
-!~             end if
+            !~    inquire(file='wavespeed',exist=ws_exist)
+            !~    if (ws_exist) then
+            !~        open(3378,file="wavespeed",action="read")
+            !~            do i=1,nmasters
+            !~            call convert_to_string(i, contribmatch, 2)
+            !~            if (contribmatch == contrib) then
+            !~            read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),&
+            !~            vel(5),vel(6),vel(7) ,vel(8), vel(9),vel(10)
+            !~            else
+            !~                read(3378,*)
+            !~            end if
+            !~            end do
+            !~        close(3378)
+            !~    end if
 
-!~             if (pord==0) print *,"Using mode velocities",vel
+            !~    if (pord==0) print *,"Using mode velocities",vel
 
             do i=1,nt
                 filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
@@ -2166,13 +2179,12 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     open(596,file=directory//'forward_src'//contrib//'_ls00/windows.'//ord,action='read',status='old')
             endif
 
-
             timest = 1
             timefin = nt
-!~             RECEIVER PIXEL FLAG
+            !~             RECEIVER PIXEL FLAG
             do i=1,nx
-!~             RECEIVER PIXEL END FLAG
-!~                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
+            !~   RECEIVER PIXEL END FLAG
+            !~   print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
@@ -2195,16 +2207,18 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                         if (file_open) write(596,*) lef, rig
 
                     else
-!~                       Read in windows
+                        ! Read in windows
                         inquire(unit=596,opened=file_open)
                         if (file_open) read(596,*) lef, rig
                     endif
 
-                    call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-!~                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
+                    ! call compute_tt(real(acc(i,1,timest:timefin)),&
+                    ! real(dat(i,1,timest:timefin)),tau,dt,(timefin-timest+1))
+                    ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
 
-138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
+                    call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
 
+                    138 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
 
                     if (iwls .and. prev_iter_exist) then
@@ -2216,9 +2230,11 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     windows(lef:rig) = 1.0
                     oned = ccdot(i,1,:) * cmplx(windows)
 
+
                     call dfftw_execute(onedplan) ! oned -> ccdotone
                     do j=1,nt
-                        filtemp(:,1,j) = cmplx(filter(:,1,j))  * ccdotone(j) * exp(-eyekh*(x(i)))
+                        filtemp(:,1,j) = ccdotone(j) * exp(-eyekh*(x(i)))
+                        ! filtemp(:,1,j) = cmplx(filter(:,1,j))  * ccdotone(j) * exp(-eyekh*(x(i)))
                     enddo
                     call dfftw_execute(invplantemp3) ! filtemp -> filtex
 
@@ -2227,12 +2243,15 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     misfit = misfit + tau**2. * iwls_misfit_factor
 
                     nmeasurements = nmeasurements + 1
-                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) * iwls_misfit_factor !* sign(1.0,signed(i))
+                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) !* iwls_misfit_factor !* sign(1.0,signed(i))
+
                     do j=1,nt
                         adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
                     enddo
+
                 endif ! if distances are within range
-            enddo
+            enddo ! loop over x
+
 
             inquire(unit=238,opened=file_open)
             if (file_open) close(238)
@@ -2241,10 +2260,12 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             inquire(unit=596,opened=file_open)
             if (file_open) close(596)
-        endif
 
 
-    enddo
+
+        endif ! if params.0 or equivalent exists
+
+    enddo ! loop over spectral ridges
 
     pcoef = 0.0
 
@@ -2481,7 +2502,7 @@ SUBROUTINE MISFIT_ALL(nt)
     enddo
     close(356)
 
-    distances = abs((x-0.5)*xlength*10.0**(-8.) - x00)
+    distances = abs((x-0.5)*xlength/1D8 - x00)
 
     open(44,file=directory//'forward_src'//contrib//'_ls'//jobno//'/timeline',action='read')
     do i=1,nt
@@ -2566,8 +2587,8 @@ SUBROUTINE MISFIT_ALL(nt)
         call p6mode_filter(nt, p6mode)
         call p7mode_filter(nt, p7mode)
         call all_pmode_filter(nt, all_pmode)
-!~         all_else = 1. - fmode - pmode          ! ???
-!~         highpmode = 1.0
+        !~         all_else = 1. - fmode - pmode          ! ???
+        !~         highpmode = 1.0
 
         do i=1,nt
             fmode(:,1,i) = fmode(:,1,i) * filt(i)!* UNKNOWN

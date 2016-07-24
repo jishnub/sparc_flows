@@ -5,6 +5,7 @@ env=dict(os.environ, MPI_TYPE_MAX="1280280")
 #~ Get the current directory, might need to pass it to the subprocess
 codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=env["HOME"]
+env["LD_LIBRARY_PATH"]=os.path.join(HOME,"anaconda2/lib")
 
 datadir=read_params.get_directory()
 
@@ -21,6 +22,10 @@ total_no_of_jobs=nsrc*no_of_ls_per_src
 if procno>=total_no_of_jobs:
     print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
     quit()
+
+# if procno<1:
+#     print "Processor no "+str(procno)+" temporary stop to check MPI issue"
+#     exit()
 
 linesearch_no=procno/nsrc+1
 src_no=procno%nsrc+1
@@ -45,7 +50,9 @@ def compute_forward(linesearch_no,src):
     #~ If it doesn't exist then run the linesearch.
     #~ if not os.path.exists(os.path.join(forward,"vz_cc_iter"+str(iter_no).zfill(2)+".fits")):
 
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
+    #mpipath="/home/jishnu/lib/openmpi/bin/mpiexec"
+    # mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
+    mpipath=os.path.join(HOME,"anaconda2/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" "+linesearch_no
 
     t0=time.time()

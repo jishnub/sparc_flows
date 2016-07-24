@@ -69,8 +69,8 @@ add_subplot(223,true_vz,title="True $v_z$")
 add_subplot(224,current_vz,title="Iterated $v_z$")
 
 for ax in axlist:
-    ax.set_xlim(-Lx/15,Lx/15)
-    ax.set_ylim(-5,z.max())
+    ax.set_xlim(-80,80)
+    ax.set_ylim(-8,z.max())
     ax.set_xlabel("x (Mm)",fontsize=18)
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))

@@ -15,8 +15,8 @@ import fnmatch
 
 Lx = read_params.get_xlength()
 nx = read_params.get_nx()
-dt = read_params.get_dt()
-dt_min = dt/60
+dt_sec = read_params.get_dt()
+dt_min = dt_sec/60
 datadir = read_params.get_directory()
 codedir = os.path.dirname(os.path.abspath(inspect.getsourcefile(lambda:0)))
 masterpixels = np.loadtxt(os.path.join(datadir,"master.pixels"),ndmin=1)
@@ -36,14 +36,15 @@ class MainWindow(Gtk.Window):
         self.data_file = None
         self.vzcc_file = None
         self.mode_filter = None
-        self.mode_speeds = [0.44,0.60,0.75,0.9,1.2,1.4,1.7,1.9]
+        self.mode_speeds = [0.5,0.75,0.95,1.15,1.2,1.4,1.7,1.9]
         self.source_x = 0
         self.nt = 40+int(solartime*60/dt_min)
-        self.t = np.arange(self.nt)*dt
+        self.t = np.arange(self.nt)*dt_sec
         self.figure = plt.figure()
+        self.halftime = 10 # Minutes
 
         Gtk.Window.__init__(self, title="Traveltimes")
-        self.set_size_request(400, 180)
+        self.set_size_request(400, 200)
         self.set_resizable(False)
         self.set_icon_from_file(get_resource_path("sun.ico"))
 
@@ -104,20 +105,7 @@ class MainWindow(Gtk.Window):
 
         self.get_data_and_vzcc()
 
-        # Load vzcc.fits
-        # align_and_hbox()
-        #
-        # self.vzcc_label = Gtk.Label("vzcc.fits")
-        # hbox_list[-1].pack_start(self.vzcc_label,expand=True,fill=False,padding=0)
-        #
-        # self.vzcc_file_entry = Gtk.Entry()
-        # self.vzcc_file_entry.set_width_chars(40)
-        # hbox_list[-1].pack_start(self.vzcc_file_entry,expand=True,fill=True,padding=0)
-        # self.vzcc_file_entry.connect("changed",self.on_vzcc_entry_changed)
-        #
-        # self.vzcc_file_browse = Gtk.Button.new_with_label("Browse")
-        # hbox_list[-1].pack_start(self.vzcc_file_browse,expand=True,fill=False,padding=0)
-        # self.vzcc_file_browse.connect("clicked",self.on_vzcc_file_browse)
+
 
         # Load filter
         align_and_hbox()
@@ -137,14 +125,13 @@ class MainWindow(Gtk.Window):
         hbox_list[-1].pack_start(self.ridge_filters_list,expand=False,fill=False,padding=10)
 
         self.params_dist = {"min":20,"max":100}
-        self.params_label = Gtk.Label("Min dist: {:.1f}, max dist: {:.1f}".
-                                    format(self.params_dist["min"],self.params_dist["max"]))
-        self.on_filter_change(self.ridge_filters_list)
+        self.params_label = Gtk.Label(" "*60)
+        # self.on_filter_change(self.ridge_filters_list)
         hbox_list[-1].pack_start(self.params_label,expand=False,fill=False,padding=10)
 
         # Select pixel
 
-        x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+        self.x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 
         align_and_hbox()
         align_list[-1].set_padding(0,0,10,0)
@@ -167,14 +154,26 @@ class MainWindow(Gtk.Window):
         self.x_label = Gtk.Label("x (Mm):")
         hbox_list[-1].pack_start(self.x_label,expand=False,fill=False,padding=0)
 
-        adjustment_x = Gtk.Adjustment(value=starting_x, lower=x[0], upper=x[-1],
-                                        step_incr=x[1]-x[0], page_incr=0, page_size=0)
+        adjustment_x = Gtk.Adjustment(value=starting_x, lower=self.x[0], upper=self.x[-1],
+                                        step_incr=self.x[1]-self.x[0], page_incr=0, page_size=0)
         self.xcoord = Gtk.SpinButton()
         self.xcoord.set_adjustment(adjustment_x)
         self.xcoord.set_numeric(True)
         self.xcoord.set_snap_to_ticks(True)
         self.xcoord.connect("value-changed",self.on_xcoord_changed)
         hbox_list[-1].pack_start(self.xcoord,expand=False,fill=False,padding=0)
+
+        # Distance label
+        align_and_hbox()
+        align_list[-1].set_padding(0,0,10,0)
+
+        self.distance_label = Gtk.Label("Dist from source: {:.1f} Mm,"
+                            " min : {:.1f}, max: {:.1f}".format(
+                            abs(self.xcoord.get_value() - self.source_x),
+                            self.params_dist["min"],self.params_dist["max"] ))
+        self.on_filter_change(self.ridge_filters_list)
+        hbox_list[-1].pack_start(self.distance_label,expand=False,fill=False,padding=0)
+
 
         # Compute button
         align_and_hbox()
@@ -191,6 +190,10 @@ class MainWindow(Gtk.Window):
         current_pixel = pixel.get_value()
         current_x = (current_pixel/nx-0.5)*Lx
         self.xcoord.set_value(current_x)
+        self.distance_label.set_text("Dist from source: {:.1f} Mm,"
+                            " min : {:.1f}, max: {:.1f}".format(
+                            abs(self.xcoord.get_value() - self.source_x),
+                            self.params_dist["min"],self.params_dist["max"]))
 
     def on_xcoord_changed(self,xcoord):
         # Check if within params range
@@ -198,6 +201,10 @@ class MainWindow(Gtk.Window):
         current_x = xcoord.get_value()
         current_pixel = int(nx//2 + current_x/Lx*nx)
         self.pixel.set_value(current_pixel)
+        self.distance_label.set_text("Dist from source: {:.1f} Mm,"
+                            " min : {:.1f}, max: {:.1f}".format(
+                            abs(self.xcoord.get_value() - self.source_x),
+                            self.params_dist["min"],self.params_dist["max"]))
 
     def on_filter_change(self,ridge_filters_list):
         # Try to load params file to get min and max dist
@@ -207,69 +214,28 @@ class MainWindow(Gtk.Window):
             params = np.loadtxt(params_path,ndmin=1)
             self.params_dist["min"] = params[0]
             self.params_dist["max"] = params[1]
+            self.halftime = int(params[2]/(2*dt_min))
 
         except IOError:
             self.params_dist["min"] = 20
             self.params_dist["max"] = 100
+            self.halftime = 10
 
-        self.params_label.set_text("Min dist: {:.1f}, max dist: {:.1f}".
-                                    format(self.params_dist["min"],self.params_dist["max"]))
+        # self.params_label.set_text("Min dist: {:.1f}, max dist: {:.1f}".
+        #                             format(self.params_dist["min"],self.params_dist["max"]))
+        self.distance_label.set_text("Dist from source: {:.1f} Mm,"
+                            " min : {:.1f}, max: {:.1f}".format(
+                            abs(self.xcoord.get_value() - self.source_x),
+                            self.params_dist["min"],self.params_dist["max"]))
         filter_file_path = os.path.join(codedir,
                     self.ridge_filters_list.get_active_text()+"mode_filter.fits")
         try:
             self.mode_filter = np.squeeze(pyfits.getdata(filter_file_path)).astype(float)
-            # print("Loaded filter from",os.path.basename(filter_file_path))
         except IOError:
             modefilter_function = getattr(modefilters,
                     self.ridge_filters_list.get_active_text()+"mode_filter")
-            self.mode_filter = np.squeeze(modefilter_function(self.nt,dt,nx,Lx)).T
-            # print ("Loaded filter from modefilters.so",self.ridge_filters_list.get_active_text()+"mode_filter")
-    #
-    # def on_data_file_browse(self,button):
-    #     dialog = Gtk.FileChooserDialog("Please choose data.fits", self,
-    #         Gtk.FileChooserAction.OPEN,
-    #         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-    #          Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-    #
-    #     filter_fits = Gtk.FileFilter()
-    #     filter_fits.set_name("FITS files")
-    #     filter_fits.add_pattern("*.fits")
-    #     dialog.add_filter(filter_fits)
-    #
-    #     response = dialog.run()
-    #     if response == Gtk.ResponseType.OK:
-    #         try:
-    #             self.data_file = np.squeeze(pyfits.getdata(dialog.get_filename())).astype(float)
-    #             self.data_file_entry.set_text(dialog.get_filename())
-    #         except IOError:
-    #             self.data_file = None
-    #             self.data_file_entry.set_text("")
-    #             print("Could not load",dialog.get_filename())
-    #
-    #     dialog.destroy()
-    #
-    # def on_vzcc_file_browse(self,button):
-    #     dialog = Gtk.FileChooserDialog("Please choose vzcc.fits", self,
-    #         Gtk.FileChooserAction.OPEN,
-    #         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-    #          Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-    #
-    #     filter_fits = Gtk.FileFilter()
-    #     filter_fits.set_name("FITS files")
-    #     filter_fits.add_pattern("*.fits")
-    #     dialog.add_filter(filter_fits)
-    #
-    #     response = dialog.run()
-    #     if response == Gtk.ResponseType.OK:
-    #         try:
-    #             self.vzcc_file = np.squeeze(pyfits.getdata(dialog.get_filename())).astype(float)
-    #             self.vzcc_file_entry.set_text(dialog.get_filename())
-    #         except IOError:
-    #             self.vzcc_file = None
-    #             self.vzcc_file_entry.set_text("")
-    #             print("Could not load",dialog.get_filename())
-    #
-    #     dialog.destroy()
+            self.mode_filter = np.squeeze(modefilter_function(self.nt,dt_sec,nx,Lx)).T
+
 
     def on_data_entry_changed(self,entry):
         current_path = entry.get_text()
@@ -303,7 +269,7 @@ class MainWindow(Gtk.Window):
                                 str(self.src.get_value_as_int()).zfill(2)+".fits")
                 self.data_file = fitsread(src_file_path)
                 self.nt = self.data_file.shape[0]
-                self.time_coordinates = np.arange(self.nt)*dt
+                self.time_coordinates = np.arange(self.nt)*dt_sec
             except IOError:
                 self.data_file = None
 
@@ -334,6 +300,7 @@ class MainWindow(Gtk.Window):
         data_filtered,vzcc_filtered = self.filter_data_vzcc()
 
         distance_Mm = abs(self.xcoord.get_value() - self.source_x)
+        signed_distance_Mm = self.xcoord.get_value() - self.source_x
         if distance_Mm<self.params_dist["min"]:
             print("Distance",distance_Mm,"is too low to compute travel time")
             return
@@ -341,7 +308,7 @@ class MainWindow(Gtk.Window):
             print("Distance",distance_Mm,"is too high to compute travel time")
             return
 
-        print(pixel)
+        print(pixel,"Distance from source",signed_distance_Mm,"Mm")
         u0 = data_filtered[:,pixel]
         u = vzcc_filtered[:,pixel]
 
@@ -354,18 +321,15 @@ class MainWindow(Gtk.Window):
         t_low_index = loc - halftime
         t_high_index = loc + halftime
 
-        tt_han = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
-        # print("Hanasoge",tt_han,"seconds")
-        tt_sparc = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
-        print("Sparc",tt_sparc,"seconds")
-        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
+        tt_han = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
+        print("Hanasoge",tt_han,"seconds")
+        tt_han_smoothed = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
         print("Smoothed, 10s cadence",tt_han_smoothed,"seconds")
-        tt_han_smoothed = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index,
-                                            interpolation_factor=6)
+        tt_han_smoothed = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
         print("Smoothed, 5s cadence",tt_han_smoothed,"seconds")
-        tt_gb = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
+        tt_gb = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
         print("Gizon Birch",tt_gb,"seconds")
-        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index)
+        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
         print("Gizon Birch, 10s",tt_gb_interp,"seconds")
         tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
         print("Gizon Birch, 5s",tt_gb_interp,"seconds")
@@ -373,12 +337,14 @@ class MainWindow(Gtk.Window):
         plt.cla()
         plt.plot(self.t/60,u0,label="data",color="blue")
         plt.plot(self.t/60,u,label="vzcc",color="red")
-        plt.axvline(t_low_index*dt_min,ls="dotted",color="black")
-        plt.axvline(t_high_index*dt_min,ls="dotted",color="black")
+        plt.axvline(timest_index*dt_min,ls="dotted",color="black")
+        plt.axvline(timefin_index*dt_min,ls="dotted",color="black")
+        plt.axvspan(t_low_index*dt_min,t_high_index*dt_min,color="0.8")
         plt.xlim(timest_index*dt_min,timefin_index*dt_min)
         plt.xlabel("Time (min)",fontsize=16)
         plt.ylabel("Wave displacement",fontsize=16)
         plt.legend(loc="best",fontsize=14)
+        plt.tight_layout()
         plt.show()
 
     def on_compute_all_pressed(self,button):
@@ -390,7 +356,7 @@ class MainWindow(Gtk.Window):
         tt_gb_30s = []
         tt_gb_interp_10s = []
         tt_gb_interp_5s = []
-        tt_sparc_30s = []
+        # tt_sparc_30s = []
         tt_hanasoge_interp_10s = []
         tt_hanasoge_interp_5s = []
         pixel_x_list = []
@@ -399,11 +365,12 @@ class MainWindow(Gtk.Window):
 
             pixel_x = (pixel/nx-0.5)*Lx
             distance_Mm = abs(pixel_x - self.source_x)
+            signed_distance_Mm = pixel_x - self.source_x
             if distance_Mm<self.params_dist["min"] or distance_Mm>self.params_dist["max"]:
                 continue
 
             vel_Mm_per_min = self.mode_speeds[self.ridge_filters_list.get_active()]
-            timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))
+            timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))-1
             timefin_index = timest_index + 40
 
             if timest_index>self.nt:
@@ -419,36 +386,37 @@ class MainWindow(Gtk.Window):
             u = vzcc_filtered[:,pixel]
 
             loc = abs(u[timest_index:timefin_index+1]).argmax()+timest_index
-            halftime = 10
-            t_low_index = loc - halftime
-            t_high_index = loc + halftime
 
-            tt = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
+            t_low_index = loc - self.halftime
+            t_high_index = loc + self.halftime
+
+            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
             tt_hanasoge_30s.append(tt)
-            tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,t_high_index)
+            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
             tt_hanasoge_interp_10s.append(tt)
-            tt = self.compute_tt_quadratic_fit_smoothed(u0,u,t_low_index,
-                                    t_high_index,interpolation_factor=6)
+            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
             tt_hanasoge_interp_5s.append(tt)
-            tt = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
-            tt_sparc_30s.append(tt)
-            tt = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
+            # tt = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
+            # tt_sparc_30s.append(tt)
+            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
             tt_gb_30s.append(tt)
-            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index)
+            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
             tt_gb_interp_10s.append(tt)
-            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,
-                                                    interpolation_factor=6)
+            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
             tt_gb_interp_5s.append(tt)
-            pixel_x_list.append(pixel_x)
+            pixel_x_list.append(signed_distance_Mm)
 
         pixel_x_list = np.array(pixel_x_list)
         tt_gb_30s = np.array(tt_gb_30s)
         tt_gb_interp_10s = np.array(tt_gb_interp_10s)
         tt_gb_interp_5s = np.array(tt_gb_interp_5s)
-        tt_sparc_30s = np.array(tt_sparc_30s)
+        # tt_sparc_30s = np.array(tt_sparc_30s)
         tt_hanasoge_30s = np.array(tt_hanasoge_30s)
         tt_hanasoge_interp_10s = np.array(tt_hanasoge_interp_10s)
         tt_hanasoge_interp_5s = np.array(tt_hanasoge_interp_5s)
+
+        # tt_file=np.loadtxt(os.path.join(datadir,"forward_src"+str(self.src.get_value_as_int()).zfill(2)+
+        #                     "_ls00","ttdiff."+str(self.ridge_filters_list.get_active())))
 
         color = iter(['r','maroon','indianred','b','steelblue','royalblue'])
 
@@ -456,31 +424,35 @@ class MainWindow(Gtk.Window):
 
         def plot_tt(arr,**kwargs):
             left_region = (pixel_x_list>-self.params_dist["max"]) & (pixel_x_list<-self.params_dist["min"])
-            p = plt.plot(pixel_x_list[left_region],arr[left_region],color=next(color),marker='.',**kwargs)
+            p = plt.plot(pixel_x_list[left_region],arr[left_region],color=kwargs.pop("color",next(color)),
+            marker=kwargs.pop("marker",'.'),**kwargs)
 
             right_region = (pixel_x_list>self.params_dist["min"]) & (pixel_x_list<self.params_dist["max"])
-            plt.plot(pixel_x_list[right_region],arr[right_region],color=p[0].get_color(),marker='.')
+            plt.plot(pixel_x_list[right_region],arr[right_region],color=p[0].get_color(),
+            marker=kwargs.pop("marker",p[0].get_marker()))
 
-        plot_tt(tt_sparc_30s,label="Sparc, 30s")
+        plot_tt(tt_hanasoge_30s,label="Sparc, 30s")
         plot_tt(tt_hanasoge_interp_10s,label="Sparc,interp: 10s")
         plot_tt(tt_hanasoge_interp_5s,label="Sparc,interp: 5s")
+        # plot_tt(tt_file[:,1],label="From file",marker="o",ls="None")
+
+
         plot_tt(tt_gb_30s,label="GB02, 30s")
         plot_tt(tt_gb_interp_10s,label="GB02,interp: 10s")
         plot_tt(tt_gb_interp_5s,label="GB02,interp: 5s")
 
         plt.legend(loc="best",fontsize=14)
-        plt.xlabel("x (Mm)",fontsize=16)
+        plt.xlabel("Distance from source (Mm)",fontsize=16)
         plt.ylabel(r"$\Delta \tau$ (sec)",fontsize=16)
-        plt.title("x = {:2.1f} Mm, distance = {:2.1f} Mm".format(
-            self.xcoord.get_value(),self.xcoord.get_value()-self.source_x))
+        plt.title("Source at x = {:2.1f} Mm".format(self.source_x))
         plt.show()
 
     def compute_tt_quadratic_fit(self,u0, u,t_low_index,t_high_index):
         u0 = u0[t_low_index:t_high_index+1]
         u  =  u[t_low_index:t_high_index+1]
-        cc=signal.correlate(u,u0).real
+        cc=signal.correlate(u0,u).real
         cc_max_index = cc.argmax()
-        t = np.arange(-len(u)+1,len(u))*dt
+        t = np.arange(-len(u)+1,len(u))*dt_sec
 
         t_wavepacket = t[cc_max_index-1:cc_max_index+2]
         cc_wavepacket = cc[cc_max_index-1:cc_max_index+2]
@@ -489,8 +461,7 @@ class MainWindow(Gtk.Window):
 
         return -p[1]/(2*p[0])
 
-    def compute_tt_quadratic_fit_smoothed(self,u0, u,t_low_index,t_high_index,
-                    interpolation_factor=3):
+    def compute_tt_quadratic_fit_interpolated(self,u0, u,t_low_index,t_high_index,interpolation_factor=1):
         u0 = u0[t_low_index:t_high_index+1]
         u  =  u[t_low_index:t_high_index+1]
 
@@ -501,9 +472,9 @@ class MainWindow(Gtk.Window):
         s = interpolate.InterpolatedUnivariateSpline(self.t[t_low_index:t_high_index+1],u)
         u = s(t_fine)
 
-        cc=signal.correlate(u,u0).real
+        cc=signal.correlate(u0,u).real
         cc_max_index = cc.argmax()
-        t = np.arange(-len(u)+1,len(u))*dt/interpolation_factor
+        t = np.arange(-len(u)+1,len(u))*dt_sec/interpolation_factor
 
         t_wavepacket = t[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
         cc_wavepacket = cc[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
@@ -517,7 +488,7 @@ class MainWindow(Gtk.Window):
         u0 = u0[t_low_index:t_high_index+1]
         u = u[t_low_index:t_high_index+1]
 
-        tau = traveltimes.compute_tt_hanasoge(u0, u, dt)
+        tau = traveltimes.compute_tt_hanasoge(u0, u, dt_sec)
 
         return tau
 
@@ -526,13 +497,12 @@ class MainWindow(Gtk.Window):
         window = np.zeros(u.shape,dtype=float)
         window[t_low_index:t_high_index+1] = 1
 
-        u0dot = fftpack.diff(u0,period=self.nt*dt)
+        u0dot = fftpack.diff(u0,period=self.nt*dt_sec)
 
-        return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
-                integrate.simps(window*u0dot**2,dx=dt))
+        return -(integrate.simps(window*u0dot*(u0-u),dx=dt_sec)/
+                integrate.simps(window*u0dot**2,dx=dt_sec))
 
-    def compute_tt_gizonbirch_interpolated(self,u0,u,t_low_index,t_high_index,
-                                            interpolation_factor=3):
+    def compute_tt_gizonbirch_interpolated(self,u0,u,t_low_index,t_high_index,interpolation_factor=1):
 
         t_fine = np.linspace(self.t[0],self.t[-1],self.t.size*interpolation_factor)
         s0 = interpolate.InterpolatedUnivariateSpline(self.t,u0)
@@ -543,10 +513,10 @@ class MainWindow(Gtk.Window):
         window = np.zeros(u.shape,dtype=float)
         window[t_low_index*interpolation_factor:(t_high_index+1)*interpolation_factor] = 1
 
-        u0dot = fftpack.diff(u0,period=self.nt*dt)
+        u0dot = fftpack.diff(u0,period=self.nt*dt_sec)
 
-        return (integrate.simps(window*u0dot*(u0-u),dx=dt)/
-                integrate.simps(window*u0dot**2,dx=dt))
+        return -(integrate.simps(window*u0dot*(u0-u),dx=dt_sec)/
+                integrate.simps(window*u0dot**2,dx=dt_sec))
 
 def close_plot_and_exit(*args):
     plt.close('all')

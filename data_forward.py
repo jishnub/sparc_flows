@@ -16,11 +16,11 @@ try:
         nmasterpixels=sum(1 for _ in mp)
 except IOError:
     sys.stderr.write("Proc"+str(procno).zfill(2)+
-                ": Could not read master.pixels, check if it exists\n") 
+                ": Could not read master.pixels, check if it exists\n")
     sys.stderr.flush()
     quit()
 
-if procno>=nmasterpixels: 
+if procno>=nmasterpixels:
     print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
     quit()
 
@@ -37,32 +37,33 @@ def compute_data(src):
     forward="forward_src"+src+"_ls00"
     Spectral=os.path.join(codedir,"Spectral")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
-    
+
     shutil.copyfile(Spectral,Instruction)
 
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec") 
+    mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
+    # mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
-   
+
     with open(os.path.join(datadir,forward,"out_data_forward"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     partialfiles=glob.glob(os.path.join(datadir,forward,"*partial*"))
     for f in partialfiles: os.remove(f)
-    
+
     fullfiles=glob.glob(os.path.join(datadir,forward,"*full*"))
     for f in fullfiles: os.remove(f)
-    
+
     if not os.path.exists(os.path.join(datadir,"tt","data")):
         try: os.makedirs(os.path.join(datadir,"tt","data"))
         except OSError as e:
             if e.errno == 17: pass
             else: print e
-    
+
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
         shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
         safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
         safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
-        
+
     if os.path.exists(Instruction): os.remove(Instruction)
 
 print "Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
@@ -72,4 +73,3 @@ file_to_remove=os.path.join(datadir,"status","forward_src"+src+"_ls00")
 if os.path.exists(file_to_remove): os.remove(file_to_remove)
 
 print "Finished computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
-

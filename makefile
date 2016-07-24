@@ -17,13 +17,16 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 	splevl.o splint.o
 
 
-FC= mpif90
-FC77= mpif77
+FC= $(HOME)/anaconda2/bin/mpif90
+#FC= mpif90
+FC77= $(HOME)/anaconda2/bin/mpif77
+#FC77= mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
+#LIBS1 = -lfftw3 -lcfitsio
+LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -L$(HOME)/anaconda/lib -lfftw3 -lcfitsio -lgfortran -fopenmp #-lquadmath
 
-COMMAND1=	sparc
+COMMAND1= sparc
 
 
 $(COMMAND1): $(OBJS1) 
@@ -39,7 +42,6 @@ $(COMMAND1): $(OBJS1)
 clean:
 	@find . -maxdepth 1 -name "*.o" -delete
 	@find . -maxdepth 1 -name "*.mod" -delete
-	@find . -maxdepth 1 -name "*.fits" -delete
 	@find . -maxdepth 1 -name "$(COMMAND1)" -delete
 
 

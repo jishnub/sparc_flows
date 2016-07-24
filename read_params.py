@@ -206,8 +206,35 @@ def get_cutoff_dist():
 
     return switch,val
 
+def get_true_psi_filename():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("true_psi_filename" in line.lower()):
+                return line.split("=")[-1].strip().strip("'")
 
+def get_true_vx_filename():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("true_vx_filename" in line.lower()):
+                return line.split("=")[-1].strip().strip("'")
 
+def get_true_vz_filename():
+    codedir=os.path.dirname(os.path.abspath(__file__))
+    paramsfile = os.path.join(codedir,"params.i")
+    with open(paramsfile,'r') as paramsfile:
+        for line in paramsfile:
+            line=line.strip()
+            if line.startswith("!"): continue
+            if ("parameter" in line.lower()) and ("true_vz_filename" in line.lower()):
+                return line.split("=")[-1].strip().strip("'")
 ################################################################################################
 
 

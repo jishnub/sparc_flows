@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  full_f_p1_h30
+#PBS -N  full_f_p3
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full
@@ -35,9 +35,9 @@ do
     [[ -e $directory/kernel/misfit_"$src"_00 ]]  && \
     cat $directory/kernel/misfit_"$src"_00 >> $directory/update/misfit_$itername &&\
     rm $directory/kernel/misfit_"$src"_00
-    
+
     [[ -e $directory/kernel/misfit_all_"$src"_00 ]]  && \
-    cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername &&\    
+    cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername &&\
     rm $directory/kernel/misfit_all_"$src"_00
 done
 
@@ -46,6 +46,7 @@ find $directory/status -name "adjoint*" -delete
 find $directory/status -name "kernel*" -delete
 
 [[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
+[[ -e $directory/model_psi_ls00_coeffs.npz ]] && cp $directory/model_psi_ls00_coeffs.npz $directory/update/model_psi_"$itername"_coeffs.npz
 [[ -e $directory/model_c_ls00.fits ]] && cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
 [[ -e vx_00.fits ]] && cp vx_00.fits "$directory"/update/vx_"$itername".fits
 [[ -e vz_00.fits ]] && cp vz_00.fits "$directory"/update/vz_"$itername".fits

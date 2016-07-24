@@ -730,7 +730,7 @@ Subroutine solar_data
 
   implicit none
   integer k,q,i
-  real*8 data(nz,12),temp,sigmax,sigmaz
+  real*8 data(nz,6),temp,sigmax,sigmaz
 
   ! Data in the file is arranged as
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
@@ -758,19 +758,15 @@ Subroutine solar_data
 
   do k =1,nz
     z(k) = data(k,1)
-    c_speed(:,:,k) = data(k,2)/dimc  ! smoothed c
-!~     c_speed(:,:,k) = data(k,11)/dimc  !*0.01
-!~     c2(:,:,k) = (data(k,2)/dimc)**2.0 !c_speed(4,5,k)**2.0
-
+    c_speed(:,:,k) = data(k,2)/dimc
      rho0(:,:,k) = data(k,3)/dimrho
-   !  rho0(:,:,k) = data(k,7)/dimrho
     p0(:,:,k) = data(k,4)/(dimrho*dimc**2.0)
     g(k) = data(k,5)*diml/dimc**2.0
     gamma(k) = data(k,6)
     cq(k) =data(k,2)/dimc
-!~     cq(k) =data(k,11)/dimc
+
      rhoq(k) = data(k,3)/dimrho
-   !  rhoq(k) = data(k,7)/dimrho
+
   enddo
   c2 = c_speed**2.0 !smoothed c2
 

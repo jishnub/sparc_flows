@@ -1,6 +1,7 @@
 import os,shutil,glob,subprocess,datetime,time,read_params,sys,fnmatch
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
+env["LD_LIBRARY_PATH"]=env.get("LD_LIBRARY_PATH","")+":/home/apps/openmpi-1.6.5/lib"
 
 codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=os.environ["HOME"]
@@ -20,22 +21,16 @@ with open(os.path.join(datadir,'master.pixels'),'r') as mp:
 procno=int(os.environ["PBS_VNODENUM"])
 nodeno=int(os.environ["PBS_NODENUM"])
 
-if procno>=nmasterpixels: 
+if procno>=nmasterpixels:
     print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
     quit()
 
 src=str(procno+1).zfill(2)
 
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
-        
 def safemkdir(a):
     if not os.path.exists(a):
         try: os.makedirs(a)
-        except OSError:
+        except OSError as e:
             if e.errno == 17: pass
             else: print e
 
@@ -48,62 +43,67 @@ def compute_forward_adjoint_kernel(src):
     Spectral=os.path.join(codedir,"Spectral")
     Adjoint=os.path.join(codedir,"Adjoint")
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
-    
+
     modes={'0':'fmode'}
     for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
     modes['8']='first_bounce_pmode'
-    
+
     ridge_filters = read_params.get_modes_used()
-    
+
     for ridge_filter in ridge_filters:
         if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
-            safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
+            shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                     os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
-    
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
+
+    mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
+    # mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
-    
+
     ####################################################################
     #~ Forward
     ####################################################################
-    
-    safecopy(Spectral,Instruction)
+
+    shutil.copyfile(Spectral,Instruction)
 
     with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-    
-    assert fwd==0,"Error in running forward"
-    
-    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
-    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
 
-    safecopy(os.path.join(datadir,forward,"vz_cc.fits"),
-                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))                    
+    assert fwd==0,"Error in running forward"
+
+    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
+    # safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
+
+    shutil.copyfile(os.path.join(datadir,forward,"vz_cc.fits"),
+                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))
 
     for ridge_filter in ridge_filters:
-        safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
+        shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                         os.path.join(datadir,"tt","iter"+iterno2dig,
                         "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
-                        
-    
+
+
+    # julia = os.path.join(HOME,"lib/julia/bin/julia")
+    # adjsrc_julia_cmd = julia+" adjoint_source.jl"
+    # with open(os.path.join(datadir,adjoint,"out"+forward),'a') as outfile:
+    #     adj=subprocess.call(adjsrc_julia_cmd.split(),stdout=outfile,env=env,cwd=codedir)
+
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    safecopy(Adjoint,Instruction)
+    shutil.copyfile(Adjoint,Instruction)
 
     with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
         adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert adj==0,"Error in running adjoint"
-            
+
     ####################################################################
     #~ Kernel
     ####################################################################
 
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-
     assert kern==0,"Error in computing kernel"
 
 timestart=datetime.datetime.now()
