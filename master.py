@@ -3,7 +3,32 @@ import subprocess ,time, os, shutil,read_params,glob,fnmatch,sys
 import numpy as np
 import matplotlib.pyplot as plt
 from termcolor import colored
-import re
+import re, datetime
+
+################################################################################
+# Check if compiled since last modification
+################################################################################
+
+def modification_date(filename):
+    t = os.path.getmtime(filename)
+    return datetime.datetime.fromtimestamp(t)
+
+def check_if_built():
+    with open("makefile","r") as f: l=f.readlines()
+    exec_name = filter(lambda x:x.lower().startswith("command1"),l)[0].split("=")[-1].strip()
+    sparc_build_time = modification_date(exec_name)
+    for corefile in ["params.i",'driver.f90','integrals.f90','physics2d.f90','derivatives.f90',
+                 'physics.f90','initialize.f90','all_modules.f90','pml.f90','step.f90',
+                 'bspline90_22.f90','damping.f90','displacement.f90','traveltimes.f90',
+                 'kernels.f90']:
+        file_time = modification_date(corefile)
+        if file_time > sparc_build_time:
+            print("{} has been modified, please run make before running master.py".format(corefile))
+            sys.exit(1)
+
+check_if_built()
+
+################################################################################
 
 np.set_printoptions(precision=5)
 
@@ -186,7 +211,7 @@ for query in xrange(100000):
                 print(fmtstr.format("Linesearch",*print_status(all_lines)),end="\r")
 
         sys.stdout.flush()
-        time.sleep(60)
+        time.sleep(20)
         continue
     else: print()
 
