@@ -56,7 +56,7 @@ def compute_forward(linesearch_no,src):
     sparccmd=mpipath+" -np 1 ./sparc "+src+" "+linesearch_no
 
     t0=time.time()
-    with open(os.path.join(datadir,forward,"out_linesearch_"+linesearch_no),'w') as outfile:
+    with open(os.path.join(datadir,forward,"out_linesearch"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert fwd==0,"Error in running linesearch for lsno "+str(linesearch_no)

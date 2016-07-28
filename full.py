@@ -51,6 +51,10 @@ def compute_forward_adjoint_kernel(src):
     ridge_filters = read_params.get_modes_used()
 
     for ridge_filter in ridge_filters:
+        for freq_range in xrange(4):
+            if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range))):
+                shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range)),
+                        os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter+"."+str(freq_range)))
         if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
             shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
                     os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
@@ -65,7 +69,7 @@ def compute_forward_adjoint_kernel(src):
 
     shutil.copyfile(Spectral,Instruction)
 
-    with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
+    with open(os.path.join(datadir,forward,"out_forward"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert fwd==0,"Error in running forward"
@@ -77,9 +81,15 @@ def compute_forward_adjoint_kernel(src):
                     os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))
 
     for ridge_filter in ridge_filters:
-        shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                        os.path.join(datadir,"tt","iter"+iterno2dig,
-                        "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
+        for freq_range in xrange(4):
+            if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range))):
+                shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range)),
+                    os.path.join(datadir,"tt","iter"+iterno2dig,
+                    "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)+"."+str(freq_range)))
+        if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
+            shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
+                os.path.join(datadir,"tt","iter"+iterno2dig,
+                "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
 
 
     # julia = os.path.join(HOME,"lib/julia/bin/julia")
@@ -93,7 +103,7 @@ def compute_forward_adjoint_kernel(src):
 
     shutil.copyfile(Adjoint,Instruction)
 
-    with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
+    with open(os.path.join(datadir,adjoint,"out_adjoint"),'w') as outfile:
         adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert adj==0,"Error in running adjoint"
@@ -105,6 +115,20 @@ def compute_forward_adjoint_kernel(src):
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     assert kern==0,"Error in computing kernel"
+
+    ####################################################################
+    #~ Remove leftover files
+    ####################################################################
+    fullfiles=glob.glob(os.path.join(datadir,forward,"*full*"))
+    for f in fullfiles: os.remove(f)
+    fullfiles=glob.glob(os.path.join(datadir,adjoint,"*full*"))
+    for f in fullfiles: os.remove(f)
+
+    if os.path.exists(os.path.join(datadir,forward,"vz_cc.bin")):
+        os.remove(os.path.join(datadir,forward,"vz_cc.bin"))
+
+    if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
+        os.remove(os.path.join(datadir,forward,"vz_cc.fits"))
 
 timestart=datetime.datetime.now()
 print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')

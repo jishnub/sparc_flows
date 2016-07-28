@@ -187,12 +187,12 @@ SUBROUTINE PRODUCE_KERNELS
 
 
 
- sound_speed_kernels = .true.
+ sound_speed_kernels = .false.
  magnetic_kernels = .false.
  flow_kernels = .false.
  if (FLOWS) flow_kernels = .true.
  if (magnetic) magnetic_kernels = .true.
- density_kernels = .true.
+ density_kernels = .false.
 
 
 ! grav =0.

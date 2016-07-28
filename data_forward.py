@@ -26,11 +26,11 @@ if procno>=nmasterpixels:
 
 src=str(procno+1).zfill(2)
 
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
+# def safecopy(a,b):
+#     try: shutil.copyfile(a,b)
+#     except IOError as e:
+#         sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
+#         sys.stderr.flush()
 
 def compute_data(src):
 
@@ -40,29 +40,30 @@ def compute_data(src):
 
     shutil.copyfile(Spectral,Instruction)
 
-    mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
-    # mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
+    # mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
+    mpipath=os.path.join(HOME,"anaconda2/bin/mpiexec")
     sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
 
+    ############################################################################
+    # Main computation
     with open(os.path.join(datadir,forward,"out_data_forward"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
+    ############################################################################
 
     partialfiles=glob.glob(os.path.join(datadir,forward,"*partial*"))
     for f in partialfiles: os.remove(f)
 
     fullfiles=glob.glob(os.path.join(datadir,forward,"*full*"))
-    for f in fullfiles: os.remove(f)
-
-    if not os.path.exists(os.path.join(datadir,"tt","data")):
-        try: os.makedirs(os.path.join(datadir,"tt","data"))
-        except OSError as e:
-            if e.errno == 17: pass
-            else: print e
+    for f in fullfiles:
+        os.remove(f)
 
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
-        shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
-        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
-        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
+        shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),
+            os.path.join(datadir,"data",src+".fits"))
+
+    if os.path.exists(os.path.join(datadir,forward,"vz_cc.bin")):
+        os.remove(os.path.join(datadir,forward,"vz_cc.bin"))
 
     if os.path.exists(Instruction): os.remove(Instruction)
 

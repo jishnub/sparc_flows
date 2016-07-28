@@ -518,7 +518,7 @@ SUBROUTINE FIRST_BOUNCE_FILTER(nt,dt,nx,Lx,srcloc,fb)
     real*8, intent(in) :: Lx,dt,srcloc
     real*8, intent(out) :: fb(nx, 1, nt)
     real*8 dist,xcoord
-    integer i,j,timest,timefin
+    integer i,timest,timefin
 
     ! dt in seconds, in driver dt is in minutes
 
