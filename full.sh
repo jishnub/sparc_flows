@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N  full_f_p3
+#PBS -N  full_p1_512
 #PBS -l nodes=1:ppn=24
 #PBS -o  output-full
 #PBS -e  error-full
