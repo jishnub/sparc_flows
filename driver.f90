@@ -2074,23 +2074,30 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     tempdat = filtdat
 
     vel = 0
-    vel(0) = 0.5D0
-    vel(1) = 0.75D0
-    vel(2) = 0.95D0
-    vel(3) = 1.15D0
-    vel(4) = 1.2D0
-    vel(5) = 1.4D0
-    vel(6) = 1.7D0
-    vel(7) = 1.9D0
 
-    ridge_freq_ranges(0,:) = (/2.D0,3.D0/)
-    ridge_freq_ranges(1,:) = (/2.7D0,4.2D0/)
-    ridge_freq_ranges(2,:) = (/3.1D0,5.2D0/)
-    ridge_freq_ranges(3,:) = (/3.4D0,5.8D0/)
-    ridge_freq_ranges(4,:) = (/3D0,6D0/)
-    ridge_freq_ranges(5,:) = (/3.5D0,6D0/)
-    ridge_freq_ranges(6,:) = (/3.5D0,6D0/)
-    ridge_freq_ranges(7,:) = (/3.5D0,6D0/)
+    open(12366,file="wavespeeds",action="read")
+    do i=0,7
+        read(12366,*) vel(i),ridge_freq_ranges(i,:)
+    enddo
+    close(12366)
+
+    ! vel(0) = 0.5D0
+    ! vel(1) = 0.75D0
+    ! vel(2) = 0.95D0
+    ! vel(3) = 1.15D0
+    ! vel(4) = 1.2D0
+    ! vel(5) = 1.4D0
+    ! vel(6) = 1.7D0
+    ! vel(7) = 1.9D0
+
+    ! ridge_freq_ranges(0,:) = (/2.D0,3.D0/)
+    ! ridge_freq_ranges(1,:) = (/2.7D0,4.2D0/)
+    ! ridge_freq_ranges(2,:) = (/3.1D0,5.2D0/)
+    ! ridge_freq_ranges(3,:) = (/3.4D0,5.8D0/)
+    ! ridge_freq_ranges(4,:) = (/3D0,6D0/)
+    ! ridge_freq_ranges(5,:) = (/3.5D0,6D0/)
+    ! ridge_freq_ranges(6,:) = (/3.5D0,6D0/)
+    ! ridge_freq_ranges(7,:) = (/3.5D0,6D0/)
 
     !RIDGE FILTERS
     do pord=0,7

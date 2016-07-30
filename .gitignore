@@ -21,3 +21,4 @@ linesearch
 compute_data
 fort.*
 .*
+*_jobscript.sh

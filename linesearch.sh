@@ -1,4 +1,4 @@
-#PBS -N  ls_f_p3
+#PBS -N  ls_jobid
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch
@@ -12,8 +12,8 @@ export TERM=xterm
 
 directory=`python -c 'import read_params; print read_params.get_directory()'`
 
-find $directory -name "compute_data" -exec rm -f {} \; 
-find $directory -name "compute_synth" -exec rm -f {} \; 
+find $directory -name "compute_data" -exec rm -f {} \;
+find $directory -name "compute_synth" -exec rm -f {} \;
 
 iter=`find $directory/update -maxdepth 1 -name 'linesearch_[0-9][0-9]'|wc -l`
 itername=`printf "%02d" $iter`
@@ -52,12 +52,12 @@ do
         [[ -e $directory/kernel/misfit_"$src"_"$lin" ]]  && \
         cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername &&\
         rm $directory/kernel/misfit_"$src"_"$lin"
-        
+
         [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
         cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername &&\
         rm $directory/kernel/misfit_all_"$src"_"$lin"
-                
-        find $directory/forward_src"$src"_ls00 -name "*full*" -delete 
+
+        find $directory/forward_src"$src"_ls00 -name "*full*" -delete
         find $directory/forward_src"$src"_ls00 -name "*partial*" -delete
         find $directory/adjoint_src"$src" -name "*full*" -delete
         find $directory/adjoint_src"$src" -name "*partial*" -delete
@@ -69,12 +69,12 @@ do
 done
 
 
-#~ find $directory/update -name "tested*" -exec rm -f {} \; 
-#~ find $directory -name "update.fits" -exec rm -f {} \; 
-find . -name "linesearch" -delete 
+#~ find $directory/update -name "tested*" -exec rm -f {} \;
+#~ find $directory -name "update.fits" -exec rm -f {} \;
+find . -name "linesearch" -delete
 find $directory/status -name "forward*" -delete
 
-find . -name "core.*" -delete 
+find . -name "core.*" -delete
 find . -name "fort.*" -delete
 
 echo "Finished at "`date`

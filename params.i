@@ -37,7 +37,7 @@ character (LEN = *), PARAMETER :: file_data = 'solar_deep'
 logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
-character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/spline_f_p3/'
+character (LEN = *), PARAMETER :: directory = '/scratch/jishnu/flows/spline_f_test/'
 
 ! Name of true flow model file
 character (LEN = *), PARAMETER :: true_psi_filename = 'true_psi.fits'

@@ -41,9 +41,9 @@ elif read_params.if_soundspeed_perturbed():
 
 num_linesearches = 6
 
-data_command = "qsub data_forward.sh"
-full_command = "qsub full.sh"
-ls_command = "qsub linesearch.sh"
+data_command = "qsub data_forward_jobscript.sh"
+full_command = "qsub full_jobscript.sh"
+ls_command = "qsub linesearch_jobscript.sh"
 def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
@@ -67,7 +67,8 @@ def update_id_in_file(filename):
                 line=line.replace(current_id,id_text)
                 code[lineno]=line
 
-    with open(filename,'w') as f:
+    filename_temp,ext = os.path.splitext(filename)
+    with open(filename_temp+"_jobscript"+ext,'w') as f:
         f.writelines(code)
 
 update_id_in_file('data_forward.sh')
