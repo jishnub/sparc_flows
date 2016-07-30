@@ -36,9 +36,19 @@ do
     cat $directory/kernel/misfit_"$src"_00 >> $directory/update/misfit_$itername &&\
     rm $directory/kernel/misfit_"$src"_00
 
-    [[ -e $directory/kernel/misfit_all_"$src"_00 ]]  && \
-    cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername &&\
-    rm $directory/kernel/misfit_all_"$src"_00
+    # [[ -e $directory/kernel/misfit_all_"$src"_00 ]]  && \
+    # cat $directory/kernel/misfit_all_"$src"_00 >> $directory/update/misfit_all_$itername &&\
+    # rm $directory/kernel/misfit_all_"$src"_00
+    for ridge in {0..8}
+    do
+     for frq_int in {0..3}
+     do
+      mkdir -p $directory/tt/iter"$itername"
+      [[ -e $directory/forward_src"$src"_ls00/ttdiff.all."$ridge"."$frq_int" ]]  && \
+      mv $directory/forward_src"$src"_ls00/ttdiff.all."$ridge"."$frq_int" \
+      $directory/tt/iter"$itername"/ttdiff.all.src"$src".mode"$ridge".frqint"$frq_int"
+     done
+    done
 done
 
 find $directory/status -name "forward*" -delete

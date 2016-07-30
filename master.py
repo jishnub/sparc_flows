@@ -62,8 +62,8 @@ def update_id_in_file(filename):
         if "PBS" in line and "-N" in line:
             current_id = '_'.join(line.split()[-1].split('_')[1:])
             if current_id!=id_text:
-                print("Current identifier in ",filename,"is",current_id)
-                print("Changing to ",id_text)
+                # print("Current identifier in ",filename,"is",current_id)
+                # print("Changing to ",id_text)
                 line=line.replace(current_id,id_text)
                 code[lineno]=line
 
@@ -346,7 +346,7 @@ for query in xrange(100000):
             exit()
         #~ check linesearch misfits
         ls_latest = os.path.join(datadir,"update",ls_files[-1])
-        ls_all_latest = os.path.join(datadir,"update",ls_all_files[-1])
+        # ls_all_latest = os.path.join(datadir,"update",ls_all_files[-1])
 
         try:
             lsdata = np.loadtxt(ls_latest)
@@ -405,7 +405,7 @@ for query in xrange(100000):
             ls_latest_renamed=ls_latest+".rnm"
             os.rename(ls_latest,ls_latest_renamed)
 
-            ls_all_latest_renamed= ls_all_latest+".rnm"
-            os.rename(ls_all_latest,ls_all_latest_renamed)
+            # ls_all_latest_renamed= ls_all_latest+".rnm"
+            # os.rename(ls_all_latest,ls_all_latest_renamed)
 
         continue

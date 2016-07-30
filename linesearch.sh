@@ -53,9 +53,9 @@ do
         cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername &&\
         rm $directory/kernel/misfit_"$src"_"$lin"
 
-        [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
-        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername &&\
-        rm $directory/kernel/misfit_all_"$src"_"$lin"
+        # [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
+        # cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername &&\
+        # rm $directory/kernel/misfit_all_"$src"_"$lin"
 
         find $directory/forward_src"$src"_ls00 -name "*full*" -delete
         find $directory/forward_src"$src"_ls00 -name "*partial*" -delete
