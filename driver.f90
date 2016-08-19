@@ -668,8 +668,8 @@ SUBROUTINE DETERMINE_STATUS(init, nsteps_given)
 
     dx = (x(2) - x(1)) * xlength*10.**(-8)
     xdist = (x-0.5)*xlength*10.**(-8) - xloc
-    sincx = sin(0.1*pi*xdist)/(0.1*pi*xdist)
-    ! sincx = sin(0.43*pi*xdist)/(0.43*pi*xdist)
+    !sincx = sin(0.1*pi*xdist)/(0.1*pi*xdist)
+    sincx = sin(0.43*pi*xdist)/(0.43*pi*xdist)
     sincx(minloc(abs(xdist))) = 1.0
     do j=1,dim2(rank)
       vr(:,j,1) = exp(-xdist**2./(400.*dx**2.))*sincx
