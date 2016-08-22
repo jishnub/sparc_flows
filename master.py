@@ -1,6 +1,6 @@
 from __future__ import division,print_function
 import subprocess ,time, os, shutil,read_params,glob,fnmatch,sys
-import numpy as np
+import numpy as np,pyfits
 import matplotlib.pyplot as plt
 from termcolor import colored
 import re, datetime
@@ -30,6 +30,22 @@ check_if_built()
 
 ################################################################################
 
+Rsun=695.9895 # Mm
+z,c,rho = np.loadtxt(read_params.get_solarmodel(),usecols=[0,1,2],unpack=True); z=(z-1)*Rsun
+c/=100 # m/s
+
+#~ Get shape
+nx = read_params.get_nx()
+ny = 1
+nz = read_params.get_nz()
+
+Lx = read_params.get_xlength()
+dx = Lx/nx
+
+x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+
+################################################################################
+
 np.set_printoptions(precision=5)
 
 datadir=read_params.get_directory()
@@ -41,9 +57,6 @@ elif read_params.if_soundspeed_perturbed():
 
 num_linesearches = 6
 
-data_command = "qsub data_forward_jobscript.sh"
-full_command = "qsub full_jobscript.sh"
-ls_command = "qsub linesearch_jobscript.sh"
 def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
@@ -54,26 +67,10 @@ if len(sys.argv[1:])!=1:
     exit()
 id_text = sys.argv[1]
 
-def update_id_in_file(filename):
-    with open(filename,'r') as f:
-        code=f.readlines()
+data_command = "qsub -N data_{} data_forward.sh".format(id_text)
+full_command = "qsub -N full_{} full.sh".format(id_text)
+ls_command = "qsub -N ls_{} linesearch.sh".format(id_text)
 
-    for lineno,line in enumerate(code):
-        if "PBS" in line and "-N" in line:
-            current_id = '_'.join(line.split()[-1].split('_')[1:])
-            if current_id!=id_text:
-                # print("Current identifier in ",filename,"is",current_id)
-                # print("Changing to ",id_text)
-                line=line.replace(current_id,id_text)
-                code[lineno]=line
-
-    filename_temp,ext = os.path.splitext(filename)
-    with open(filename_temp+"_jobscript"+ext,'w') as f:
-        f.writelines(code)
-
-update_id_in_file('data_forward.sh')
-update_id_in_file('full.sh')
-update_id_in_file('linesearch.sh')
 
 def copy_updated_model(num,var="psi"):
     updated_model=os.path.join(datadir,'update','test_'+var+'_'+str(num)+'.fits')
@@ -100,10 +97,14 @@ if os.path.exists('running_full'):
 running_ls = False
 running_full = False
 
+eps_fig = plt.figure()
+model_fig = plt.figure()
+
 def get_eps_around_minimum(prev1_eps,prev1_misfits):
 
     #~ Previous iteration, save the plot
-    plt.plot(prev1_eps,prev1_misfits,'bo',zorder=1)
+    eps_fig.clf()
+    eps_fig.gca().plot(prev1_eps,prev1_misfits,'bo',zorder=1)
     plt.xlabel("Step size",fontsize=20)
     plt.ylabel(r"misfit",fontsize=20)
     plt.savefig('step_size_selection.eps')
@@ -136,7 +137,7 @@ def get_eps_around_minimum(prev1_eps,prev1_misfits):
     plt.plot(epsfine,misfitfine,'g-',zorder=0)
 
     plt.savefig('step_size_selection.eps')
-    plt.clf()
+    eps_fig.clf()
 
     return eps
 
@@ -150,7 +151,32 @@ def get_iter_status():
 
 epslist_path=os.path.join(datadir,'epslist.npz')
 
-
+def plot_true_and_model_psi():
+    print("Plotting psi")
+    model_fig.clf()
+    model_fig.add_subplot(121)
+    true_psi = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
+    plt.pcolormesh(x,z,true_psi,cmap="RdBu_r")
+    plt.xlim(-70,70)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+    plt.title("True",fontsize=14)
+    plt.colorbar()
+    model_fig.add_subplot(122)
+    with np.load(os.path.join(datadir,"model_psi_ls00_coeffs.npz")) as f:
+        back=f["back"].item()
+    model_psi = np.squeeze(pyfits.getdata(os.path.join(datadir,"model_psi_ls00.fits")))
+    plt.pcolormesh(x,z,model_psi-back,cmap="RdBu_r")
+    plt.xlim(-70,70)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+    plt.title("Iter",fontsize=14)
+    plt.colorbar()
+    model_fig.set_size_inches(8,4)
+    plt.tight_layout()
+    plt.savefig(os.path.join(datadir,"model_psi_ls00.png"))
 
 def print_status(all_lines):
     timesteps_regex = re.compile(r"NUMBER OF TIMESTEPS =\s+\d+")
@@ -230,6 +256,7 @@ for query in xrange(100000):
 
     if iterno==-1:
         #~ Start of iterations
+        plot_true_and_model_psi()
         print("#"*80)
         print(colored("Starting with iterations, running full for the first time","blue"))
         status=subprocess.call(full_command.split())
@@ -242,11 +269,33 @@ for query in xrange(100000):
         #~ Kernel computation should be over for this iteration
         #~ We should proceed to computing update and running linesearch
 
+        plot_true_and_model_psi()
+
         running_full = False
         if running_ls:
             print(colored("It seems the linesearch file wasn't generated. Check if previous linesearch finished correctly","red"))
             exit()
-        print("Misfit from previous iteration",np.sum(np.loadtxt(os.path.join(datadir,"update",misfit_files[-1]),usecols=[2])))
+        misfit_from_prev_iter = np.sum(np.loadtxt(os.path.join(datadir,"update",
+                                misfit_files[-1]),usecols=[2]))
+        print("Misfit from previous iteration",misfit_from_prev_iter)
+
+        # Check if misfit has changed substantially
+        misfit_from_two_iters_back = 0
+        if len(misfit_files)>1:
+            misfit_from_two_iters_back = np.sum(np.loadtxt(os.path.join(
+                                            datadir,"update",misfit_files[-2]),
+                                            usecols=[2]))
+        change_in_misfit = misfit_from_prev_iter - misfit_from_two_iters_back
+        if len(misfit_files)>1 and change_in_misfit>0:
+            print("travel-time misfit increasing, stopping")
+            break
+        if abs(change_in_misfit)/misfit_from_prev_iter<1e-3:
+            print("Misfit from 2 iters back {}".format(misfit_from_two_iters_back))
+            print("Misfit this iter {}".format(misfit_from_prev_iter))
+            print("Relative change in misfit {}".format(abs(change_in_misfit)/misfit_from_prev_iter))
+            print("Change in travel-time misfit in very small, stopping")
+            break
+
 
         #~ Need to run linesearch for this iteration
         #~ check if eps for iteration exists
@@ -296,7 +345,6 @@ for query in xrange(100000):
                         else:
                             print("using arbitary step sizes")
                             eps=[1e-2*i for i in xrange(1,num_linesearches+1)]
-
             else:
                 print("Linesearch for this iteration not done yet, choosing step size from iteration",)
                 #~ Iteration not yet done
@@ -305,7 +353,6 @@ for query in xrange(100000):
                 closest_iter = str(prev_iternos[abs(prev_iternos-iterno).argmin()])
                 print(closest_iter)
                 eps=epslist[closest_iter][0]
-
 
         except IOError:
             #~ If the file doesn't exist, no linesearches have been carried out
@@ -339,6 +386,8 @@ for query in xrange(100000):
         #~ Linesearch should be over, and we can do two things -
         #~ (a) run linesearch again with different step size if misfit minimum is not found
         #~ (b) run full if misfit minimum is found
+
+        plot_true_and_model_psi()
 
         running_ls = False
         if running_full:

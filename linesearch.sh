@@ -1,4 +1,3 @@
-#PBS -N  ls_jobid
 #PBS -l nodes=3:ppn=24
 #PBS -o  output-linesearch
 #PBS -e  error-linesearch

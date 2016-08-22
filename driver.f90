@@ -2111,6 +2111,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         read(97,*) mindist
         read(97,*) maxdist
         read(97,*) window
+        read(97,*) freq_intervals
         close(97)
 
         halftime = nint(window/(2.*dt))
@@ -2163,7 +2164,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             endif
         end if
 
-        freq_intervals = 4
         do freq_ind=0,(freq_intervals-1)
 
          call convert_to_string(freq_ind, ffind, 1)

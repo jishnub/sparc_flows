@@ -177,38 +177,51 @@ def main():
     ############################################################################
 
     def coeff_to_model(coeffs):
-        model = interpolate.bisplev(xspline,zspline,(tx_ref,tz_ref,coeffs,kx_ref,kz_ref))
-        model_fullsize = np.zeros_like(psi_true)
-        model_fullsize.put(spline_ind_1D,model.T.flatten())
+        # 2D spline
+        # model = interpolate.bisplev(xspline,zspline,(tx_ref,tz_ref,coeffs,kx_ref,kz_ref))
+        # model_fullsize = np.zeros_like(psi_true)
+        # model_fullsize.put(spline_ind_1D,model.T.flatten())
+        # 1D spline
+        model = interpolate.splev(zspline,(tz_ref,coeffs,kz_ref))
+        kDH13 = 2*np.pi/30
+        RDH13 = 15
+        from scipy.special import j1
+
+        psi_xpart = np.sign(x[None,:])*j1(kDH13*abs(x[None,:]))*np.exp(-abs(x[None,:])/RDH13)
+        psi_xpart /= psi_xpart.max()
+        psi_z=np.zeros(z.size)
+        psi_z[zspline_index_int] = model
+        model_fullsize = psi_xpart*psi_z[:,None]
         return model_fullsize
 
     with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
 
-        x_cutoff = f["x_cutoff"]; z_cutoff = f["z_cutoff"] # Mm
-        xspline_index = abs(x)<x_cutoff
-        xspline_index_int = np.where(xspline_index)[0]
-        xspline = x[xspline_index]
-        zspline_index = z>z_cutoff
-        zspline_index_int = np.where(zspline_index)[0]
-        zspline = z[zspline_index]
+        # x_cutoff = f["x_cutoff"]
+        z_cutoff = f["z_cutoff"] # Mm
+        # xspline_index = abs(x)<x_cutoff
+        # xspline_index_int = np.where(xspline_index)[0]
+        # xspline = x[xspline_index]
+        zspline_index_int = np.where(z>z_cutoff)[0]
+        zspline = z[zspline_index_int]
 
-        xspline_index_mgrid = np.array([xspline_index_int for _ in zspline_index_int])
-        zspline_index_mgrid = np.array([[zj]*len(xspline_index_int) for zj in zspline_index_int])
-        spline_ind_1D = np.ravel_multi_index([zspline_index_mgrid.flatten(),
-                                    xspline_index_mgrid.flatten()],(nz,nx))
+        # xspline_index_mgrid = np.array([xspline_index_int for _ in zspline_index_int])
+        # zspline_index_mgrid = np.array([[zj]*len(xspline_index_int) for zj in zspline_index_int])
+        # spline_ind_1D = np.ravel_multi_index([zspline_index_mgrid.flatten(),
+        #                             xspline_index_mgrid.flatten()],(nz,nx))
 
-        xspline_coord_mgrid = np.array([xspline for _ in zspline_index_int])
-        zspline_coord_mgrid = np.array([[zj]*len(xspline) for zj in zspline])
+        # xspline_coord_mgrid = np.array([xspline for _ in zspline_index_int])
+        # zspline_coord_mgrid = np.array([[zj]*len(xspline) for zj in zspline])
 
         coeff_surf_cutoff_ind = f["coeff_surf_cutoff_ind"]
 
-        tx_ref = f["tx"]
+        # tx_ref = f["tx"]
         tz_ref = f["tz"]
         c_ref_above_surface = f["c_upper"]
         c_ref_below_surface = f["c_lower"]
-        kx_ref = f["kx"]
+        # kx_ref = f["kx"]
         kz_ref = f["kz"]
-        spl_c_shape_xz_2D = (len(tx_ref)-kx_ref-1,len(tz_ref)-kz_ref-1)
+        spl_c_shape = len(tz_ref)-kz_ref-1
+        # spl_c_shape_xz_2D = (len(tx_ref)-kx_ref-1,len(tz_ref)-kz_ref-1)
 
     ############################################################################
     # Gradient computation
@@ -252,44 +265,77 @@ def main():
     # fig=plt.figure()
     # plotdir = os.path.join(datadir,"update","plots_grad_iter"+str(iterno).zfill(2))
     # if not os.path.exists(plotdir): os.makedirs(plotdir)
-    for j,_ in enumerate(c_ref_below_surface):
-        _,zind = np.unravel_index(j,spl_c_shape_xz_2D)
-        if zind>=coeff_surf_cutoff_ind: continue
-        c_only_j = np.zeros_like(c_ref_below_surface)
-        c_only_j[j] = 1
-        bspline_j = coeff_to_model(c_only_j)
-        # plt.subplot(131)
-        # plt.pcolormesh(x,z,grad,cmap="RdBu")
-        # plt.xlim(-50,50)
-        # plt.ylim(-8,z[-1])
-        # plt.subplot(132)
-        # vmax = abs(bspline_j).max()
-        # plt.pcolormesh(x,z,bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
-        # plt.title("B-spline {:d}".format(j))
-        # plt.xlim(-50,50)
-        # plt.ylim(-8,z[-1])
-        grad_spline[j] = integrate_2D(grad*bspline_j)
-        # plt.subplot(133)
-        # vmax = abs(grad*bspline_j).max()
-        # plt.pcolormesh(x,z,grad*bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
-        # plt.xlim(-50,50)
-        # plt.ylim(-8,z[-1])
-        # plt.title("{:.1E}".format(grad_spline[j]))
-        # fig.set_size_inches(11,4)
-        # plt.tight_layout()
+    # for j,_ in enumerate(c_ref_below_surface):
+    #     _,zind = np.unravel_index(j,spl_c_shape_xz_2D)
+    #     if zind>=coeff_surf_cutoff_ind: continue
+    #     c_only_j = np.zeros_like(c_ref_below_surface)
+    #     c_only_j[j] = 1
+    #     bspline_j = coeff_to_model(c_only_j)
+    #     # plt.subplot(131)
+    #     # plt.pcolormesh(x,z,grad,cmap="RdBu")
+    #     # plt.xlim(-50,50)
+    #     # plt.ylim(-8,z[-1])
+    #     # plt.subplot(132)
+    #     # vmax = abs(bspline_j).max()
+    #     # plt.pcolormesh(x,z,bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
+    #     # plt.title("B-spline {:d}".format(j))
+    #     # plt.xlim(-50,50)
+    #     # plt.ylim(-8,z[-1])
+    #     grad_spline[j] = integrate_2D(grad*bspline_j)
+    #     # plt.subplot(133)
+    #     # vmax = abs(grad*bspline_j).max()
+    #     # plt.pcolormesh(x,z,grad*bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
+    #     # plt.xlim(-50,50)
+    #     # plt.ylim(-8,z[-1])
+    #     # plt.title("{:.1E}".format(grad_spline[j]))
+    #     # fig.set_size_inches(11,4)
+    #     # plt.tight_layout()
+    #
+    #     # plt.savefig(os.path.join(plotdir,str(j).zfill(4)+".png"))
+    #     # plt.clf()
 
-        # plt.savefig(os.path.join(plotdir,str(j).zfill(4)+".png"))
-        # plt.clf()
+    f=plt.figure()
+    plt.subplot(121)
+    plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
+    plt.title("True psi",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
 
+    plt.subplot(122)
+    plt.pcolormesh(x,z,grad/abs(grad).max(),cmap="RdBu_r",vmax=1,vmin=-1)
+    plt.title("Gradient",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
 
-    plt.figure()
-    for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-        plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
-        facecolor="honeydew",edgecolor="lightsage")
-        plt.axvline(i,ls="dotted",color="black")
-    plt.plot(grad_spline,'o-',markersize=3)
-    plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
+    f.set_size_inches(8,3.5)
+    plt.tight_layout()
     plt.savefig(os.path.join(datadir,"update","grad_"+str(iterno).zfill(2)+".png"))
+
+    for zind,_ in enumerate(c_ref_below_surface):
+        if zind>=coeff_surf_cutoff_ind: continue
+        c_only_zind = np.zeros_like(c_ref_below_surface)
+        c_only_zind[zind] = 1
+        bspline_zind = coeff_to_model(c_only_zind)
+        grad_spline[zind] = integrate_2D(grad*bspline_zind)
+
+
+    # plt.figure()
+
+    # plt.axvspan(coeff_surf_cutoff_ind,len(tz_ref)-kz_ref-1,
+    # facecolor="honeydew",edgecolor="lightsage")
+    # plt.axvline(coeff_surf_cutoff_ind,ls="dotted",color="black")
+    # for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
+    #     plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
+    #     facecolor="honeydew",edgecolor="lightsage")
+    #     plt.axvline(i,ls="dotted",color="black")
+    # plt.plot(grad_spline,'o-',markersize=3)
+    # plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
+    # plt.xlim(0,(len(tz_ref)-kz_ref-1))
+    # plt.savefig(os.path.join(datadir,"update","grad_coeffs_"+str(iterno).zfill(2)+".png"))
 
     #~ Write out gradients for this iteration
     with warnings.catch_warnings():
@@ -440,6 +486,47 @@ def main():
 
     ############################################################################
 
+    f=plt.figure()
+    plt.subplot(131)
+    plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
+    plt.title("True psi",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+
+    plt.subplot(132)
+    model = read_model(var="psi",iterno=iterno)
+    model_back = model["back"]
+    c_model_below_surface = model["c_lower"]
+    model_below_surface = coeff_to_model(c_model_below_surface)
+    model_above_surface = coeff_to_model(c_ref_above_surface)
+    model = model_below_surface + model_above_surface
+    vmax=abs(model).max()
+    plt.pcolormesh(x,z,model,cmap="RdBu_r",vmax=vmax,vmin=-vmax)
+    plt.title("Model",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+
+    plt.subplot(133)
+    update = np.squeeze(read_update(var="psi",iterno=iterno))
+    update = coeff_to_model(update)
+    vmax=abs(update).max()
+    plt.pcolormesh(x,z,update,cmap="RdBu_r",vmax=vmax,vmin=-vmax)
+    plt.title("Update",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+
+    f.set_size_inches(12,3.5)
+    plt.tight_layout()
+    plt.savefig(os.path.join(datadir,"update","update_"+str(iterno).zfill(2)+".png"))
+
+    ############################################################################
+
     large_x_cutoff = 40
     deep_z_cutoff = -5
 
@@ -448,50 +535,75 @@ def main():
         model_back = model["back"]
         c_model_below_surface = model["c_lower"]
         if i==0:
-            fig=plt.figure()
-            plt.plot(c_ref_above_surface+c_ref_below_surface,'o-',markersize=3)
-            plt.plot(c_ref_above_surface+c_model_below_surface,'o-',markersize=3)
-            for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-                plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
-                facecolor="honeydew",edgecolor="lightsage")
-                plt.axvline(i,ls="dotted",color="black")
-            plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
+            grad_spline = read_grad(var=var,iterno=iterno)
+            model_grad_coeffs_fig=plt.figure()
+            ax1 = model_grad_coeffs_fig.gca()
+            ax1.plot(c_ref_above_surface+c_ref_below_surface,'o-',markersize=4,
+            label="True model")
+            ax1.plot(c_ref_above_surface+c_model_below_surface,'o-',markersize=4,
+            color="brown",label="Iterated model")
+            # Add edge colors based on gradient
+            edgecolors = np.array(["None","Red","Blue"])
+            ax1.scatter(range(c_ref_above_surface.size),c_ref_above_surface+c_model_below_surface,
+            marker='o',s=75,c="None",
+            edgecolors=edgecolors[np.sign(grad_spline).astype(int)],zorder=2)
+            # Read grad and plot in twin axis
+
+            ax2 = ax1.twinx()
+            ax2.bar(np.arange(grad_spline.size)-0.3,grad_spline,width=0.6,bottom=0,
+            color="goldenrod",label="Gradient",edgecolor="peru",alpha=0.5)
+            # ax2.plot(grad_spline,'o--',markersize=3,color="Chocolate",label="Gradient")
+
+            # for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
+            #     plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
+            #     facecolor="honeydew",edgecolor="lightsage")
+            #     plt.axvline(i,ls="dotted",color="black")
+            ax1.axvspan(coeff_surf_cutoff_ind,len(tz_ref)-kz_ref-1,
+            facecolor="honeydew",edgecolor="lightsage",zorder=1,label="Clamped coeffs")
+            ax1.axvline(coeff_surf_cutoff_ind,ls="dotted",color="black")
+            plt.xlim(0,len(tz_ref)-kz_ref-1)
+            plt.title("Spline coefficients",fontsize=16)
+
+            handles1,labels1 = ax1.get_legend_handles_labels()
+            handles2,labels2 = ax2.get_legend_handles_labels()
+            plt.legend(handles1+handles2,labels1+labels2,loc="best")
+            # plt.legend(handles1,labels1,loc="best")
+            # plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
             plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
 
-            plt.clf()
-            plt.subplot(131)
-            vmax = abs(c_ref_above_surface+c_ref_below_surface).max()
-            plt.pcolormesh((c_ref_above_surface+c_ref_below_surface).reshape(spl_c_shape_xz_2D).T,
-            cmap="RdBu",vmax=vmax,vmin=-vmax)
-            plt.xlim(0,spl_c_shape_xz_2D[0])
-            plt.ylim(0,spl_c_shape_xz_2D[1])
-            plt.axhline(10,ls="dotted",color="black")
-            plt.title("True")
-
-            plt.subplot(132)
-
-            plt.pcolormesh((c_ref_above_surface+c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
-            cmap="RdBu",vmax=vmax,vmin=-vmax)
-            plt.axhline(10,ls="dotted",color="black")
-            plt.xlim(0,spl_c_shape_xz_2D[0])
-            plt.ylim(0,spl_c_shape_xz_2D[1])
-            plt.title("Iterated")
-
-            plt.subplot(133)
-
-            plt.pcolormesh(
-            (c_ref_below_surface-c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
-            cmap="RdBu")
-
-            plt.axhline(10,ls="dotted",color="black")
-            plt.xlim(0,spl_c_shape_xz_2D[0])
-            plt.ylim(0,spl_c_shape_xz_2D[1])
-            plt.title("Difference")
-
-            fig.set_size_inches(11,4)
-            plt.tight_layout()
-            plt.savefig(os.path.join(datadir,"update","coeffs_2D_"+str(iterno).zfill(2)+".png"))
-
+            # plt.clf()
+            # plt.subplot(131)
+            # vmax = abs(c_ref_above_surface+c_ref_below_surface).max()
+            # plt.pcolormesh((c_ref_above_surface+c_ref_below_surface).reshape(spl_c_shape_xz_2D).T,
+            # cmap="RdBu",vmax=vmax,vmin=-vmax)
+            # plt.xlim(0,spl_c_shape_xz_2D[0])
+            # plt.ylim(0,spl_c_shape_xz_2D[1])
+            # plt.axhline(10,ls="dotted",color="black")
+            # plt.title("True")
+            #
+            # plt.subplot(132)
+            #
+            # plt.pcolormesh((c_ref_above_surface+c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
+            # cmap="RdBu",vmax=vmax,vmin=-vmax)
+            # plt.axhline(10,ls="dotted",color="black")
+            # plt.xlim(0,spl_c_shape_xz_2D[0])
+            # plt.ylim(0,spl_c_shape_xz_2D[1])
+            # plt.title("Iterated")
+            #
+            # plt.subplot(133)
+            #
+            # plt.pcolormesh(
+            # (c_ref_below_surface-c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
+            # cmap="RdBu")
+            #
+            # plt.axhline(10,ls="dotted",color="black")
+            # plt.xlim(0,spl_c_shape_xz_2D[0])
+            # plt.ylim(0,spl_c_shape_xz_2D[1])
+            # plt.title("Difference")
+            #
+            # fig.set_size_inches(11,4)
+            # plt.tight_layout()
+            # plt.savefig(os.path.join(datadir,"update","coeffs_2D_"+str(iterno).zfill(2)+".png"))
 
         update = read_update(var=var,iterno=iterno)
 
@@ -508,9 +620,10 @@ def main():
 
 
         model_below_surface = coeff_to_model(c_model_below_surface)
-        cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/3))
-        cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
-        model_below_surface *= cutoff_x[None,:]*cutoff_z[:,None]
+        # cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/3))
+        # cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
+        # model_below_surface *= cutoff_z[:,None]
+        # model_below_surface *= cutoff_x[None,:]*cutoff_z[:,None]
         model_above_surface = coeff_to_model(c_ref_above_surface)
         model = model_below_surface + model_above_surface + model_back
         model = model[:,np.newaxis,:]
@@ -533,12 +646,12 @@ def main():
         plt.pcolormesh(x,z,arr_to_plot,cmap="RdBu_r",
         vmax=abs(arr_to_plot).max(),vmin=-abs(arr_to_plot).max())
         plt.colorbar()
-        plt.axvline(-x_cutoff,color="black",ls="dotted")
-        plt.axvline(x_cutoff,color="black",ls="dotted")
-        plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
-        plt.axvline(large_x_cutoff,color="brown",ls="dotted")
+        # plt.axvline(-x_cutoff,color="black",ls="dotted")
+        # plt.axvline(x_cutoff,color="black",ls="dotted")
+        # plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
+        # plt.axvline(large_x_cutoff,color="brown",ls="dotted")
         plt.axhline(z_cutoff,color="black",ls="dotted")
-        plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
+        # plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
         plt.xlim(-70,70)
         plt.ylim(-7,z[-1])
 
