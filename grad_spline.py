@@ -237,10 +237,18 @@ def main():
             return dict(f.items())
 
     def read_grad(var='psi',iterno=iterno):
-        return pyfits.getdata(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        # return pyfits.getdata(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            grad_spline=f["grad_spline"]
+        return grad_spline
 
     def read_update(var='psi',iterno=iterno):
-        return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            update_spline=f["update_spline"]
+        return update_spline
 
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
@@ -340,7 +348,8 @@ def main():
     #~ Write out gradients for this iteration
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        pyfits.writeto(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),grad_spline,clobber=True)
+        # pyfits.writeto(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),grad_spline,clobber=True)
+        np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),grad_spline=grad_spline)
 
     ############################################################################
     # Optimization
@@ -352,9 +361,10 @@ def main():
         def sd_update(var='psi'):
             grad = read_grad(var=var,iterno=iterno)
             update = -grad
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
+            np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
+            # with warnings.catch_warnings():
+                # warnings.simplefilter("ignore")
+                # pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
                 # fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
 
             print "Steepest descent"
@@ -395,9 +405,10 @@ def main():
             beta_k = get_beta(grad_k,grad_km1,p_km1)
             update=-grad_k +  beta_k*p_km1
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
+            np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
+            # with warnings.catch_warnings():
+            #     warnings.simplefilter("ignore")
+            #     pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
 
         cg_update(var='psi')
 
@@ -528,21 +539,26 @@ def main():
     ############################################################################
 
     large_x_cutoff = 40
-    deep_z_cutoff = -5
+    deep_z_cutoff = -4
 
     def create_ls_model(i=0,var='psi',eps=0,kind='linear'):
         model = read_model(var=var,iterno=iterno)
         model_back = model["back"]
         c_model_below_surface = model["c_lower"]
         if i==0:
-            grad_spline = read_grad(var=var,iterno=iterno)
+            grad_spline = read_update(var=var,iterno=iterno)
             model_grad_coeffs_fig=plt.figure()
             ax1 = model_grad_coeffs_fig.gca()
             ax1.plot(c_ref_above_surface+c_ref_below_surface,'o-',markersize=4,
-            label="True model")
-            ax1.plot(c_ref_above_surface+c_model_below_surface,'o-',markersize=4,
-            color="brown",label="Iterated model")
-            # Add edge colors based on gradient
+            color="teal",label="True model")
+
+            c_model = c_ref_above_surface+c_model_below_surface
+            ax1.plot(range(coeff_surf_cutoff_ind),c_model[:coeff_surf_cutoff_ind],
+            'o-',markersize=4,color="brown",label="Iterated model")
+            ax1.plot(range(coeff_surf_cutoff_ind-1,coeff_surf_cutoff_ind+1),
+            c_model[coeff_surf_cutoff_ind-1:coeff_surf_cutoff_ind+1],
+            '--',color="brown")
+
             edgecolors = np.array(["None","Red","Blue"])
             ax1.scatter(range(c_ref_above_surface.size),c_ref_above_surface+c_model_below_surface,
             marker='o',s=75,c="None",
@@ -551,7 +567,7 @@ def main():
 
             ax2 = ax1.twinx()
             ax2.bar(np.arange(grad_spline.size)-0.3,grad_spline,width=0.6,bottom=0,
-            color="goldenrod",label="Gradient",edgecolor="peru",alpha=0.5)
+            color="goldenrod",label="Update",edgecolor="peru",alpha=0.4)
             # ax2.plot(grad_spline,'o--',markersize=3,color="Chocolate",label="Gradient")
 
             # for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
@@ -621,8 +637,8 @@ def main():
 
         model_below_surface = coeff_to_model(c_model_below_surface)
         # cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/3))
-        # cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
-        # model_below_surface *= cutoff_z[:,None]
+        cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
+        model_below_surface *= cutoff_z[:,None]
         # model_below_surface *= cutoff_x[None,:]*cutoff_z[:,None]
         model_above_surface = coeff_to_model(c_ref_above_surface)
         model = model_below_surface + model_above_surface + model_back

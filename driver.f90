@@ -2508,7 +2508,9 @@ SUBROUTINE MISFIT_ALL(nt)
     ! eyekh(nx/2+1) = 0.0
     read(contrib,*) indexnum
 
-    if (rank==0) print *,'Doing Adjoint Source'
+    if (rank==0) print *,'Misfit all'
+    inquire(file=directory//'tt_dist_ridges',exist=lexist)
+    if (.not. lexist) return
 
     open(356,file=directory//'master.pixels',action='read', position='rewind')
     do i=1,nmasters
