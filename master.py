@@ -15,9 +15,6 @@ elif read_params.if_soundspeed_perturbed():
 
 num_linesearches = 6
 
-data_command = "qsub data_forward.sh"
-full_command = "qsub full.sh"
-ls_command = "qsub linesearch.sh"
 def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
@@ -28,25 +25,9 @@ if len(sys.argv[1:])!=1:
     exit()
 id_text = sys.argv[1]
 
-def update_id_in_file(filename):
-    with open(filename,'r') as f:
-        code=f.readlines()
-    
-    for lineno,line in enumerate(code):
-        if "PBS" in line and "-N" in line:
-            current_id = '_'.join(line.split()[-1].split('_')[1:])
-            if current_id!=id_text:
-                print "Current identifier in ",filename,"is",current_id
-                print "Changing to ",id_text
-                line=line.replace(current_id,id_text)
-                code[lineno]=line
-                
-    with open(filename,'w') as f:
-        f.writelines(code)
-                
-update_id_in_file('data_forward.sh')
-update_id_in_file('full.sh')
-update_id_in_file('linesearch.sh')
+data_command = "qsub -N id_text data_forward.sh"
+full_command = "qsub -N id_text full.sh"
+ls_command = "qsub -N id_text linesearch.sh"
 
 def copy_updated_model(num,var="psi"):
     updated_model=os.path.join(datadir,'update','test_'+var+'_'+str(num)+'.fits')

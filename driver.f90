@@ -105,42 +105,42 @@ Program driver
 
             allocate(psivar(nx,dim2(rank),nz))
 
-!            do k=1,nz
-!                do i=1,nx
-!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-!                    bes(1) = BesJN(1,rand1)
-!                    signt = sign(1.D0,x(i)-0.5D0)
-!                    psivar(i,1,k) = bes(1) * rand2 * &
-!                    exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2*sigmaz**2.)) &
-!                    * signt/c2(i,1,k)**0.5
-!!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
-!                enddo
-!            enddo
+            do k=1,nz
+                do i=1,nx
+                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
+                    bes(1) = BesJN(1,rand1)
+                    signt = sign(1.D0,x(i)-0.5D0)
+                    psivar(i,1,k) = bes(1) * rand2 * &
+                    exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2*sigmaz**2.)) &
+                    * signt/c2(i,1,k)**0.5
+!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
+                enddo
+            enddo
 
 !            call fourier_smooth_x(psivar,90,psivar)
 
-!            psivar = rho0*(c2**0.5)*psivar
+            psivar = rho0*(c2**0.5)*psivar
 
-!            call ddz(psivar, v0_x, 1)
-!            v0_x = -v0_x/rho0
+            call ddz(psivar, v0_x, 1)
+            v0_x = -v0_x/rho0
 
-!            call ddx(psivar, v0_z, 1)
-!            v0_z = v0_z/rho0
+            call ddx(psivar, v0_z, 1)
+            v0_z = v0_z/rho0
 
-!            psivar = psivar/(rho0*(c2**0.5))
+            psivar = psivar/(rho0*(c2**0.5))
 
 !~          Save psi in Mm
-!~             if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
+            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
 
-            call readfits('true_psi_smoothed.fits',psivar,nz)
-            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
-            deallocate(psivar)
-
-            call readfits('true_vx_smoothed.fits',v0_x,nz)
-            v0_x = v0_x*1D2/dimc
-
-            call readfits('true_vz_smoothed.fits',v0_z,nz)
-            v0_z = v0_z*1D2/dimc
+!            call readfits('true_psi_smoothed.fits',psivar,nz)
+!            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
+!            deallocate(psivar)
+!
+!            call readfits('true_vx_smoothed.fits',v0_x,nz)
+!            v0_x = v0_x*1D2/dimc
+!
+!            call readfits('true_vz_smoothed.fits',v0_z,nz)
+!            v0_z = v0_z*1D2/dimc
 
 
 
