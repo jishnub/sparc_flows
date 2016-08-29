@@ -176,52 +176,34 @@ def main():
     # Spline
     ############################################################################
 
-    def coeff_to_model(coeffs):
-        # 2D spline
-        # model = interpolate.bisplev(xspline,zspline,(tx_ref,tz_ref,coeffs,kx_ref,kz_ref))
-        # model_fullsize = np.zeros_like(psi_true)
-        # model_fullsize.put(spline_ind_1D,model.T.flatten())
-        # 1D spline
-        model = interpolate.splev(zspline,(tz_ref,coeffs,kz_ref))
-        kDH13 = 2*np.pi/30
-        RDH13 = 15
-        from scipy.special import j1
-
-        psi_xpart = np.sign(x[None,:])*j1(kDH13*abs(x[None,:]))*np.exp(-abs(x[None,:])/RDH13)
-        psi_xpart /= psi_xpart.max()
-        psi_z=np.zeros(z.size)
-        psi_z[zspline_index_int] = model
-        model_fullsize = psi_xpart*psi_z[:,None]
-        return model_fullsize
+    def coeff_to_model(tck_x,x_spline,tck_z,z_spline):
+        tx1D,cx1D,kx = tck_x
+        tz1D,cz1D,kz = tck_z
+        psi_x_right=interpolate.splev(x_spline,(tx1D,cx1D,kx))
+        psi_x = np.zeros(nx)
+        psi_x[(x>0) & (x<x_spl_cutoff)] = psi_x_right
+        psi_x[(x>-x_spl_cutoff) & (x<0)] = -psi_x_right[::-1]
+        psi_z_top=interpolate.splev(z_spline,(tz1D,cz1D,kz))
+        psi_z = np.zeros_like(z)
+        psi_z[z>z_spl_cutoff] = psi_z_top
+        return psi_x[None,:]*psi_z[:,None]
 
     with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
 
-        # x_cutoff = f["x_cutoff"]
-        z_cutoff = f["z_cutoff"] # Mm
-        # xspline_index = abs(x)<x_cutoff
-        # xspline_index_int = np.where(xspline_index)[0]
-        # xspline = x[xspline_index]
-        zspline_index_int = np.where(z>z_cutoff)[0]
-        zspline = z[zspline_index_int]
+        x_spl_cutoff = f["x_spline_cutoff"]
+        z_spl_cutoff = f["z_spline_cutoff"]
+        zspline = z[z>z_spl_cutoff]
+        xspline = x[(x>0) & (x<x_spl_cutoff)]
 
-        # xspline_index_mgrid = np.array([xspline_index_int for _ in zspline_index_int])
-        # zspline_index_mgrid = np.array([[zj]*len(xspline_index_int) for zj in zspline_index_int])
-        # spline_ind_1D = np.ravel_multi_index([zspline_index_mgrid.flatten(),
-        #                             xspline_index_mgrid.flatten()],(nz,nx))
+        coeff_surf_cutoff_ind = f["c_surf_cutoff"]
 
-        # xspline_coord_mgrid = np.array([xspline for _ in zspline_index_int])
-        # zspline_coord_mgrid = np.array([[zj]*len(xspline) for zj in zspline])
-
-        coeff_surf_cutoff_ind = f["coeff_surf_cutoff_ind"]
-
-        # tx_ref = f["tx"]
+        tx_ref = f["tx"]
         tz_ref = f["tz"]
-        c_ref_above_surface = f["c_upper"]
-        c_ref_below_surface = f["c_lower"]
-        # kx_ref = f["kx"]
+        cz_ref_above_surface = f["cz_top"]
+        cz_ref_below_surface = f["cz_bot"]
+        kx_ref = f["kx"]
         kz_ref = f["kz"]
-        spl_c_shape = len(tz_ref)-kz_ref-1
-        # spl_c_shape_xz_2D = (len(tx_ref)-kx_ref-1,len(tz_ref)-kz_ref-1)
+        cx_ref = f["cx"]        
 
     ############################################################################
     # Gradient computation
@@ -270,37 +252,7 @@ def main():
     # Basis kernels
     grad_spline = np.zeros_like(c_ref_below_surface)
     grad = np.squeeze(totkern_psi).T
-    # fig=plt.figure()
-    # plotdir = os.path.join(datadir,"update","plots_grad_iter"+str(iterno).zfill(2))
-    # if not os.path.exists(plotdir): os.makedirs(plotdir)
-    # for j,_ in enumerate(c_ref_below_surface):
-    #     _,zind = np.unravel_index(j,spl_c_shape_xz_2D)
-    #     if zind>=coeff_surf_cutoff_ind: continue
-    #     c_only_j = np.zeros_like(c_ref_below_surface)
-    #     c_only_j[j] = 1
-    #     bspline_j = coeff_to_model(c_only_j)
-    #     # plt.subplot(131)
-    #     # plt.pcolormesh(x,z,grad,cmap="RdBu")
-    #     # plt.xlim(-50,50)
-    #     # plt.ylim(-8,z[-1])
-    #     # plt.subplot(132)
-    #     # vmax = abs(bspline_j).max()
-    #     # plt.pcolormesh(x,z,bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
-    #     # plt.title("B-spline {:d}".format(j))
-    #     # plt.xlim(-50,50)
-    #     # plt.ylim(-8,z[-1])
-    #     grad_spline[j] = integrate_2D(grad*bspline_j)
-    #     # plt.subplot(133)
-    #     # vmax = abs(grad*bspline_j).max()
-    #     # plt.pcolormesh(x,z,grad*bspline_j,cmap="RdBu",vmax=vmax,vmin=-vmax)
-    #     # plt.xlim(-50,50)
-    #     # plt.ylim(-8,z[-1])
-    #     # plt.title("{:.1E}".format(grad_spline[j]))
-    #     # fig.set_size_inches(11,4)
-    #     # plt.tight_layout()
-    #
-    #     # plt.savefig(os.path.join(plotdir,str(j).zfill(4)+".png"))
-    #     # plt.clf()
+
 
     f=plt.figure()
     plt.subplot(121)
@@ -330,25 +282,9 @@ def main():
         bspline_zind = coeff_to_model(c_only_zind)
         grad_spline[zind] = integrate_2D(grad*bspline_zind)
 
-
-    # plt.figure()
-
-    # plt.axvspan(coeff_surf_cutoff_ind,len(tz_ref)-kz_ref-1,
-    # facecolor="honeydew",edgecolor="lightsage")
-    # plt.axvline(coeff_surf_cutoff_ind,ls="dotted",color="black")
-    # for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-    #     plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
-    #     facecolor="honeydew",edgecolor="lightsage")
-    #     plt.axvline(i,ls="dotted",color="black")
-    # plt.plot(grad_spline,'o-',markersize=3)
-    # plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
-    # plt.xlim(0,(len(tz_ref)-kz_ref-1))
-    # plt.savefig(os.path.join(datadir,"update","grad_coeffs_"+str(iterno).zfill(2)+".png"))
-
     #~ Write out gradients for this iteration
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        # pyfits.writeto(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),grad_spline,clobber=True)
         np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),grad_spline=grad_spline)
 
     ############################################################################
@@ -362,11 +298,6 @@ def main():
             grad = read_grad(var=var,iterno=iterno)
             update = -grad
             np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
-            # with warnings.catch_warnings():
-                # warnings.simplefilter("ignore")
-                # pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
-                # fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
-
             print "Steepest descent"
 
         sd_update(var='psi')
@@ -406,9 +337,6 @@ def main():
             update=-grad_k +  beta_k*p_km1
 
             np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
-            # with warnings.catch_warnings():
-            #     warnings.simplefilter("ignore")
-            #     pyfits.writeto(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update,clobber=True)
 
         cg_update(var='psi')
 
@@ -662,11 +590,11 @@ def main():
         plt.pcolormesh(x,z,arr_to_plot,cmap="RdBu_r",
         vmax=abs(arr_to_plot).max(),vmin=-abs(arr_to_plot).max())
         plt.colorbar()
-        # plt.axvline(-x_cutoff,color="black",ls="dotted")
-        # plt.axvline(x_cutoff,color="black",ls="dotted")
+        # plt.axvline(-x_spl_cutoff,color="black",ls="dotted")
+        # plt.axvline(x_spl_cutoff,color="black",ls="dotted")
         # plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
         # plt.axvline(large_x_cutoff,color="brown",ls="dotted")
-        plt.axhline(z_cutoff,color="black",ls="dotted")
+        plt.axhline(z_spl_cutoff,color="black",ls="dotted")
         # plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
         plt.xlim(-70,70)
         plt.ylim(-7,z[-1])
