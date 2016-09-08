@@ -50,22 +50,21 @@ np.set_printoptions(precision=5)
 
 datadir=read_params.get_directory()
 
-if read_params.if_flows():
-    iter_var="psi"
-elif read_params.if_soundspeed_perturbed():
-    iter_var="c"
+iter_var="psi"
 
 num_linesearches = 6
 
 def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
     eps = [str(i) for i in eps]
     eps_str = ' '.join(eps)
-    return "python grad_spline.py algo="+algo+" "+str(eps_str)
+    basis = read_params.parse_cmd_line_params(key="basis")
+    if basis is None:
+        return "python grad.py algo="+algo+" "+str(eps_str)
+    elif basis=="spline":
+        return "python grad_spline.py algo="+algo+" "+str(eps_str)
 
-if len(sys.argv[1:])!=1:
-    print("Usage: python master.py <id>")
-    exit()
-id_text = sys.argv[1]
+id_text = read_params.parse_cmd_line_params(key="id")
+opt_algo = read_params.parse_cmd_line_params(key="opt_algo")
 
 data_command = "qsub -N data_{} data_forward.sh".format(id_text)
 full_command = "qsub -N full_{} full.sh".format(id_text)
@@ -83,8 +82,6 @@ def copy_updated_model(num,var="psi"):
         shutil.copyfile(updated_model,model_for_next_iter)
     except IOError: pass
 
-
-
 if os.path.exists('compute_data'):
     os.remove('compute_data')
 
@@ -97,47 +94,47 @@ if os.path.exists('running_full'):
 running_ls = False
 running_full = False
 
-eps_fig = plt.figure()
+# eps_fig = plt.figure()
 model_fig = plt.figure()
 
 def get_eps_around_minimum(prev1_eps,prev1_misfits):
 
     #~ Previous iteration, save the plot
-    eps_fig.clf()
-    eps_fig.gca().plot(prev1_eps,prev1_misfits,'bo',zorder=1)
-    plt.xlabel("Step size",fontsize=20)
-    plt.ylabel(r"misfit",fontsize=20)
-    plt.savefig('step_size_selection.eps')
+    # eps_fig.clf()
+    # eps_fig.gca().plot(prev1_eps,prev1_misfits,'bo',zorder=1)
+    # plt.xlabel("Step size",fontsize=20)
+    # plt.ylabel(r"misfit",fontsize=20)
+    # plt.savefig('step_size_selection.eps')
 
     p=np.polyfit(prev1_eps,prev1_misfits,2)
 
-    assert (not p[0]<0), colored("inverted parabolic fit, can't estimate step size","red")
     step = 1e-2
-    if p[0]>0:
+    if p[0]<0 and not (np.diff(prev1_misfits)<0).all():
+        print(colored("inverted parabolic fit, can't estimate step size","red"))
+        exit()
+    elif p[0]<0 and (np.diff(prev1_misfits)<0).all():
+        eps = np.array(prev1_eps)*10
+    elif p[0]>0:
         step = - p[1]/(2*p[0])
+        eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
     elif p[0]==0:
         step = -p[2]/p[1]
-    # assert step>0,colored("ls minimum predicted at less than zero step","red")
-
-    #~ Choose points around the predicted minimum stepsize, and compute predicted misfits
-    #~ according to the previous itreation's trend
-    if step>0:
         eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
-    else:
-        eps = prev1_eps/10
+
+
     pred_misfit = np.polyval(p,eps)
     print("Estimated step size",eps)
     print("Predicted misfit",pred_misfit)
-    plt.plot(eps,pred_misfit,'ro',zorder=1)
+    # plt.plot(eps,pred_misfit,'ro',zorder=1)
 
     #~ Plot the fit polynomial line, this should pass through the points and have a minimum
     #~ around the predicted points
-    epsfine = np.linspace(min(eps[0],prev1_eps[0]),max(eps[-1],prev1_eps[-1]),num=2000)
-    misfitfine = np.polyval(p,epsfine)
-    plt.plot(epsfine,misfitfine,'g-',zorder=0)
+    # epsfine = np.linspace(min(eps[0],prev1_eps[0]),max(eps[-1],prev1_eps[-1]),num=2000)
+    # misfitfine = np.polyval(p,epsfine)
+    # plt.plot(epsfine,misfitfine,'g-',zorder=0)
 
-    plt.savefig('step_size_selection.eps')
-    eps_fig.clf()
+    # plt.savefig('step_size_selection.eps')
+    # eps_fig.clf()
 
     return eps
 
@@ -360,7 +357,7 @@ for query in xrange(100000):
             print("Using arbitary step sizes")
             eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
         #~ Run grad
-        gradcmd = grad_command(algo="cg",eps=eps)
+        gradcmd = grad_command(algo=opt_algo,eps=eps)
         def exp_notation(a):
             b=a.split()
             for index,word in enumerate(b):
@@ -387,8 +384,6 @@ for query in xrange(100000):
         #~ (a) run linesearch again with different step size if misfit minimum is not found
         #~ (b) run full if misfit minimum is found
 
-        plot_true_and_model_psi()
-
         running_ls = False
         if running_full:
             print(colored("It seems the full misfit was not generated. Check if the previous full.sh finished without errors","red"))
@@ -408,10 +403,20 @@ for query in xrange(100000):
         misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels,2]) for i in xrange(num_linesearches)])
 
         print("Linesearch misfits",misfit)
+        if np.isnan(misfit).any():
+            print("Nan found, quitting")
+            exit()
         #~ Check for misfit minimum
         misfit_diff = np.diff(misfit)
         misfit_diff_sign_change_locs = np.where(np.diff(np.sign(misfit_diff)))[0]
         misfit_diff_changes_sign = len(misfit_diff_sign_change_locs)>0
+        if misfit_diff_changes_sign:
+            misfit_diff_sign_change_ind = misfit_diff_sign_change_locs[0]
+            # Ensure that it is a simple minimum
+            if not (np.sign(misfit_diff)[:misfit_diff_sign_change_ind+1]==-1 and
+                    np.sign(misfit_diff)[misfit_diff_sign_change_ind+1:]==1):
+                    print("Not a simple minimum, quitting")
+                    exit()
 
         #~ Update epslist
         epslist=np.load(epslist_path)
@@ -439,6 +444,7 @@ for query in xrange(100000):
 
             #~ Run full.sh
             print("#"*80)
+            plot_true_and_model_psi()
             print(colored("Running full","blue"))
             status=subprocess.call(full_command.split())
             running_full=True

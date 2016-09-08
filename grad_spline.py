@@ -1,15 +1,29 @@
 from __future__ import division
 import numpy as np
-from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy import interpolate,integrate
+from scipy.special import j1,j0,jn
+def j2(z): return jn(2,z)
+def j1prime(z): return 0.5*(j0(z)-j2(z))
 import os,fnmatch,sys
 import pyfits
 import warnings
 import read_params
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt,ticker
 
-#######################################################################
+########################################################################
+
+class supergranule():
+    def __init__(self,**kwargs):
+        self.__dict__.update(kwargs)
+
+DH13 = supergranule(R = 15,
+                    k = 2*np.pi/30,
+                    sigmaz = 0.912,
+                    z0 = -2.3,
+                    v0 = 240)
+
+########################################################################
 
 def fitsread(f):
     try:
@@ -94,7 +108,7 @@ def filterz(arr,algo='spline',sp=1.0):
                 arrzmax=arrz.max()
                 arrz=arrz/arrzmax
 
-                s=UnivariateSpline(z_ind,arrz,s=sp)
+                s=interpolate.UnivariateSpline(z_ind,arrz,s=sp)
                 arr[x_ind,y_ind]=s(z_ind)*arrzmax
 
     elif algo=='gaussian':
@@ -170,49 +184,6 @@ def main():
 
     ############################################################################
 
-    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
-
-    ############################################################################
-    # Spline
-    ############################################################################
-
-    def coeff_to_model(tck_x,x_spline,tck_z,z_spline):
-        tx1D,cx1D,kx = tck_x
-        tz1D,cz1D,kz = tck_z
-        psi_x_right=interpolate.splev(x_spline,(tx1D,cx1D,kx))
-        psi_x = np.zeros(nx)
-        psi_x[(x>0) & (x<x_spl_cutoff)] = psi_x_right
-        psi_x[(x>-x_spl_cutoff) & (x<0)] = -psi_x_right[::-1]
-        psi_z_top=interpolate.splev(z_spline,(tz1D,cz1D,kz))
-        psi_z = np.zeros_like(z)
-        psi_z[z>z_spl_cutoff] = psi_z_top
-        return psi_x[None,:]*psi_z[:,None]
-
-    with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
-
-        x_spl_cutoff = f["x_spline_cutoff"]
-        z_spl_cutoff = f["z_spline_cutoff"]
-        zspline = z[z>z_spl_cutoff]
-        xspline = x[(x>0) & (x<x_spl_cutoff)]
-
-        coeff_surf_cutoff_ind = f["c_surf_cutoff"]
-
-        tx_ref = f["tx"]
-        tz_ref = f["tz"]
-        cz_ref_above_surface = f["cz_top"]
-        cz_ref_below_surface = f["cz_bot"]
-        kx_ref = f["kx"]
-        kz_ref = f["kz"]
-        cx_ref = f["cx"]        
-
-    ############################################################################
-    # Gradient computation
-    ############################################################################
-
-    array_shape=(nx,ny,nz)
-    totkern_psi=np.zeros(array_shape)
-    hess=np.zeros(array_shape)
-
     def read_model(var='psi',iterno=iterno):
         modelfile = updatedir('model_'+var+'_'+str(iterno).zfill(2)+'_coeffs.npz')
         with np.load(modelfile) as f:
@@ -222,18 +193,93 @@ def main():
         # return pyfits.getdata(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
         modelfile = updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
         with np.load(modelfile) as f:
-            grad_spline=f["grad_spline"]
-        return grad_spline
+            return dict(f.items())
 
     def read_update(var='psi',iterno=iterno):
         # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
         modelfile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
         with np.load(modelfile) as f:
-            update_spline=f["update_spline"]
-        return update_spline
+            return dict(f.items())
 
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
+
+    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
+
+    ############################################################################
+    # Spline
+    ############################################################################
+
+    def coeff_to_model(tck_z,tck_R):
+        f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
+        f0_x_max = f0_x.max()
+        # f1_x is the derivative of f0_x wrt R
+        f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+        f0_x/=f0_x_max
+        f1_x/=f0_x_max
+
+        R1_z = interpolate.splev(z,tck_R,ext=1)
+        h_z=interpolate.splev(z,tck_z,ext=1)
+
+        return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
+
+    with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
+
+        coeff_surf_cutoff_ind = f["c_surf_cutoff"]
+
+        tR = f["tR"]
+        tz = f["tz"]
+        cz_ref_top = f["cz_top"]
+        cz_ref_bot = f["cz_bot"]
+        kR = f["kR"]
+        kz = f["kz"]
+
+        z_spl_cutoff = f["z_spline_cutoff"]
+        R_surf_cutoff = f["R_surf_cutoff"]
+
+    class spline_basis_coeffs():
+        def __init__(self,true_coeffs,iter_coeffs,low_ind=0,high_ind=None):
+            self.true = true_coeffs
+            self.iterated = iter_coeffs
+            self.low_ind = low_ind
+            self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
+            self.grad = None
+            self.update = None
+            self.size = self.iterated.size
+
+
+        def get_true(self,low_ind=None,high_ind=None):
+            return self.true[self.low_ind if low_ind is None else low_ind:
+                                self.high_ind if high_ind is None else high_ind]
+
+        def get_iterated(self,low_ind=None,high_ind=None):
+            return self.iterated[self.low_ind if low_ind is None else low_ind:
+                                self.high_ind if high_ind is None else high_ind]
+
+        def get_update(self,low_ind=None,high_ind=None):
+            return self.update[self.low_ind if low_ind is None else low_ind:
+                                self.high_ind if high_ind is None else high_ind]
+
+        def get_range(self):
+            return np.array(range(self.low_ind,self.high_ind))
+
+    iter_model = read_model()
+
+    coeffs = {
+    "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["cz_bot"],
+    low_ind=0,high_ind=coeff_surf_cutoff_ind),
+
+    "R":spline_basis_coeffs(true_coeffs=np.zeros_like(iter_model["cR"]),
+    iter_coeffs=iter_model["cR"],low_ind=0,high_ind=R_surf_cutoff)
+    }
+
+    ############################################################################
+    # Gradient computation
+    ############################################################################
+
+    array_shape=(nx,ny,nz)
+    totkern_psi=np.zeros(array_shape)
+    hess=np.zeros(array_shape)
 
     for src in xrange(1,num_src+1):
 
@@ -245,15 +291,18 @@ def main():
     hess = hess/abs(hess).max()
     hess[hess<5e-3]=5e-3
 
-
     # Filter and smooth
-    totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
+    totkern_psi = filter_and_symmetrize(totkern_psi,hess,
+                    z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
 
-    # Basis kernels
-    grad_spline = np.zeros_like(c_ref_below_surface)
-    grad = np.squeeze(totkern_psi).T
+    kernel = np.squeeze(totkern_psi).T
 
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pyfits.writeto(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),
+                        kernel,clobber=True)
 
+    # Plot gradient (kernel)
     f=plt.figure()
     plt.subplot(121)
     plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
@@ -264,7 +313,7 @@ def main():
     plt.ylabel("z (Mm)",fontsize=16)
 
     plt.subplot(122)
-    plt.pcolormesh(x,z,grad/abs(grad).max(),cmap="RdBu_r",vmax=1,vmin=-1)
+    plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
     plt.title("Gradient",fontsize=16)
     plt.xlim(-50,50)
     plt.ylim(-6,z[-1])
@@ -275,17 +324,41 @@ def main():
     plt.tight_layout()
     plt.savefig(os.path.join(datadir,"update","grad_"+str(iterno).zfill(2)+".png"))
 
-    for zind,_ in enumerate(c_ref_below_surface):
-        if zind>=coeff_surf_cutoff_ind: continue
-        c_only_zind = np.zeros_like(c_ref_below_surface)
-        c_only_zind[zind] = 1
-        bspline_zind = coeff_to_model(c_only_zind)
-        grad_spline[zind] = integrate_2D(grad*bspline_zind)
+    # compute basis coefficient gradients
+    def compute_grad_basis(coeffs):
+        grad_c = np.zeros(coeffs["z"].size)
+        grad_R = np.zeros(coeffs["R"].size)
+        f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
+        f0_x_max = f0_x.max()
+        # f1_x is the derivative of f0_x wrt R
+        f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+        f0_x/=f0_x_max
+        f1_x/=f0_x_max
+
+        hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
+        R1 = interpolate.splev(z,(tR,coeffs["R"].iterated,kR),ext=1)
+        g_c = f0_x[None,:] + f1_x[None,:]*R1[:,None]
+        g_R = f1_x[None,:]*hs[:,None]
+
+        for j in coeffs["z"].get_range():
+            bj = np.zeros_like(coeffs["z"].iterated)
+            bj[j] = 1
+            bz = interpolate.splev(z,(tz,bj,kz),ext=1)
+            grad_c[j] = integrate_2D(kernel*bz[:,None]*g_c)
+
+        for j in coeffs["R"].get_range():
+            qj = np.zeros_like(coeffs["R"].iterated)
+            qj[j] = 1
+            qz = interpolate.splev(z,(tR,qj,kR),ext=1)
+            grad_R[j] = integrate_2D(kernel*qz[:,None]*g_R)
+
+        return {"z":grad_c,"R":grad_R}
 
     #~ Write out gradients for this iteration
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),grad_spline=grad_spline)
+        np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),
+        **compute_grad_basis(coeffs))
 
     ############################################################################
     # Optimization
@@ -295,9 +368,10 @@ def main():
     if (iterno==0) or steepest_descent:
 
         def sd_update(var='psi'):
-            grad = read_grad(var=var,iterno=iterno)
-            update = -grad
-            np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
+            grad = read_grad(var='psi',iterno=iterno)
+            update = {p:-grad[p] for p in grad.keys()}
+            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            np.savez(updatefile,**update)
             print "Steepest descent"
 
         sd_update(var='psi')
@@ -311,20 +385,15 @@ def main():
             polak_ribiere = True
             hestenes_stiefel = True and (not polak_ribiere)
 
-            if polak_ribiere:
-                print "Conjugate gradient, Polak Ribiere method"
+            np.seterr(divide="raise")
+            try:
                 beta = np.sum(grad*(grad - lastgrad))
-                beta/= np.sum(lastgrad**2.)
-
-            elif hestenes_stiefel:
-                print "Conjugate gradient, Hestenes Stiefel method"
-                beta = np.sum(grad*(grad - lastgrad))
-                beta/= np.sum((grad - lastgrad)*lastupdate)
-
-            print "beta",beta
-            if beta==0: print "Conjugate gradient reduces to steepest descent"
-            elif beta<0:
-                print "Stepping away from previous update direction"
+                if polak_ribiere:
+                    beta/= np.sum(lastgrad**2.)
+                elif hestenes_stiefel:
+                    beta/= np.sum((grad - lastgrad)*lastupdate)
+            except FloatingPointError:
+                beta=0
 
             return beta
 
@@ -333,10 +402,16 @@ def main():
             grad_km1 = read_grad(var=var,iterno=iterno-1)
             p_km1 = read_update(var=var,iterno=iterno-1)
 
-            beta_k = get_beta(grad_k,grad_km1,p_km1)
-            update=-grad_k +  beta_k*p_km1
+            beta_k = {}
+            update = {}
+            for param in grad_k.keys():
+                beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
+                update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
 
-            np.savez(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz'),update_spline=update)
+            print "beta",dict((k,round(v,2)) for k,v in beta_k.iteritems())
+
+            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            np.savez(updatefile,**update)
 
         cg_update(var='psi')
 
@@ -425,177 +500,121 @@ def main():
 
     ############################################################################
 
-    f=plt.figure()
-    plt.subplot(131)
-    plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
-    plt.title("True psi",fontsize=16)
-    plt.xlim(-50,50)
-    plt.ylim(-6,z[-1])
-    plt.xlabel("x (Mm)",fontsize=16)
-    plt.ylabel("z (Mm)",fontsize=16)
+    # Add update to coeff dictionary
+    update = read_update(var='psi',iterno=iterno)
+    for param,coeff in coeffs.items():
+        coeff.update = update[param]
 
-    plt.subplot(132)
-    model = read_model(var="psi",iterno=iterno)
-    model_back = model["back"]
-    c_model_below_surface = model["c_lower"]
-    model_below_surface = coeff_to_model(c_model_below_surface)
-    model_above_surface = coeff_to_model(c_ref_above_surface)
-    model = model_below_surface + model_above_surface
-    vmax=abs(model).max()
-    plt.pcolormesh(x,z,model,cmap="RdBu_r",vmax=vmax,vmin=-vmax)
-    plt.title("Model",fontsize=16)
-    plt.xlim(-50,50)
-    plt.ylim(-6,z[-1])
-    plt.xlabel("x (Mm)",fontsize=16)
-    plt.ylabel("z (Mm)",fontsize=16)
+    ############################################################################
 
-    plt.subplot(133)
-    update = np.squeeze(read_update(var="psi",iterno=iterno))
-    update = coeff_to_model(update)
-    vmax=abs(update).max()
-    plt.pcolormesh(x,z,update,cmap="RdBu_r",vmax=vmax,vmin=-vmax)
-    plt.title("Update",fontsize=16)
-    plt.xlim(-50,50)
-    plt.ylim(-6,z[-1])
-    plt.xlabel("x (Mm)",fontsize=16)
-    plt.ylabel("z (Mm)",fontsize=16)
+    # Plot update coefficients
 
-    f.set_size_inches(12,3.5)
+    model_grad_coeffs_fig=plt.figure()
+    ax = [plt.subplot(2,1,i) for i in xrange(1,3)]
+
+    for ind,(param,coeff) in enumerate(coeffs.items()):
+
+        # True model coefficients
+        ax[ind].plot(coeff.get_true(),
+        'o-',markersize=4,color="teal",label="True")
+        # Iterated model coefficients
+        ax[ind].plot(coeff.get_iterated(),
+        'o-',markersize=4,color="brown",label="Iter")
+
+        # Read grad and plot in twin axis
+
+        ax2 = ax[ind].twinx()
+        ax2.bar(coeff.get_range()-0.3,coeff.get_update(),width=0.6,bottom=0,
+        color="goldenrod",label="Update",edgecolor="peru",alpha=0.4)
+        s = ticker.ScalarFormatter()
+        s.set_scientific(True)
+        s.set_powerlimits((0,0))
+        ax2.yaxis.set_major_formatter(s)
+        s = ticker.ScalarFormatter()
+        s.set_scientific(True)
+        s.set_powerlimits((0,0))
+        ax[ind].yaxis.set_major_formatter(s)
+
+        plt.margins(x=0.2)
+
+        ax[ind].set_title(param,fontsize=16)
+
+        handles1,labels1 = ax[ind].get_legend_handles_labels()
+        handles2,labels2 = ax2.get_legend_handles_labels()
+        plt.legend(handles1+handles2,labels1+labels2,loc="upper right")
+
+    sp_ind_z = map(lambda x: x.get_title(),ax).index("z")
+    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
+    (cz_ref_top + cz_ref_bot)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
+    'o--',markersize=4,color="teal")
+
+    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
+    (cz_ref_top + coeffs["z"].iterated)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
+    '--',color="brown")
+
     plt.tight_layout()
-    plt.savefig(os.path.join(datadir,"update","update_"+str(iterno).zfill(2)+".png"))
+    plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
 
     ############################################################################
 
     large_x_cutoff = 40
     deep_z_cutoff = -4
 
-    def create_ls_model(i=0,var='psi',eps=0,kind='linear'):
-        model = read_model(var=var,iterno=iterno)
-        model_back = model["back"]
-        c_model_below_surface = model["c_lower"]
-        if i==0:
-            grad_spline = read_update(var=var,iterno=iterno)
-            model_grad_coeffs_fig=plt.figure()
-            ax1 = model_grad_coeffs_fig.gca()
-            ax1.plot(c_ref_above_surface+c_ref_below_surface,'o-',markersize=4,
-            color="teal",label="True model")
+    def create_ls_model(var='psi',eps=0,kind='linear'):
 
-            c_model = c_ref_above_surface+c_model_below_surface
-            ax1.plot(range(coeff_surf_cutoff_ind),c_model[:coeff_surf_cutoff_ind],
-            'o-',markersize=4,color="brown",label="Iterated model")
-            ax1.plot(range(coeff_surf_cutoff_ind-1,coeff_surf_cutoff_ind+1),
-            c_model[coeff_surf_cutoff_ind-1:coeff_surf_cutoff_ind+1],
-            '--',color="brown")
+        for param in update.keys():
+            if abs(update[param]).max()!=0:
+                update[param]/=abs(update[param]).max()
 
-            edgecolors = np.array(["None","Red","Blue"])
-            ax1.scatter(range(c_ref_above_surface.size),c_ref_above_surface+c_model_below_surface,
-            marker='o',s=75,c="None",
-            edgecolors=edgecolors[np.sign(grad_spline).astype(int)],zorder=2)
-            # Read grad and plot in twin axis
-
-            ax2 = ax1.twinx()
-            ax2.bar(np.arange(grad_spline.size)-0.3,grad_spline,width=0.6,bottom=0,
-            color="goldenrod",label="Update",edgecolor="peru",alpha=0.4)
-            # ax2.plot(grad_spline,'o--',markersize=3,color="Chocolate",label="Gradient")
-
-            # for i in [(len(tz_ref)-kz_ref-1)*j for j in xrange(0,len(tx_ref)-kx_ref)]:
-            #     plt.axvspan(i+coeff_surf_cutoff_ind,i+(len(tz_ref)-kz_ref-1),
-            #     facecolor="honeydew",edgecolor="lightsage")
-            #     plt.axvline(i,ls="dotted",color="black")
-            ax1.axvspan(coeff_surf_cutoff_ind,len(tz_ref)-kz_ref-1,
-            facecolor="honeydew",edgecolor="lightsage",zorder=1,label="Clamped coeffs")
-            ax1.axvline(coeff_surf_cutoff_ind,ls="dotted",color="black")
-            plt.xlim(0,len(tz_ref)-kz_ref-1)
-            plt.title("Spline coefficients",fontsize=16)
-
-            handles1,labels1 = ax1.get_legend_handles_labels()
-            handles2,labels2 = ax2.get_legend_handles_labels()
-            plt.legend(handles1+handles2,labels1+labels2,loc="best")
-            # plt.legend(handles1,labels1,loc="best")
-            # plt.xlim(0,(len(tz_ref)-kz_ref-1)*(len(tx_ref)-kx_ref-1))
-            plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
-
-            # plt.clf()
-            # plt.subplot(131)
-            # vmax = abs(c_ref_above_surface+c_ref_below_surface).max()
-            # plt.pcolormesh((c_ref_above_surface+c_ref_below_surface).reshape(spl_c_shape_xz_2D).T,
-            # cmap="RdBu",vmax=vmax,vmin=-vmax)
-            # plt.xlim(0,spl_c_shape_xz_2D[0])
-            # plt.ylim(0,spl_c_shape_xz_2D[1])
-            # plt.axhline(10,ls="dotted",color="black")
-            # plt.title("True")
-            #
-            # plt.subplot(132)
-            #
-            # plt.pcolormesh((c_ref_above_surface+c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
-            # cmap="RdBu",vmax=vmax,vmin=-vmax)
-            # plt.axhline(10,ls="dotted",color="black")
-            # plt.xlim(0,spl_c_shape_xz_2D[0])
-            # plt.ylim(0,spl_c_shape_xz_2D[1])
-            # plt.title("Iterated")
-            #
-            # plt.subplot(133)
-            #
-            # plt.pcolormesh(
-            # (c_ref_below_surface-c_model_below_surface).reshape(spl_c_shape_xz_2D).T,
-            # cmap="RdBu")
-            #
-            # plt.axhline(10,ls="dotted",color="black")
-            # plt.xlim(0,spl_c_shape_xz_2D[0])
-            # plt.ylim(0,spl_c_shape_xz_2D[1])
-            # plt.title("Difference")
-            #
-            # fig.set_size_inches(11,4)
-            # plt.tight_layout()
-            # plt.savefig(os.path.join(datadir,"update","coeffs_2D_"+str(iterno).zfill(2)+".png"))
-
-        update = read_update(var=var,iterno=iterno)
-
-        updatemax=update.max()
-        if updatemax!=0: update/=updatemax
+        ls_cz = coeffs["z"].iterated
+        ls_cR = coeffs["R"].iterated
 
         if kind=='linear':
-            model_scale = rms(c_model_below_surface)
-            if model_scale ==0: model_scale=c_ref_above_surface.max()
-            c_model_below_surface = c_model_below_surface+eps*update*model_scale
+            cz_scale = rms(coeffs["z"].get_iterated())
+            if cz_scale==0: cz_scale=cz_ref_top.max()
+            ls_cz += eps*update["z"]*cz_scale
+
+            cR_scale = rms(coeffs["R"].get_iterated())
+            if cR_scale==0: cR_scale=0.1
+            ls_cR += eps*update["R"]*cR_scale
 
         elif kind=='exp':
-            c_model_below_surface= c_model_below_surface*(1+eps*update)
+            ls_cz *= 1+eps*update
+            ls_cR *= 1+eps*update
 
-
-        model_below_surface = coeff_to_model(c_model_below_surface)
-        # cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/3))
+        lsmodel = coeff_to_model((tz,ls_cz+cz_ref_top,kz),(tR,ls_cR,kR))
+        cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
         cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
-        model_below_surface *= cutoff_z[:,None]
-        # model_below_surface *= cutoff_x[None,:]*cutoff_z[:,None]
-        model_above_surface = coeff_to_model(c_ref_above_surface)
-        model = model_below_surface + model_above_surface + model_back
-        model = model[:,np.newaxis,:]
-        model = np.transpose(model,(2,1,0))
+        lsmodel *= cutoff_x[None,:]*cutoff_z[:,None]
+        lsmodel += iter_model["back"]
 
-        return model,c_model_below_surface,model_back
+        lsmodel = lsmodel[:,np.newaxis,:]
+        lsmodel = np.transpose(lsmodel,(2,1,0))
+
+        return lsmodel,{"cz_bot":ls_cz,"back":iter_model["back"],"cR":ls_cR}
 
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
-        lsmodel,ls_coeffs_below_surface,back = create_ls_model(i=i,var='psi',eps=eps_i,kind='linear')
+        lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
         fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
+        np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
 
+        # Plot true model and test model
         plt.subplot(121)
-        plt.pcolormesh(x,z,psi_true,cmap="RdBu_r",vmax=abs(psi_true).max(),vmin=-abs(psi_true).max())
+        plt.pcolormesh(x,z,psi_true,cmap="RdBu_r",
+                    vmax=abs(psi_true).max(),vmin=-abs(psi_true).max())
         plt.colorbar()
         plt.xlim(-70,70)
         plt.ylim(-7,z[-1])
         plt.subplot(122)
-        arr_to_plot = np.squeeze(lsmodel).T-back
+        arr_to_plot = np.squeeze(lsmodel).T-model_coeffs["back"]
         plt.pcolormesh(x,z,arr_to_plot,cmap="RdBu_r",
-        vmax=abs(arr_to_plot).max(),vmin=-abs(arr_to_plot).max())
+                    vmax=abs(arr_to_plot).max(),vmin=-abs(arr_to_plot).max())
         plt.colorbar()
-        # plt.axvline(-x_spl_cutoff,color="black",ls="dotted")
-        # plt.axvline(x_spl_cutoff,color="black",ls="dotted")
-        # plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
-        # plt.axvline(large_x_cutoff,color="brown",ls="dotted")
+        plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
+        plt.axvline(large_x_cutoff,color="brown",ls="dotted")
         plt.axhline(z_spl_cutoff,color="black",ls="dotted")
-        # plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
+        plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
         plt.xlim(-70,70)
         plt.ylim(-7,z[-1])
 
@@ -604,8 +623,6 @@ def main():
         plt.savefig(updatedir("test_psi_"+str(i)+".png"))
         plt.clf()
 
-
-        np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),c_lower=ls_coeffs_below_surface,back=back)
 
     #~ Update epslist
     epslist_path = os.path.join(datadir,"epslist.npz")
