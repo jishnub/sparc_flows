@@ -6,6 +6,7 @@
 *.out
 sparc
 grad
+tt_test
 *.fits
 output*
 error*
@@ -21,4 +22,3 @@ linesearch
 compute_data
 fort.*
 .*
-*_jobscript.sh

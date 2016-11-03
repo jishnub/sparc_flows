@@ -48,7 +48,7 @@ Program driver
     logical saved, iteration, init_variables, tempbool
     character*1 ci
     real*8 tau,dt
-    real*8 u_dh13(nz),v0_dh13
+    real*8 u_dh13(nz)
 
     20  format(8f12.4)
 
@@ -58,7 +58,7 @@ Program driver
 
     call Initialize_all
 
-     ! call adjoint_source_filt(280)
+     ! call adjoint_source_filt(520)
      ! call misfit_all(280)
      ! stop
 
@@ -76,7 +76,6 @@ Program driver
             kay = 2*pi/(30E8/diml)
             z0 = 1.-2.3D8/diml
             sigmaz = 0.912D8/diml
-            v0_dh13 = 240*100./dimc
             rand2 = 240.*100./dimc * 1./kay
             call ddz(rho0,gradrho0_z,1)
 
@@ -280,8 +279,11 @@ Program driver
         endif
     endif
 
-    !   stop
-    if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS
+      ! stop
+    if (CONSTRUCT_KERNELS) then
+      call PRODUCE_KERNELS
+      stop
+    end if
 
 
     start_mp_time = MPI_WTIME()
@@ -404,7 +406,7 @@ Program driver
 
             if (.not. compute_data) then
                 call adjoint_source_filt(indexglob)
-                if (.not. linesearch) call misfit_all(indexglob)
+                ! if (.not. linesearch) call misfit_all(indexglob)
             endif
         endif
         if (compute_adjoint) then
@@ -1010,6 +1012,7 @@ SUBROUTINE COMPUTE_TT(u0, u, tau, dt, nt)
  mat(:,2) = times
  mat(:,3) = times**2.
  call inverse(mat, invmat, 3)
+
  p1 = invmat(2,1)*cc(loc-1) + invmat(2,2) * cc(loc) + invmat(2,3) * cc(loc+1)
  p2 = invmat(3,1)*cc(loc-1) + invmat(3,2) * cc(loc) + invmat(3,3) * cc(loc+1)
 
@@ -1020,50 +1023,73 @@ END SUBROUTINE COMPUTE_TT
 !================================================================================
 
 SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
-    use initialize
-    use integrals
-    implicit none
-    integer, intent(in) :: nt, lef, rig
-    real*8, intent(in) :: u0(nt), u(nt)
-    real*8 dt
-    real*8, intent(inout) :: tau
-    real*8 u0dot(nt), window(nt)
-    integer k
-    integer*8 plan
-    complex*16 u0w(nt/2+1)
-    real*8 numerator,denominator
+ implicit none
+ include 'fftw3.f'
+ integer, parameter :: degree=3
+ integer, intent(in) :: nt, lef, rig
+ real*8, intent(in) :: u0(nt), u(nt)
+ real*8 dt
+ real*8, intent(out) :: tau
+ real*8 window(nt),functemp(nt)
+ integer k,i,num_real_roots
+ integer*8 plan
+ real*8 temp,polycoeffs(0:degree)
+ real*8 :: roots(degree)
+ complex*16 wu0(nt/2+1,1:degree+1)
+ real*8 u0dot(nt,1:degree+1)
+ complex*16, parameter :: eye = (0.0,1.0)
+ real*8, parameter :: pi=acos(dble(-1.0))
 
+ polycoeffs = 0
 
-    window = 0.0
-    window(lef:rig) = 1.0
-    call dfftw_plan_dft_r2c_1d(plan,nt,u0,u0w,FFTW_ESTIMATE)
-    call dfftw_execute_dft_r2c(plan, u0, u0w)
+ window = 0.0
+ window(lef:rig) = 1.0
+
+ do i=1,degree+1
+    call dfftw_plan_dft_r2c_1d(plan,nt,u0,wu0(:,i),&
+            FFTW_ESTIMATE)
+    call dfftw_execute_dft_r2c(plan, u0, wu0(:,i))
     call dfftw_destroy_plan(plan)
 
     do k=1,nt/2
-        u0w(k)=u0w(k)*(eye*2*pi*(k-1.0)/(nt*dt))
+        wu0(k,i)=wu0(k,i)*(eye*2*pi*(k-1.0)/(nt*dt))**i
     end do
 
-    u0w(nt/2+1)=0
-
-    call dfftw_plan_dft_c2r_1d(plan,nt,u0w,u0dot,FFTW_ESTIMATE)
-    call dfftw_execute_dft_c2r(plan, u0w, u0dot)
+    call dfftw_plan_dft_c2r_1d(plan,nt,wu0(:,i),u0dot(:,i),&
+            FFTW_ESTIMATE)
+    call dfftw_execute_dft_c2r(plan, wu0(:,i),u0dot(:,i))
     call dfftw_destroy_plan(plan)
+ enddo
 
-    u0dot=u0dot/nt
+ u0dot=u0dot/nt
 
-!~     open(unit=395,file="u_udot",status='REPLACE')
-!~     do k=1,nt
-!~         write(395,'(F14.3,X,F14.3,X,F14.3)')  u0(k),u0dot(k),u(k)
-!~     end do
-!~     close(395)
+ ! coefficients of dchi/dt
 
-    call integrate_time(window*u0dot*(u0-u),numerator,dt)
-    call integrate_time(window*u0dot**2,denominator,dt)
+ do i=0,degree
+     functemp = 0
+     if (i .eq. 0) then
+         functemp = 2*u0dot(:,1)*(u-u0)
+     elseif (i .eq. 1) then
+         functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+     elseif (i .eq. 2) then
+         functemp = -3*u0dot(:,1)*u0dot(:,2)+&
+             (u-u0)*u0dot(:,3)
+     elseif (i .eq. 3) then
+         functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
+             +(-u+u0)*u0dot(:,4))/3.0
+     endif
 
-    tau=numerator/denominator
-    ! print *,tau*60.,dt*60.
+     call integrate_time(window*functemp,&
+             polycoeffs(degree-i),dt,nt)
+ end do
 
+ polycoeffs = polycoeffs/polycoeffs(0)
+
+ tau=-polycoeffs(degree)/polycoeffs(degree-1)
+
+ call polyroots(polycoeffs,degree,num_real_roots,roots)
+
+ tau=roots(minloc(abs(roots(1:num_real_roots)-tau),dim=1))
 
 END SUBROUTINE COMPUTE_TT_GIZONBIRCH
 
@@ -2164,6 +2190,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             endif
         end if
 
+
         do freq_ind=0,(freq_intervals-1)
 
          call convert_to_string(freq_ind, ffind, 1)
@@ -2217,9 +2244,9 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
          !~  RECEIVER PIXEL FLAG
          do i=1,nx
              !~   RECEIVER PIXEL END FLAG
-             !~   print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
-             if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
+             if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
+                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                  if (.not. linesearch) then
                      if (pord .ne. 8) then
                          timest = floor(distances(i)/vel(pord) * 1./dt)
@@ -2232,8 +2259,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                          +0.29270337114*dist+36.4398734578)* 1./(dt))
                      end if
                      loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
-                     lef = loc - halftime
-                     rig = loc + halftime
+                     lef = max(1,loc - halftime)
+                     rig = min(nt,loc + 2*halftime)
 
                      inquire(unit=596,opened=file_open)
                      if (file_open) write(596,*) lef, rig
@@ -2244,8 +2271,9 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                      if (file_open) read(596,*) lef, rig
                  endif
 
-                 ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-                 call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
+                 print*,"calling compute tt with i=",i,"lef",lef,"rig",rig
+                 call compute_tt_gizonbirch(real(dat(i,1,:)),real(acc(i,1,:)),&
+                                            tau,dt,nt, lef, rig)
 
                  138 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
                  write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
@@ -2830,3 +2858,92 @@ END SUBROUTINE MISFIT_ALL
 
 
 !================================================================================
+
+subroutine POLYROOTS(polycoeffs,N,num_real_roots,realroots)
+ implicit none
+ integer, intent(in) :: N
+ real*8, intent(in) :: polycoeffs(0:N)
+ real*8 companion(N,N),wi(N),wr(N)
+ real*8, intent(out) :: realroots(N)
+ integer,intent(out) :: num_real_roots
+ integer i,info,lwork,lwmax,temp
+ parameter(lwmax=100)
+ real*8 work(lwmax),vl(N,N),vr(N,N)
+
+ companion=0
+ do i=1,N
+   companion(1,i) = -polycoeffs(i)
+ end do
+
+ do i=2,N
+   companion(i,i-1) = 1
+ enddo
+
+ LWORK = -1
+ CALL DGEEV( 'N', 'N', N, companion, N, WR, WI, VL, N,&
+              VR, N, WORK, LWORK, INFO )
+ LWORK = MIN( LWMAX, INT( WORK( 1 ) ) )
+
+ call DGEEV('N','N',N,companion,N,wr,wi,vl,N,&
+               vr,N,work,lwork,info)
+
+   num_real_roots=0
+   do i=1,N
+       if (abs(wi(i))<1e-10) num_real_roots=num_real_roots+1
+   end do
+
+  temp = 1
+
+  do i=1,N
+      if (abs(wi(i))<1e-10) then
+          realroots(temp) = wr(i)
+          temp = temp+1
+      end if
+  end do
+
+end subroutine POLYROOTS
+
+!================================================================================
+
+SUBROUTINE INTEGRATE_TIME(f,int_f,dt,nt)
+
+    implicit none
+    integer, intent(in) :: nt
+    real*8, intent(in) :: dt,f(nt)
+    real*8, intent(out) ::  int_f
+
+    int_f = 0
+    call simpson_regular(f,dt,nt,int_f)
+
+END SUBROUTINE INTEGRATE_TIME
+
+SUBROUTINE SIMPSON_REGULAR(f,dvar,nt,int_f)
+
+    implicit none
+    integer, intent(in) :: nt
+    real*8, intent(in) :: dvar,f(nt)
+    real*8, intent(out) :: int_f
+    integer k
+
+    int_f = 0.0
+
+    do k=1,nt
+
+        if ((k == 1) .or. (k == size(f))) then
+            int_f = int_f + f(k)
+            cycle
+        end if
+
+        if (mod(k,2) == 0) then
+            int_f = int_f + 4*f(k)
+        else
+            int_f = int_f + 2*f(k)
+        endif
+
+    end do
+
+    int_f=int_f*dvar/3.
+
+END SUBROUTINE SIMPSON_REGULAR
+
+!===============================================================================

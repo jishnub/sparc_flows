@@ -12,7 +12,9 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject, Gdk
 from scipy import signal,linalg,fftpack,integrate,interpolate
 import fnmatch
+import plotc
 
+Rsun = 695.8
 Lx = read_params.get_xlength()
 nx = read_params.get_nx()
 dt_sec = read_params.get_dt()
@@ -40,13 +42,17 @@ class MainWindow(Gtk.Window):
         self.source_x = 0
         self.nt = 40+int(solartime*60/dt_min)
         self.t = np.arange(self.nt)*dt_sec
-        self.figure = plt.figure()
-        self.halftime = 10 # Minutes
+        self.x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+        self.freq_mHz = np.fft.fftfreq(self.nt,dt_sec)*1e3
+        self.k_invMm = 2*np.pi*np.fft.fftfreq(nx,Lx/nx)
+        self.halftime = 90 # Minutes
 
         Gtk.Window.__init__(self, title="Traveltimes")
         self.set_size_request(400, 200)
         self.set_resizable(False)
-        self.set_icon_from_file(get_resource_path("sun.ico"))
+        try:
+            self.set_icon_from_file(get_resource_path("sun.ico"))
+        except: pass
 
         self.timeout_id = None
 
@@ -130,8 +136,6 @@ class MainWindow(Gtk.Window):
         hbox_list[-1].pack_start(self.params_label,expand=False,fill=False,padding=10)
 
         # Select pixel
-
-        self.x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 
         align_and_hbox()
         align_list[-1].set_padding(0,0,10,0)
@@ -219,7 +223,7 @@ class MainWindow(Gtk.Window):
         except IOError:
             self.params_dist["min"] = 20
             self.params_dist["max"] = 100
-            self.halftime = 10
+            self.halftime = 90
 
         # self.params_label.set_text("Min dist: {:.1f}, max dist: {:.1f}".
         #                             format(self.params_dist["min"],self.params_dist["max"]))
@@ -235,7 +239,6 @@ class MainWindow(Gtk.Window):
             modefilter_function = getattr(modefilters,
                     self.ridge_filters_list.get_active_text()+"mode_filter")
             self.mode_filter = np.squeeze(modefilter_function(self.nt,dt_sec,nx,Lx)).T
-
 
     def on_data_entry_changed(self,entry):
         current_path = entry.get_text()
@@ -265,7 +268,7 @@ class MainWindow(Gtk.Window):
         # Load data
         if data:
             try:
-                src_file_path = os.path.join(datadir,"tt","data","data"+
+                src_file_path = os.path.join(datadir,"data",
                                 str(self.src.get_value_as_int()).zfill(2)+".fits")
                 self.data_file = fitsread(src_file_path)
                 self.nt = self.data_file.shape[0]
@@ -293,7 +296,8 @@ class MainWindow(Gtk.Window):
         return data_filtered,vzcc_filtered
 
     def on_pixel_tt_pressed(self,button):
-        if self.data_file is None or self.vzcc_file is None: return
+        if self.data_file is None or self.vzcc_file is None:
+            return
 
         pixel = self.pixel.get_value_as_int()
 
@@ -314,36 +318,48 @@ class MainWindow(Gtk.Window):
 
         vel_Mm_per_min = self.mode_speeds[self.ridge_filters_list.get_active()]
         timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))
-        timefin_index = timest_index + 40
+        timefin_index = timest_index + 60
 
         loc = abs(u[timest_index:timefin_index+1]).argmax()+timest_index
-        halftime = 10
-        t_low_index = loc - halftime
-        t_high_index = loc + halftime
+        t_low_index = max(0,loc - self.halftime)
+        t_high_index = min(self.nt,loc + 2*self.halftime)
 
-        tt_han = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
+        tt_han = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
         print("Hanasoge",tt_han,"seconds")
-        tt_han_smoothed = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
-        print("Smoothed, 10s cadence",tt_han_smoothed,"seconds")
-        tt_han_smoothed = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
-        print("Smoothed, 5s cadence",tt_han_smoothed,"seconds")
-        tt_gb = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
+        tt_gb = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
         print("Gizon Birch",tt_gb,"seconds")
-        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
-        print("Gizon Birch, 10s",tt_gb_interp,"seconds")
-        tt_gb_interp = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
-        print("Gizon Birch, 5s",tt_gb_interp,"seconds")
 
-        plt.cla()
+        plt.figure(0)
         plt.plot(self.t/60,u0,label="data",color="blue")
         plt.plot(self.t/60,u,label="vzcc",color="red")
-        plt.axvline(timest_index*dt_min,ls="dotted",color="black")
-        plt.axvline(timefin_index*dt_min,ls="dotted",color="black")
-        plt.axvspan(t_low_index*dt_min,t_high_index*dt_min,color="0.8")
-        plt.xlim(timest_index*dt_min,timefin_index*dt_min)
+        # plt.axvline(timest_index*dt_min,ls="dotted",color="black")
+        # plt.axvline(timefin_index*dt_min,ls="dotted",color="black")
+        plt.axvspan(t_low_index*dt_min,t_high_index*dt_min,edgecolor="0.6",facecolor="0.95")
+        plt.xlim(self.t[0]/60,self.t[-1]/60)
         plt.xlabel("Time (min)",fontsize=16)
         plt.ylabel("Wave displacement",fontsize=16)
         plt.legend(loc="best",fontsize=14)
+        plt.tight_layout()
+
+        plt.figure(1)
+        plotc.colorplot(trig_interp(data_filtered,x=4,y=2),
+        x=lininterp(self.x,factor=4),y=lininterp(self.t,factor=2)/60,
+        sp=121,colorbar=False)
+        plt.axvline(self.x[pixel],linestyle="dashed",linewidth=1,color="firebrick")
+        plt.axhline(t_low_index*dt_min,color="0.6")
+        plt.axhline(t_high_index*dt_min,color="0.6")
+        plt.xlim(max(-Lx/2,self.x[pixel]-15),min(Lx/2,self.x[pixel]+15))
+        plt.ylim(t_low_index*dt_min-10,t_high_index*dt_min+10)
+        plt.title("Time-Distance",fontsize=16)
+        plt.xlabel("x (Mm)",fontsize=14)
+        plt.ylabel("Time (min)",fontsize=14)
+
+        plotc.spectrumplot(abs(np.fft.fft2(data_filtered)),x=self.k_invMm*Rsun,y=self.freq_mHz,
+                    sp=122,cmap="Greys",xr=[0,1200],yr=[0,8],colorbar=False)
+        plt.title("Spectrum",fontsize=16)
+        plt.xlabel(r"$k\,R_\odot$",fontsize=14)
+        plt.ylabel(r"$\nu$ (mHz)",fontsize=14)
+
         plt.tight_layout()
         plt.show()
 
@@ -354,11 +370,6 @@ class MainWindow(Gtk.Window):
 
         tt_hanasoge_30s = []
         tt_gb_30s = []
-        tt_gb_interp_10s = []
-        tt_gb_interp_5s = []
-        # tt_sparc_30s = []
-        tt_hanasoge_interp_10s = []
-        tt_hanasoge_interp_5s = []
         pixel_x_list = []
 
         for pixel in xrange(nx):
@@ -371,7 +382,7 @@ class MainWindow(Gtk.Window):
 
             vel_Mm_per_min = self.mode_speeds[self.ridge_filters_list.get_active()]
             timest_index = int(np.floor(distance_Mm/vel_Mm_per_min/dt_min))-1
-            timefin_index = timest_index + 40
+            timefin_index = timest_index + 60
 
             if timest_index>self.nt:
                 print("Pixel {:3d}, starting index {:3d} is greater than nt {:3d}"
@@ -387,38 +398,21 @@ class MainWindow(Gtk.Window):
 
             loc = abs(u[timest_index:timefin_index+1]).argmax()+timest_index
 
-            t_low_index = loc - self.halftime
-            t_high_index = loc + self.halftime
+            t_low_index = max(0,loc - self.halftime)
+            t_high_index = min(self.nt,loc + 2*self.halftime)
 
-            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
+            tt = self.compute_tt_quadratic_fit(u0,u,t_low_index,t_high_index)
             tt_hanasoge_30s.append(tt)
-            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
-            tt_hanasoge_interp_10s.append(tt)
-            tt = self.compute_tt_quadratic_fit_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
-            tt_hanasoge_interp_5s.append(tt)
-            # tt = self.compute_tt_sparc(u0,u,t_low_index,t_high_index)
-            # tt_sparc_30s.append(tt)
-            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=1)
+
+            tt = self.compute_tt_gizonbirch(u0,u,t_low_index,t_high_index)
             tt_gb_30s.append(tt)
-            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=3)
-            tt_gb_interp_10s.append(tt)
-            tt = self.compute_tt_gizonbirch_interpolated(u0,u,t_low_index,t_high_index,interpolation_factor=6)
-            tt_gb_interp_5s.append(tt)
             pixel_x_list.append(signed_distance_Mm)
 
         pixel_x_list = np.array(pixel_x_list)
         tt_gb_30s = np.array(tt_gb_30s)
-        tt_gb_interp_10s = np.array(tt_gb_interp_10s)
-        tt_gb_interp_5s = np.array(tt_gb_interp_5s)
-        # tt_sparc_30s = np.array(tt_sparc_30s)
         tt_hanasoge_30s = np.array(tt_hanasoge_30s)
-        tt_hanasoge_interp_10s = np.array(tt_hanasoge_interp_10s)
-        tt_hanasoge_interp_5s = np.array(tt_hanasoge_interp_5s)
 
-        # tt_file=np.loadtxt(os.path.join(datadir,"forward_src"+str(self.src.get_value_as_int()).zfill(2)+
-        #                     "_ls00","ttdiff."+str(self.ridge_filters_list.get_active())))
-
-        color = iter(['r','maroon','indianred','b','steelblue','royalblue'])
+        color = iter(['steelblue','olive'])
 
         plt.cla()
 
@@ -432,15 +426,12 @@ class MainWindow(Gtk.Window):
             marker=kwargs.pop("marker",p[0].get_marker()))
 
         plot_tt(tt_hanasoge_30s,label="Sparc, 30s")
-        plot_tt(tt_hanasoge_interp_10s,label="Sparc,interp: 10s")
-        plot_tt(tt_hanasoge_interp_5s,label="Sparc,interp: 5s")
-        # plot_tt(tt_file[:,1],label="From file",marker="o",ls="None")
-
-
         plot_tt(tt_gb_30s,label="GB02, 30s")
-        plot_tt(tt_gb_interp_10s,label="GB02,interp: 10s")
-        plot_tt(tt_gb_interp_5s,label="GB02,interp: 5s")
 
+        plt.axvline(self.source_x,color="firebrick",label="Source")
+        plt.axvspan(-15,15,facecolor="0.95",edgecolor="0.6",label="SG")
+
+        plt.margins(x=0.1,y=0.1)
         plt.legend(loc="best",fontsize=14)
         plt.xlabel("Distance from source (Mm)",fontsize=16)
         plt.ylabel(r"$\Delta \tau$ (sec)",fontsize=16)
@@ -448,8 +439,8 @@ class MainWindow(Gtk.Window):
         plt.show()
 
     def compute_tt_quadratic_fit(self,u0, u,t_low_index,t_high_index):
-        u0 = u0[t_low_index:t_high_index+1]
-        u  =  u[t_low_index:t_high_index+1]
+        u0 = np.take(u0,range(t_low_index,t_high_index+1),mode='wrap')
+        u  =  np.take(u,range(t_low_index,t_high_index+1),mode='wrap')
         cc=signal.correlate(u0,u).real
         cc_max_index = cc.argmax()
         t = np.arange(-len(u)+1,len(u))*dt_sec
@@ -459,64 +450,31 @@ class MainWindow(Gtk.Window):
 
         p = np.polyfit(t_wavepacket,cc_wavepacket,2)
 
-        return -p[1]/(2*p[0])
-
-    def compute_tt_quadratic_fit_interpolated(self,u0, u,t_low_index,t_high_index,interpolation_factor=1):
-        u0 = u0[t_low_index:t_high_index+1]
-        u  =  u[t_low_index:t_high_index+1]
-
-        t_fine = np.linspace(self.t[t_low_index],self.t[t_high_index],
-                    (t_high_index-t_low_index+1)*interpolation_factor)
-        s0 = interpolate.InterpolatedUnivariateSpline(self.t[t_low_index:t_high_index+1],u0)
-        u0 = s0(t_fine)
-        s = interpolate.InterpolatedUnivariateSpline(self.t[t_low_index:t_high_index+1],u)
-        u = s(t_fine)
-
-        cc=signal.correlate(u0,u).real
-        cc_max_index = cc.argmax()
-        t = np.arange(-len(u)+1,len(u))*dt_sec/interpolation_factor
-
-        t_wavepacket = t[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
-        cc_wavepacket = cc[cc_max_index-interpolation_factor:cc_max_index+interpolation_factor+1]
-
-        p = np.polyfit(t_wavepacket,cc_wavepacket,2)
-
-        return -p[1]/(2*p[0])
-
-    def compute_tt_sparc(self,u0, u,t_low_index,t_high_index):
-        import traveltimes
-        u0 = u0[t_low_index:t_high_index+1]
-        u = u[t_low_index:t_high_index+1]
-
-        tau = traveltimes.compute_tt_hanasoge(u0, u, dt_sec)
-
-        return tau
+        return p[1]/(2*p[0])
 
     def compute_tt_gizonbirch(self,u0,u,t_low_index,t_high_index):
 
-        window = np.zeros(u.shape,dtype=float)
-        window[t_low_index:t_high_index+1] = 1
+        w = np.zeros(self.nt,dtype=float)
+        np.put(w,range(t_low_index,t_high_index+1),[1],mode='wrap')
+        # w[t_low_index:t_high_index+1] = 1
 
-        u0dot = fftpack.diff(u0,period=self.nt*dt_sec)
+        degree = 4
 
-        return -(integrate.simps(window*u0dot*(u0-u),dx=dt_sec)/
-                integrate.simps(window*u0dot**2,dx=dt_sec))
+        u0dot = np.array([fftpack.diff(u0,period=self.nt*dt_sec,order=i) for i in xrange(degree+2)])
 
-    def compute_tt_gizonbirch_interpolated(self,u0,u,t_low_index,t_high_index,interpolation_factor=1):
+        p = np.zeros(degree)
 
-        t_fine = np.linspace(self.t[0],self.t[-1],self.t.size*interpolation_factor)
-        s0 = interpolate.InterpolatedUnivariateSpline(self.t,u0)
-        u0 = s0(t_fine)
-        s = interpolate.InterpolatedUnivariateSpline(self.t,u)
-        u = s(t_fine)
+        p[-1] = integrate.simps(w*2*u0dot[1]*(u-u0),dx=dt_sec)
+        p[-2] = integrate.simps(w*2*(u0dot[1]**2+u0dot[2]*(u0-u)),dx=dt_sec)
+        p[-3] = integrate.simps(w*(-3*u0dot[1]*u0dot[2]+u0dot[3]*(u-u0)),dx=dt_sec)
+        p[-4] = integrate.simps(
+                w*(3*u0dot[2]**2+4*u0dot[1]*u0dot[3]+u0dot[4]*(u0-u))/3,dx=dt_sec)
 
-        window = np.zeros(u.shape,dtype=float)
-        window[t_low_index*interpolation_factor:(t_high_index+1)*interpolation_factor] = 1
+        guess = -p[-1]/p[-2]
+        r = np.roots(p)
 
-        u0dot = fftpack.diff(u0,period=self.nt*dt_sec)
+        return r[abs(r-guess).argmin()]
 
-        return -(integrate.simps(window*u0dot*(u0-u),dx=dt_sec)/
-                integrate.simps(window*u0dot**2,dx=dt_sec))
 
 def close_plot_and_exit(*args):
     plt.close('all')
@@ -524,7 +482,38 @@ def close_plot_and_exit(*args):
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f)).astype(float)
 
+def trig_interp(arr,x=1,y=1):
+    if arr.ndim==1:
+        spec = np.fft.fft(arr)
+        nx, = spec.shape
+        spec = np.concatenate((spec[:nx//2],
+                            np.zeros(nx*(x-1),dtype=complex),
+                            spec[nx//2:]))
 
+        return np.fft.ifft(spec).real
+
+    elif arr.ndim==2:
+        spec = np.fft.fft2(arr)
+        ny,nx = spec.shape
+
+        top = np.concatenate((spec[:ny//2,:nx//2],
+                            np.zeros((ny//2,nx*(x-1)),dtype=complex),
+                            spec[:ny//2,nx//2:]),axis=1)
+
+        middle = np.zeros((ny*(y-1),nx*x),dtype=complex)
+
+        bottom = np.concatenate((spec[ny//2:,:nx//2],
+                            np.zeros((ny//2,nx*(x-1)),dtype=complex),
+                            spec[ny//2:,nx//2:]),axis=1)
+
+        spec = np.concatenate((top,middle,bottom),axis=0)
+
+        return np.fft.ifft2(spec).real
+
+def lininterp(arr,factor=1):
+    dx = arr[1]-arr[0]
+    nx, = arr.shape
+    return np.linspace(arr[0],arr[-1]+dx,nx*factor,endpoint=False)
 
 win1 = MainWindow()
 win1.connect("delete-event", close_plot_and_exit)

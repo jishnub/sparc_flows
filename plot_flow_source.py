@@ -28,8 +28,9 @@ x=np.linspace(-Lx/2,Lx/2,num=nx,endpoint=False)
 vx=fitsread('true_vx.fits')
 vz=fitsread('true_vz.fits')
 
-qv=plotc.quiver2D(vx,vz,x=x,y=z,every=[2,2],xr=[-40,40],yr=[-5,None],
-scale=8000,key=False,key_properties={'suffix':' m/s','fmt':'{:2.0f}','scale':250},rasterized=False,color='#777777')
+qv=plotc.quiver2D(vx,vz,x=x,y=z,every=[2,2],xr=[-80,80],yr=[-5,None],
+scale=8000,key=False,key_properties={'suffix':' m/s','fmt':'{:2.0f}','scale':250},
+rasterized=False,color='#777777')
 
 ax=qv.axis
 
@@ -60,7 +61,7 @@ plt.plot([rec_x],[obs_depth],marker='o',markerfacecolor='#333333',markersize=12)
 
 ax.text(src_x,0.2,"Source",horizontalalignment='center',verticalalignment='bottom',
         fontsize=20)
-        
+
 ax.text(rec_x,0.4,"Receiver",horizontalalignment='center',verticalalignment='bottom',
         fontsize=20)
 
@@ -81,4 +82,3 @@ else:
     print "Not saving plot to file"
 
 plt.show()
-

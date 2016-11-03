@@ -65,6 +65,8 @@ def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
 
 id_text = read_params.parse_cmd_line_params(key="id")
 opt_algo = read_params.parse_cmd_line_params(key="opt_algo")
+if opt_algo is None:
+    opt_algo = "cg"
 
 data_command = "qsub -N data_{} data_forward.sh".format(id_text)
 full_command = "qsub -N full_{} full.sh".format(id_text)
@@ -413,8 +415,8 @@ for query in xrange(100000):
         if misfit_diff_changes_sign:
             misfit_diff_sign_change_ind = misfit_diff_sign_change_locs[0]
             # Ensure that it is a simple minimum
-            if not (np.sign(misfit_diff)[:misfit_diff_sign_change_ind+1]==-1 and
-                    np.sign(misfit_diff)[misfit_diff_sign_change_ind+1:]==1):
+            if not ((np.sign(misfit_diff)[:misfit_diff_sign_change_ind+1]==-1).all() and
+                    (np.sign(misfit_diff)[misfit_diff_sign_change_ind+1:]==1).all()):
                     print("Not a simple minimum, quitting")
                     exit()
 

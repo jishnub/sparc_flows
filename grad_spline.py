@@ -9,6 +9,8 @@ import os,fnmatch,sys
 import pyfits
 import warnings
 import read_params
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt,ticker
 
 ########################################################################
@@ -144,12 +146,14 @@ def main():
 
     args=sys.argv[1:]
     optimization_algo=filter(lambda temp: temp.startswith('algo='),args)
-    if len(optimization_algo)>0: optimization_algo = optimization_algo[0].split("=")[-1]
-    else: optimization_algo="conjugate gradient"
+    if len(optimization_algo)>0:
+        optimization_algo = optimization_algo[0].split("=")[-1]
+    else: optimization_algo="cg"
 
-    steepest_descent = optimization_algo=='sd' or optimization_algo=='steepest descent'
-    conjugate_gradient = optimization_algo=='cg' or optimization_algo=='conjugate gradient'
+    steepest_descent = optimization_algo=='sd'
+    conjugate_gradient = optimization_algo=='cg'
     LBFGS = optimization_algo=='LBFGS'
+    BFGS = optimization_algo=='BFGS'
 
     def isfloat(value):
         try:
@@ -201,6 +205,12 @@ def main():
         with np.load(modelfile) as f:
             return dict(f.items())
 
+    def read_BFGS_hessian(var='psi',iterno=iterno):
+        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            return dict(f.items())
+
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
 
@@ -213,52 +223,62 @@ def main():
     def coeff_to_model(tck_z,tck_R):
         f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
         f0_x_max = f0_x.max()
+        f0_x/=f0_x_max
+
+        h_z=interpolate.splev(z,tck_z,ext=1)
+
         # f1_x is the derivative of f0_x wrt R
         f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
-        f0_x/=f0_x_max
         f1_x/=f0_x_max
+        if tck_R[1] is not None:
+            R1_z = interpolate.splev(z,tck_R,ext=1)
+        else:
+            R1_z = np.zeros_like(h_z)
 
-        R1_z = interpolate.splev(z,tck_R,ext=1)
-        h_z=interpolate.splev(z,tck_z,ext=1)
 
         return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
 
-    with np.load(os.path.join(datadir,"true_psi_coeffs.npz")) as f:
 
-        coeff_surf_cutoff_ind = f["c_surf_cutoff"]
+    f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
+    coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
+    tR = f.get("tR")
+    tz = f.get("tz")
+    cz_ref_top = f.get("cz_top")
+    cz_ref_bot = f.get("cz_bot")
+    kR = f.get("kR")
+    kz = f.get("kz")
 
-        tR = f["tR"]
-        tz = f["tz"]
-        cz_ref_top = f["cz_top"]
-        cz_ref_bot = f["cz_bot"]
-        kR = f["kR"]
-        kz = f["kz"]
-
-        z_spl_cutoff = f["z_spline_cutoff"]
-        R_surf_cutoff = f["R_surf_cutoff"]
+    z_spl_cutoff = f.get("z_spline_cutoff")
+    R_surf_cutoff = f.get("R_surf_cutoff")
 
     class spline_basis_coeffs():
         def __init__(self,true_coeffs,iter_coeffs,low_ind=0,high_ind=None):
             self.true = true_coeffs
             self.iterated = iter_coeffs
             self.low_ind = low_ind
-            self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
+            if high_ind is not None:
+                self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
+            else:
+                self.high_ind = None
             self.grad = None
             self.update = None
-            self.size = self.iterated.size
+            self.size = self.iterated.size if self.iterated is not None else None
 
 
         def get_true(self,low_ind=None,high_ind=None):
-            return self.true[self.low_ind if low_ind is None else low_ind:
-                                self.high_ind if high_ind is None else high_ind]
+            low_ind = self.low_ind if low_ind is None else low_ind
+            high_ind = self.high_ind if high_ind is None else high_ind
+            return self.true[low_ind:high_ind]
 
         def get_iterated(self,low_ind=None,high_ind=None):
-            return self.iterated[self.low_ind if low_ind is None else low_ind:
-                                self.high_ind if high_ind is None else high_ind]
+            low_ind = self.low_ind if low_ind is None else low_ind
+            high_ind = self.high_ind if high_ind is None else high_ind
+            return self.iterated[low_ind:high_ind]
 
         def get_update(self,low_ind=None,high_ind=None):
-            return self.update[self.low_ind if low_ind is None else low_ind:
-                                self.high_ind if high_ind is None else high_ind]
+            low_ind = self.low_ind if low_ind is None else low_ind
+            high_ind = self.high_ind if high_ind is None else high_ind
+            return self.update[low_ind:high_ind]
 
         def get_range(self):
             return np.array(range(self.low_ind,self.high_ind))
@@ -266,12 +286,13 @@ def main():
     iter_model = read_model()
 
     coeffs = {
-    "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["cz_bot"],
-    low_ind=0,high_ind=coeff_surf_cutoff_ind),
+    "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["z"],
+    low_ind=kz+1,high_ind=coeff_surf_cutoff_ind)}
 
-    "R":spline_basis_coeffs(true_coeffs=np.zeros_like(iter_model["cR"]),
-    iter_coeffs=iter_model["cR"],low_ind=0,high_ind=R_surf_cutoff)
-    }
+    if iter_model.get("cR") is not None:
+        coeffs["R"]=spline_basis_coeffs(true_coeffs=np.zeros_like(iter_model.get("R")),
+        iter_coeffs=iter_model.get("R"),low_ind=kR+1,
+        high_ind=R_surf_cutoff)
 
     ############################################################################
     # Gradient computation
@@ -296,6 +317,10 @@ def main():
                     z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
 
     kernel = np.squeeze(totkern_psi).T
+
+    large_x_cutoff = 40
+    cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
+    kernel = kernel*cutoff_x[None,:]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -326,33 +351,64 @@ def main():
 
     # compute basis coefficient gradients
     def compute_grad_basis(coeffs):
-        grad_c = np.zeros(coeffs["z"].size)
-        grad_R = np.zeros(coeffs["R"].size)
+
         f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
         f0_x_max = f0_x.max()
-        # f1_x is the derivative of f0_x wrt R
-        f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
         f0_x/=f0_x_max
-        f1_x/=f0_x_max
-
         hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
-        R1 = interpolate.splev(z,(tR,coeffs["R"].iterated,kR),ext=1)
-        g_c = f0_x[None,:] + f1_x[None,:]*R1[:,None]
-        g_R = f1_x[None,:]*hs[:,None]
+        g_c = f0_x[None,:]
 
+        grad = dict.fromkeys(coeffs.keys())
+        for key in grad:
+            grad[key] = np.zeros(coeffs[key].size)
+
+        if "R" in coeffs.keys() and coeffs["R"].iterated is not None:
+            # f1_x is the derivative of f0_x wrt R
+            f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+            f1_x/=f0_x_max
+            R1 = interpolate.splev(z,(tR,coeffs["R"].iterated,kR),ext=1)
+            g_c = g_c + f1_x[None,:]*R1[:,None]
+            g_R = f1_x[None,:]*hs[:,None]
+
+            for j in coeffs["R"].get_range():
+                qj = np.zeros_like(coeffs["R"].iterated)
+                qj[j] = 1
+                qz = interpolate.splev(z,(tR,qj,kR),ext=1)
+                grad["R"][j] = integrate_2D(kernel*qz[:,None]*g_R)
+
+        if not os.path.exists(os.path.join(datadir,"update","basis_kernels")):
+            os.makedirs(os.path.join(datadir,"update","basis_kernels"))
         for j in coeffs["z"].get_range():
             bj = np.zeros_like(coeffs["z"].iterated)
             bj[j] = 1
             bz = interpolate.splev(z,(tz,bj,kz),ext=1)
-            grad_c[j] = integrate_2D(kernel*bz[:,None]*g_c)
+            grad["z"][j] = integrate_2D(kernel*bz[:,None]*g_c)
 
-        for j in coeffs["R"].get_range():
-            qj = np.zeros_like(coeffs["R"].iterated)
-            qj[j] = 1
-            qz = interpolate.splev(z,(tR,qj,kR),ext=1)
-            grad_R[j] = integrate_2D(kernel*qz[:,None]*g_R)
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
+            plt.title("Gradient",fontsize=16)
+            plt.xlim(-50,50)
+            plt.ylim(-6,z[-1])
+            plt.xlabel("x (Mm)",fontsize=16)
+            plt.ylabel("z (Mm)",fontsize=16)
 
-        return {"z":grad_c,"R":grad_R}
+            plt.subplot(1,2,2)
+            plt.pcolormesh(x,z,kernel*bz[:,None]*g_c/abs(kernel*bz[:,None]*g_c).max(),
+                            cmap="RdBu_r",vmax=1,vmin=-1)
+            plt.title("Integral: {:.1e}".format(grad["z"][j]),fontsize=16)
+            plt.xlim(-50,50)
+            plt.ylim(-6,z[-1])
+            plt.xlabel("x (Mm)",fontsize=16)
+            plt.ylabel("z (Mm)",fontsize=16)
+
+            plt.gcf().set_size_inches(8,3.5)
+            plt.tight_layout()
+            plt.savefig(os.path.join(datadir,"update",
+                        "basis_kernels","{:02d}.png".format(j)))
+            plt.clf()
+
+        return grad
 
     #~ Write out gradients for this iteration
     with warnings.catch_warnings():
@@ -498,6 +554,51 @@ def main():
 
         np.savez(LBFGS_data_file,**LBFGS_data)
 
+    elif BFGS:
+        def BFGS_update(var='psi'):
+            print "Using BFGS"
+            grad_k = read_grad(var=var,iterno=iterno)
+            grad_km1 = read_grad(var=var,iterno=iterno-1)
+
+            model_k  = read_model(var=var,iterno=iterno)
+            model_km1  = read_model(var=var,iterno=iterno-1)
+
+            try:
+                Hkm1 = read_BFGS_hessian(var=var,iterno=iterno)
+            except IOError:
+                Hkm1 = {}
+                for key in grad_k.keys():
+                    Hkm1[key] = np.identity(grad_k[key].size)
+
+
+            Hk = {}
+            update = {}
+            for key in grad_k.keys():
+                y_km1 = grad_k[key] - grad_km1[key]
+                s_km1 = model_k[key] - model_km1[key]
+
+                if (not y_km1.any()) or (not s_km1.any()):
+                    Hk[key] = Hkm1[key]
+                else:
+
+                    rho_km1 = 1/y_km1.dot(s_km1)
+
+                    left = np.identity(s_km1.size) - rho_km1*np.outer(s_km1,y_km1)
+                    right = np.identity(s_km1.size) - rho_km1*np.outer(y_km1,s_km1)
+
+                    Hk[key] = left.dot(Hkm1[key]).dot(right) + rho_km1*np.outer(s_km1,s_km1)
+
+                update[key] = -Hk[key].dot(grad_k[key])
+
+            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            np.savez(updatefile,**update)
+
+            hessfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            np.savez(hessfile,**Hk)
+
+        BFGS_update(var='psi')
+
+
     ############################################################################
 
     # Add update to coeff dictionary
@@ -507,18 +608,32 @@ def main():
 
     ############################################################################
 
+    deep_z_cutoff = -4
+
+    b_i_surf = np.zeros_like(coeffs.get("z").true)
+    for i in xrange(b_i_surf.size):
+        c_i = np.zeros_like(b_i_surf)
+        c_i[i] = 1
+        b_i_surf[i] = interpolate.splev(deep_z_cutoff,(tz,c_i,kz))
+
+    c_deep_z_cutoff_index = b_i_surf.argmax()
+
+    coeffs["z"].update *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
+
+    ############################################################################
+
     # Plot update coefficients
 
     model_grad_coeffs_fig=plt.figure()
-    ax = [plt.subplot(2,1,i) for i in xrange(1,3)]
+    ax = [plt.subplot(len(coeffs.keys()),1,i) for i in xrange(1,len(coeffs.keys())+1)]
 
     for ind,(param,coeff) in enumerate(coeffs.items()):
 
         # True model coefficients
-        ax[ind].plot(coeff.get_true(),
+        ax[ind].plot(coeff.get_range(),coeff.get_true(),
         'o-',markersize=4,color="teal",label="True")
         # Iterated model coefficients
-        ax[ind].plot(coeff.get_iterated(),
+        ax[ind].plot(coeff.get_range(),coeff.get_iterated(),
         'o-',markersize=4,color="brown",label="Iter")
 
         # Read grad and plot in twin axis
@@ -526,24 +641,23 @@ def main():
         ax2 = ax[ind].twinx()
         ax2.bar(coeff.get_range()-0.3,coeff.get_update(),width=0.6,bottom=0,
         color="goldenrod",label="Update",edgecolor="peru",alpha=0.4)
+
         s = ticker.ScalarFormatter()
         s.set_scientific(True)
         s.set_powerlimits((0,0))
         ax2.yaxis.set_major_formatter(s)
-        s = ticker.ScalarFormatter()
-        s.set_scientific(True)
-        s.set_powerlimits((0,0))
         ax[ind].yaxis.set_major_formatter(s)
 
-        plt.margins(x=0.2)
+
 
         ax[ind].set_title(param,fontsize=16)
 
         handles1,labels1 = ax[ind].get_legend_handles_labels()
         handles2,labels2 = ax2.get_legend_handles_labels()
-        plt.legend(handles1+handles2,labels1+labels2,loc="upper right")
+        ax[ind].legend(handles1+handles2,labels1+labels2,loc="upper right")
 
     sp_ind_z = map(lambda x: x.get_title(),ax).index("z")
+
     ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
     (cz_ref_top + cz_ref_bot)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
     'o--',markersize=4,color="teal")
@@ -552,13 +666,35 @@ def main():
     (cz_ref_top + coeffs["z"].iterated)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
     '--',color="brown")
 
+    ax[sp_ind_z].axvspan(0,kz+0.5,color="thistle",zorder=0)
+    ax[sp_ind_z].axvspan(cz_ref_top.size-kz-1.5,cz_ref_top.size-1,color="thistle",
+    zorder=0,label="set to zero")
+    ax[sp_ind_z].axvspan(coeff_surf_cutoff_ind-0.5,cz_ref_top.size-kz-1.5,color="lightgrey",
+    zorder=0,label="clamped")
+
+    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].iterated[:kz+2],'--',color="brown",zorder=1)
+    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].true[:kz+2],'--',color="teal",zorder=1)
+    ax[sp_ind_z].plot(range(kz+1),coeffs["z"].true[:kz+1],marker="o",mfc="thistle",
+    ls="None",zorder=2)
+
+    ax[sp_ind_z].plot(range(coeffs["z"].iterated.size-(kz+2),coeffs["z"].iterated.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="brown")
+    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+2),coeffs["z"].true.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="teal")
+    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+1),coeffs["z"].true.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+1):],marker="o",mfc="thistle",
+    ls="None",zorder=2)
+
+    for ax_i in ax:
+        ax_i.margins(x=0.1)
+        ax_i.legend(loc="best")
+
     plt.tight_layout()
     plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
 
     ############################################################################
 
-    large_x_cutoff = 40
-    deep_z_cutoff = -4
+
 
     def create_ls_model(var='psi',eps=0,kind='linear'):
 
@@ -566,62 +702,43 @@ def main():
             if abs(update[param]).max()!=0:
                 update[param]/=abs(update[param]).max()
 
-        ls_cz = coeffs["z"].iterated
-        ls_cR = coeffs["R"].iterated
+        ls_cz = coeffs.get("z").iterated
+        ls_cR = coeffs.get("R")
+        if ls_cR is not None: ls_cR = ls_cR.iterated
 
         if kind=='linear':
             cz_scale = rms(coeffs["z"].get_iterated())
             if cz_scale==0: cz_scale=cz_ref_top.max()
             ls_cz += eps*update["z"]*cz_scale
 
-            cR_scale = rms(coeffs["R"].get_iterated())
-            if cR_scale==0: cR_scale=0.1
-            ls_cR += eps*update["R"]*cR_scale
+            if ls_cR is not None:
+                cR_scale = rms(coeffs.get("R").get_iterated())
+                if cR_scale==0: cR_scale=0.1
+                ls_cR += eps*update.get("R")*cR_scale
 
         elif kind=='exp':
             ls_cz *= 1+eps*update
-            ls_cR *= 1+eps*update
+            if ls_cR is not None:
+                ls_cR *= 1+eps*update
 
         lsmodel = coeff_to_model((tz,ls_cz+cz_ref_top,kz),(tR,ls_cR,kR))
-        cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
-        cutoff_z = 1/(1+np.exp(-(z - deep_z_cutoff)/1))
-        lsmodel *= cutoff_x[None,:]*cutoff_z[:,None]
+
+        # lsmodel *= cutoff_x[None,:]
         lsmodel += iter_model["back"]
 
         lsmodel = lsmodel[:,np.newaxis,:]
         lsmodel = np.transpose(lsmodel,(2,1,0))
 
-        return lsmodel,{"cz_bot":ls_cz,"back":iter_model["back"],"cR":ls_cR}
+        coeffdict = {"z":ls_cz,"back":iter_model["back"]}
+        if ls_cR is not None:
+            coeffdict["R"] = ls_cR
+        return lsmodel,coeffdict
 
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
         lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
         fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
         np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
-
-        # Plot true model and test model
-        plt.subplot(121)
-        plt.pcolormesh(x,z,psi_true,cmap="RdBu_r",
-                    vmax=abs(psi_true).max(),vmin=-abs(psi_true).max())
-        plt.colorbar()
-        plt.xlim(-70,70)
-        plt.ylim(-7,z[-1])
-        plt.subplot(122)
-        arr_to_plot = np.squeeze(lsmodel).T-model_coeffs["back"]
-        plt.pcolormesh(x,z,arr_to_plot,cmap="RdBu_r",
-                    vmax=abs(arr_to_plot).max(),vmin=-abs(arr_to_plot).max())
-        plt.colorbar()
-        plt.axvline(-large_x_cutoff,color="brown",ls="dotted")
-        plt.axvline(large_x_cutoff,color="brown",ls="dotted")
-        plt.axhline(z_spl_cutoff,color="black",ls="dotted")
-        plt.axhline(deep_z_cutoff,color="brown",ls="dotted")
-        plt.xlim(-70,70)
-        plt.ylim(-7,z[-1])
-
-        plt.gcf().set_size_inches(8,3)
-        plt.tight_layout()
-        plt.savefig(updatedir("test_psi_"+str(i)+".png"))
-        plt.clf()
 
 
     #~ Update epslist

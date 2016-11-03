@@ -114,15 +114,16 @@ def compute_forward_adjoint_kernel(src):
 
     with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-    #assert kern==0,"Error in computing kernel"
+    assert kern==0,"Error in computing kernel"
 
     ####################################################################
     #~ Remove leftover files
     ####################################################################
     for f in glob.glob(os.path.join(datadir,forward,"*full*")): os.remove(f)
+    for f in glob.glob(os.path.join(datadir,forward,"*partial*")): os.remove(f)
     for f in glob.glob(os.path.join(datadir,adjoint,"*full*")): os.remove(f)
     for f in glob.glob(os.path.join(datadir,adjoint,"*partial*")): os.remove(f)
-    
+
 
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.bin")):
         os.remove(os.path.join(datadir,forward,"vz_cc.bin"))
