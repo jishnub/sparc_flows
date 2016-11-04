@@ -376,8 +376,10 @@ def main():
                 qz = interpolate.splev(z,(tR,qj,kR),ext=1)
                 grad["R"][j] = integrate_2D(kernel*qz[:,None]*g_R)
 
-        if not os.path.exists(os.path.join(datadir,"update","basis_kernels")):
-            os.makedirs(os.path.join(datadir,"update","basis_kernels"))
+        if not os.path.exists(os.path.join(datadir,"update",
+            "basis_kernels","iter_{:02d}".format(iterno))):
+            os.makedirs(os.path.join(datadir,"update",
+            "basis_kernels","iter_{:02d}".format(iterno)))
         for j in coeffs["z"].get_range():
             bj = np.zeros_like(coeffs["z"].iterated)
             bj[j] = 1
@@ -404,7 +406,7 @@ def main():
 
             plt.gcf().set_size_inches(8,3.5)
             plt.tight_layout()
-            plt.savefig(os.path.join(datadir,"update",
+            plt.savefig(os.path.join(datadir,"update","iter_{:02d}".format(iterno),
                         "basis_kernels","{:02d}.png".format(j)))
             plt.clf()
 
@@ -443,11 +445,11 @@ def main():
 
             np.seterr(divide="raise")
             try:
-                beta = np.sum(grad*(grad - lastgrad))
+                beta = grad.dot(grad - lastgrad)
                 if polak_ribiere:
                     beta/= np.sum(lastgrad**2.)
                 elif hestenes_stiefel:
-                    beta/= np.sum((grad - lastgrad)*lastupdate)
+                    beta/= np.dot(grad - lastgrad,lastupdate)
             except FloatingPointError:
                 beta=0
 
@@ -463,7 +465,7 @@ def main():
             for param in grad_k.keys():
                 beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
                 update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
-
+                np.set_printoptions(linewidth=200,precision=4)
             print "beta",dict((k,round(v,2)) for k,v in beta_k.iteritems())
 
             updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')

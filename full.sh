@@ -60,6 +60,10 @@ find $directory/status -name "kernel*" -delete
 [[ -e vx_00.fits ]] && cp vx_00.fits "$directory"/update/vx_"$itername".fits
 [[ -e vz_00.fits ]] && cp vz_00.fits "$directory"/update/vz_"$itername".fits
 
+mkdir -p "$directory"/kernel/iter_"$itername"
+cp "$directory"/kernel/*.fits "$directory"/kernel/iter_"$itername"/.
+cp "$directory"/kernel/out_kernel* "$directory"/kernel/iter_"$itername"/.
+
 find . -name "core.*" -delete
 find . -name "fort.*" -delete
 
