@@ -2246,7 +2246,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
              !~   RECEIVER PIXEL END FLAG
 
              if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
-                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
+                 ! print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                  if (.not. linesearch) then
                      if (pord .ne. 8) then
                          timest = floor(distances(i)/vel(pord) * 1./dt)
@@ -2271,7 +2271,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                      if (file_open) read(596,*) lef, rig
                  endif
 
-                 print*,"calling compute tt with i=",i,"lef",lef,"rig",rig
+                 ! print*,"calling compute tt with i=",i,"lef",lef,"rig",rig
                  call compute_tt_gizonbirch(real(dat(i,1,:)),real(acc(i,1,:)),&
                                             tau,dt,nt, lef, rig)
 

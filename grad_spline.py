@@ -150,10 +150,14 @@ def main():
         optimization_algo = optimization_algo[0].split("=")[-1]
     else: optimization_algo="cg"
 
-    steepest_descent = optimization_algo=='sd'
-    conjugate_gradient = optimization_algo=='cg'
-    LBFGS = optimization_algo=='LBFGS'
-    BFGS = optimization_algo=='BFGS'
+    steepest_descent = optimization_algo.lower()=='sd'
+    conjugate_gradient = optimization_algo.lower()=='cg'
+    LBFGS = optimization_algo.lower()=='lbfgs'
+    BFGS = optimization_algo.lower()=='bfgs'
+    
+    if not (BFGS or LBFGS or steepest_descent or conjugate_gradient):
+        print "No matching optimization algorithm, quitting"
+        quit()
 
     def isfloat(value):
         try:
@@ -406,8 +410,8 @@ def main():
 
             plt.gcf().set_size_inches(8,3.5)
             plt.tight_layout()
-            plt.savefig(os.path.join(datadir,"update","iter_{:02d}".format(iterno),
-                        "basis_kernels","{:02d}.png".format(j)))
+            plt.savefig(os.path.join(datadir,"update","basis_kernels",
+                    "iter_{:02d}".format(iterno),"{:02d}.png".format(j)))
             plt.clf()
 
         return grad
