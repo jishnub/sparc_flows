@@ -13,6 +13,9 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt,ticker
 
+
+
+
 ########################################################################
 
 class supergranule():
@@ -58,13 +61,12 @@ def get_number_of_sources():
     datadir = read_params.get_directory()
     return len(np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1))
 
-def filterx(kern,nk):
+def filterx(kern,nk=30):
 
     Lx = read_params.get_xlength()
     nx = read_params.get_nx()
     k = np.fft.rfftfreq(nx,1./nx)
-    sigmak = nk # retain an arbitrary number of wavenumbers
-    filt_k = np.exp(-k**2/(2*sigmak**2))
+    filt_k = np.exp(-k**2/(2*nk**2))
 
     filt_k = filt_k[:,np.newaxis,np.newaxis]
 
@@ -125,9 +127,10 @@ def updatedir(filename):
 
 def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
-def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pix=0.3):
+def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',
+    z_filt_pix=0.3,kx_filt_pix=100):
     kern = totkern/hess
-    kern = filterx(kern,30)
+    kern = filterx(kern,nk=kx_filt_pix)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
@@ -140,6 +143,17 @@ def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pi
 ########################################################################
 
 def main():
+
+    #######################################################################
+    # Inversion parameters
+    #######################################################################
+
+    large_x_cutoff = 40
+    deep_z_cutoff = -4
+    kx_filt_pix = 60
+    z_filt_pix = 2
+
+    #######################################################################
 
     datadir=read_params.get_directory()
     iterno=get_iter_no()
@@ -154,7 +168,7 @@ def main():
     conjugate_gradient = optimization_algo.lower()=='cg'
     LBFGS = optimization_algo.lower()=='lbfgs'
     BFGS = optimization_algo.lower()=='bfgs'
-    
+
     if not (BFGS or LBFGS or steepest_descent or conjugate_gradient):
         print "No matching optimization algorithm, quitting"
         quit()
@@ -242,7 +256,6 @@ def main():
 
         return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
 
-
     f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
     coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
     tR = f.get("tR")
@@ -264,8 +277,6 @@ def main():
                 self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
             else:
                 self.high_ind = None
-            self.grad = None
-            self.update = None
             self.size = self.iterated.size if self.iterated is not None else None
 
 
@@ -278,11 +289,6 @@ def main():
             low_ind = self.low_ind if low_ind is None else low_ind
             high_ind = self.high_ind if high_ind is None else high_ind
             return self.iterated[low_ind:high_ind]
-
-        def get_update(self,low_ind=None,high_ind=None):
-            low_ind = self.low_ind if low_ind is None else low_ind
-            high_ind = self.high_ind if high_ind is None else high_ind
-            return self.update[low_ind:high_ind]
 
         def get_range(self):
             return np.array(range(self.low_ind,self.high_ind))
@@ -318,11 +324,12 @@ def main():
 
     # Filter and smooth
     totkern_psi = filter_and_symmetrize(totkern_psi,hess,
-                    z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
+                    z_filt_algo='gaussian',z_filt_pix=z_filt_pix,sym='asym',
+                    kx_filt_pix=kx_filt_pix)
 
     kernel = np.squeeze(totkern_psi).T
 
-    large_x_cutoff = 40
+
     cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
     kernel = kernel*cutoff_x[None,:]
 
@@ -426,17 +433,26 @@ def main():
     # Optimization
     ############################################################################
 
+    def normalize(d):
+        for key,value in d.items():
+            if value.max()!=0:
+                d[key] = value/value.max()
+
+    update={}
+
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
 
         def sd_update(var='psi'):
             grad = read_grad(var='psi',iterno=iterno)
             update = {p:-grad[p] for p in grad.keys()}
-            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
-            np.savez(updatefile,**update)
+            # normalize(update)
+            # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            # np.savez(updatefile,**update)
             print "Steepest descent"
+            return update
 
-        sd_update(var='psi')
+        update = sd_update(var='psi')
 
         if iterno > 0: print 'Forcing steepest descent'
 
@@ -471,11 +487,13 @@ def main():
                 update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
                 np.set_printoptions(linewidth=200,precision=4)
             print "beta",dict((k,round(v,2)) for k,v in beta_k.iteritems())
+            # normalize(update)
+            # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            # np.savez(updatefile,**update)
 
-            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
-            np.savez(updatefile,**update)
+            return update
 
-        cg_update(var='psi')
+        update = cg_update(var='psi')
 
     elif LBFGS:
 
@@ -578,7 +596,6 @@ def main():
 
 
             Hk = {}
-            update = {}
             for key in grad_k.keys():
                 y_km1 = grad_k[key] - grad_km1[key]
                 s_km1 = model_k[key] - model_km1[key]
@@ -596,25 +613,20 @@ def main():
 
                 update[key] = -Hk[key].dot(grad_k[key])
 
-            updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
-            np.savez(updatefile,**update)
-
             hessfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
             np.savez(hessfile,**Hk)
 
-        BFGS_update(var='psi')
+            return update
 
+        update = BFGS_update(var='psi')
 
-    ############################################################################
-
-    # Add update to coeff dictionary
-    update = read_update(var='psi',iterno=iterno)
-    for param,coeff in coeffs.items():
-        coeff.update = update[param]
+    normalize(update)
+    updatefile = updatedir('update_psi_'+str(iterno).zfill(2)+'.npz')
+    np.savez(updatefile,**update)
 
     ############################################################################
 
-    deep_z_cutoff = -4
+    # Deep z cutoff
 
     b_i_surf = np.zeros_like(coeffs.get("z").true)
     for i in xrange(b_i_surf.size):
@@ -624,7 +636,7 @@ def main():
 
     c_deep_z_cutoff_index = b_i_surf.argmax()
 
-    coeffs["z"].update *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
+    update["z"] *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
 
     ############################################################################
 
@@ -645,17 +657,15 @@ def main():
         # Read grad and plot in twin axis
 
         ax2 = ax[ind].twinx()
-        ax2.bar(coeff.get_range()-0.3,coeff.get_update(),width=0.6,bottom=0,
-        color="goldenrod",label="Update",edgecolor="peru",alpha=0.4)
+        ax2.bar(coeff.get_range()-0.3,update[param][coeff.get_range()],
+        width=0.6,bottom=0,color="goldenrod",label="Update",
+        edgecolor="peru",alpha=0.4)
 
         s = ticker.ScalarFormatter()
         s.set_scientific(True)
         s.set_powerlimits((0,0))
         ax2.yaxis.set_major_formatter(s)
         ax[ind].yaxis.set_major_formatter(s)
-
-
-
         ax[ind].set_title(param,fontsize=16)
 
         handles1,labels1 = ax[ind].get_legend_handles_labels()
@@ -700,17 +710,11 @@ def main():
 
     ############################################################################
 
-
-
     def create_ls_model(var='psi',eps=0,kind='linear'):
 
-        for param in update.keys():
-            if abs(update[param]).max()!=0:
-                update[param]/=abs(update[param]).max()
-
-        ls_cz = coeffs.get("z").iterated
+        ls_cz = coeffs.get("z").iterated.copy()
         ls_cR = coeffs.get("R")
-        if ls_cR is not None: ls_cR = ls_cR.iterated
+        if ls_cR is not None: ls_cR = ls_cR.iterated.copy()
 
         if kind=='linear':
             cz_scale = rms(coeffs["z"].get_iterated())
@@ -729,7 +733,6 @@ def main():
 
         lsmodel = coeff_to_model((tz,ls_cz+cz_ref_top,kz),(tR,ls_cR,kR))
 
-        # lsmodel *= cutoff_x[None,:]
         lsmodel += iter_model["back"]
 
         lsmodel = lsmodel[:,np.newaxis,:]
@@ -745,7 +748,6 @@ def main():
         lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
         fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
         np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
-
 
     #~ Update epslist
     epslist_path = os.path.join(datadir,"epslist.npz")
@@ -769,9 +771,6 @@ def main():
         arr[0] = eps
         epslist = {str(iterno):arr}
 
-    #~ np.set_printoptions(precision=5)
-    #~ print "Updated epslist in grad"
-    #~ print epslist[str(iterno)]
     np.savez(epslist_path,**epslist)
 
 
