@@ -1,13 +1,34 @@
 from __future__ import division
 import numpy as np
-from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
+from scipy import interpolate,integrate
+from scipy.special import j1,j0,jn
+def j2(z): return jn(2,z)
+def j1prime(z): return 0.5*(j0(z)-j2(z))
 import os,fnmatch,sys
 import pyfits
 import warnings
 import read_params
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt,ticker
 
-#######################################################################
+
+
+
+########################################################################
+
+class supergranule():
+    def __init__(self,**kwargs):
+        self.__dict__.update(kwargs)
+
+DH13 = supergranule(R = 15,
+                    k = 2*np.pi/30,
+                    sigmaz = 0.912,
+                    z0 = -2.3,
+                    v0 = 240)
+
+########################################################################
 
 def fitsread(f):
     try:
@@ -40,13 +61,12 @@ def get_number_of_sources():
     datadir = read_params.get_directory()
     return len(np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1))
 
-def filterx(kern,nk):
+def filterx(kern,nk=30):
 
     Lx = read_params.get_xlength()
     nx = read_params.get_nx()
     k = np.fft.rfftfreq(nx,1./nx)
-    sigmak = nk # retain an arbitrary number of wavenumbers
-    filt_k = np.exp(-k**2/(2*sigmak**2))
+    filt_k = np.exp(-k**2/(2*nk**2))
 
     filt_k = filt_k[:,np.newaxis,np.newaxis]
 
@@ -54,7 +74,7 @@ def filterx(kern,nk):
 
 def filterz(arr,algo='spline',sp=1.0):
     nx,ny,nz=arr.shape
-    z=np.arange(nz)
+    z_ind=np.arange(nz)
     b=arr.copy()
 
     if algo=='smooth':
@@ -86,14 +106,14 @@ def filterz(arr,algo='spline',sp=1.0):
         arr[:,:,kst:nz-kst+1]=temp[:,:,kst:nz-kst+1]
 
     elif algo=='spline':
-        for x in xrange(nx):
-            for y in xrange(ny):
-                arrz=arr[x,y]
+        for x_ind in xrange(nx):
+            for y_ind in xrange(ny):
+                arrz=arr[x_ind,y_ind]
                 arrzmax=arrz.max()
                 arrz=arrz/arrzmax
 
-                s=UnivariateSpline(z,arrz,s=sp)
-                arr[x,y]=s(z)*arrzmax
+                s=interpolate.UnivariateSpline(z_ind,arrz,s=sp)
+                arr[x_ind,y_ind]=s(z_ind)*arrzmax
 
     elif algo=='gaussian':
         arr[:]=gaussian_filter1d(arr,sigma=sp,axis=-1)
@@ -107,9 +127,10 @@ def updatedir(filename):
 
 def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 
-def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pix=0.3):
+def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',
+    z_filt_pix=0.3,kx_filt_pix=100):
     kern = totkern/hess
-    kern = filterx(kern,30)
+    kern = filterx(kern,nk=kx_filt_pix)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
@@ -118,21 +139,39 @@ def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',z_filt_pi
     return kern
 
 
+
 ########################################################################
 
 def main():
+
+    #######################################################################
+    # Inversion parameters
+    #######################################################################
+
+    large_x_cutoff = 40
+    deep_z_cutoff = -4
+    kx_filt_pix = 60
+    z_filt_pix = 2
+
+    #######################################################################
 
     datadir=read_params.get_directory()
     iterno=get_iter_no()
 
     args=sys.argv[1:]
-    optimization_algo=filter(lambda x: x.startswith('algo='),args)
-    if len(optimization_algo)>0: optimization_algo = optimization_algo[0].split("=")[-1]
-    else: optimization_algo="conjugate gradient"
+    optimization_algo=filter(lambda temp: temp.startswith('algo='),args)
+    if len(optimization_algo)>0:
+        optimization_algo = optimization_algo[0].split("=")[-1]
+    else: optimization_algo="cg"
 
-    steepest_descent = optimization_algo=='sd' or optimization_algo=='steepest descent'
-    conjugate_gradient = optimization_algo=='cg' or optimization_algo=='conjugate gradient'
-    LBFGS = optimization_algo=='LBFGS'
+    steepest_descent = optimization_algo.lower()=='sd'
+    conjugate_gradient = optimization_algo.lower()=='cg'
+    LBFGS = optimization_algo.lower()=='lbfgs'
+    BFGS = optimization_algo.lower()=='bfgs'
+
+    if not (BFGS or LBFGS or steepest_descent or conjugate_gradient):
+        print "No matching optimization algorithm, quitting"
+        quit()
 
     def isfloat(value):
         try:
@@ -153,63 +192,129 @@ def main():
     nz = read_params.get_nz()
 
     Lx = read_params.get_xlength()
+    dx = Lx/nx
+
+    x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
+
+    def integrate_2D(arr):
+        # Assume (nz,nx) format
+        return integrate.simps(integrate.simps(arr,dx=dx,axis=1),x=z,axis=0)
 
     back=np.loadtxt(read_params.get_solarmodel())
 
     num_src=get_number_of_sources()
 
-    array_shape=(nx,ny,nz)
-    totkern_c=np.zeros(array_shape)
-    totkern_psi=np.zeros(array_shape)
-    totkern_vx=np.zeros(array_shape)
-    totkern_vz=np.zeros(array_shape)
-    hess=np.zeros(array_shape)
-
-    sound_speed_perturbed = read_params.if_soundspeed_perturbed()
-    flows = read_params.if_flows()
-    continuity_enforced=read_params.if_continuity_enforced()
-    cont_var=read_params.get_continuity_variable()
-    psi_cont = False
-    vx_cont = False
-    vz_cont = False
-    if continuity_enforced:
-        if cont_var == 'psi': psi_cont = True
-        elif cont_var == 'vx': vx_cont = True
-        elif cont_var == 'vz': vz_cont = True
-        else:
-            print "Continuity variable unknown, check params.i"
-            quit()
+    ############################################################################
 
     def read_model(var='psi',iterno=iterno):
-        return fitsread(updatedir('model_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('model_'+var+'_'+str(iterno).zfill(2)+'_coeffs.npz')
+        with np.load(modelfile) as f:
+            return dict(f.items())
 
     def read_grad(var='psi',iterno=iterno):
-        return fitsread(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        # return pyfits.getdata(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            return dict(f.items())
 
     def read_update(var='psi',iterno=iterno):
-        return fitsread(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            return dict(f.items())
+
+    def read_BFGS_hessian(var='psi',iterno=iterno):
+        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        modelfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        with np.load(modelfile) as f:
+            return dict(f.items())
 
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
 
+    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
+
+    ############################################################################
+    # Spline
+    ############################################################################
+
+    def coeff_to_model(tck_z,tck_R):
+        f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
+        f0_x_max = f0_x.max()
+        f0_x/=f0_x_max
+
+        h_z=interpolate.splev(z,tck_z,ext=1)
+
+        # f1_x is the derivative of f0_x wrt R
+        f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+        f1_x/=f0_x_max
+        if tck_R[1] is not None:
+            R1_z = interpolate.splev(z,tck_R,ext=1)
+        else:
+            R1_z = np.zeros_like(h_z)
+
+
+        return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
+
+    f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
+    coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
+    tR = f.get("tR")
+    tz = f.get("tz")
+    cz_ref_top = f.get("cz_top")
+    cz_ref_bot = f.get("cz_bot")
+    kR = f.get("kR")
+    kz = f.get("kz")
+
+    z_spl_cutoff = f.get("z_spline_cutoff")
+    R_surf_cutoff = f.get("R_surf_cutoff")
+
+    class spline_basis_coeffs():
+        def __init__(self,true_coeffs,iter_coeffs,low_ind=0,high_ind=None):
+            self.true = true_coeffs
+            self.iterated = iter_coeffs
+            self.low_ind = low_ind
+            if high_ind is not None:
+                self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
+            else:
+                self.high_ind = None
+            self.size = self.iterated.size if self.iterated is not None else None
+
+
+        def get_true(self,low_ind=None,high_ind=None):
+            low_ind = self.low_ind if low_ind is None else low_ind
+            high_ind = self.high_ind if high_ind is None else high_ind
+            return self.true[low_ind:high_ind]
+
+        def get_iterated(self,low_ind=None,high_ind=None):
+            low_ind = self.low_ind if low_ind is None else low_ind
+            high_ind = self.high_ind if high_ind is None else high_ind
+            return self.iterated[low_ind:high_ind]
+
+        def get_range(self):
+            return np.array(range(self.low_ind,self.high_ind))
+
+    iter_model = read_model()
+
+    coeffs = {
+    "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["z"],
+    low_ind=kz+1,high_ind=coeff_surf_cutoff_ind)}
+
+    if iter_model.get("cR") is not None:
+        coeffs["R"]=spline_basis_coeffs(true_coeffs=np.zeros_like(iter_model.get("R")),
+        iter_coeffs=iter_model.get("R"),low_ind=kR+1,
+        high_ind=R_surf_cutoff)
+
+    ############################################################################
+    # Gradient computation
+    ############################################################################
+
+    array_shape=(nx,ny,nz)
+    totkern_psi=np.zeros(array_shape)
+    hess=np.zeros(array_shape)
+
     for src in xrange(1,num_src+1):
 
-        if sound_speed_perturbed:
-            totkern_c += read_kern(var='c',src=src)
-
-        if flows:
-            if continuity_enforced and psi_cont:
-                totkern_psi += read_kern(var='psi',src=src)
-
-            elif continuity_enforced and vx_cont:
-                totkern_vx += read_kern(var='vx',src=src)
-
-            elif continuity_enforced and vz_cont:
-                totkern_vz += read_kern(var='vz',src=src)
-
-            elif not continuity_enforced:
-                totkern_vx += read_kern(var='vx',src=src)
-                totkern_vz += read_kern(var='vz',src=src)
+        totkern_psi += read_kern(var='psi',src=src)
 
         hess+=abs(fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits')))
 
@@ -217,52 +322,137 @@ def main():
     hess = hess/abs(hess).max()
     hess[hess<5e-3]=5e-3
 
-    #~ Smoothing and symmetrization
-    if sound_speed_perturbed:
-        totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='gaussian',z_filt_pix=5,sym='sym')
-    if flows:
-        if continuity_enforced and psi_cont:
-            totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
-        elif (continuity_enforced and vx_cont) or (not continuity_enforced):
-            totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
-        elif (continuity_enforced and vz_cont) or (not continuity_enforced):
-            totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
+    # Filter and smooth
+    totkern_psi = filter_and_symmetrize(totkern_psi,hess,
+                    z_filt_algo='gaussian',z_filt_pix=z_filt_pix,sym='asym',
+                    kx_filt_pix=kx_filt_pix)
+
+    kernel = np.squeeze(totkern_psi).T
+
+
+    cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
+    kernel = kernel*cutoff_x[None,:]
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        pyfits.writeto(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),
+                        kernel,clobber=True)
+
+    # Plot gradient (kernel)
+    f=plt.figure()
+    plt.subplot(121)
+    plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
+    plt.title("True psi",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+
+    plt.subplot(122)
+    plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
+    plt.title("Gradient",fontsize=16)
+    plt.xlim(-50,50)
+    plt.ylim(-6,z[-1])
+    plt.xlabel("x (Mm)",fontsize=16)
+    plt.ylabel("z (Mm)",fontsize=16)
+
+    f.set_size_inches(8,3.5)
+    plt.tight_layout()
+    plt.savefig(os.path.join(datadir,"update","grad_"+str(iterno).zfill(2)+".png"))
+
+    # compute basis coefficient gradients
+    def compute_grad_basis(coeffs):
+
+        f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
+        f0_x_max = f0_x.max()
+        f0_x/=f0_x_max
+        hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
+        g_c = f0_x[None,:]
+
+        grad = dict.fromkeys(coeffs.keys())
+        for key in grad:
+            grad[key] = np.zeros(coeffs[key].size)
+
+        if "R" in coeffs.keys() and coeffs["R"].iterated is not None:
+            # f1_x is the derivative of f0_x wrt R
+            f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+            f1_x/=f0_x_max
+            R1 = interpolate.splev(z,(tR,coeffs["R"].iterated,kR),ext=1)
+            g_c = g_c + f1_x[None,:]*R1[:,None]
+            g_R = f1_x[None,:]*hs[:,None]
+
+            for j in coeffs["R"].get_range():
+                qj = np.zeros_like(coeffs["R"].iterated)
+                qj[j] = 1
+                qz = interpolate.splev(z,(tR,qj,kR),ext=1)
+                grad["R"][j] = integrate_2D(kernel*qz[:,None]*g_R)
+
+        if not os.path.exists(os.path.join(datadir,"update",
+            "basis_kernels","iter_{:02d}".format(iterno))):
+            os.makedirs(os.path.join(datadir,"update",
+            "basis_kernels","iter_{:02d}".format(iterno)))
+        for j in coeffs["z"].get_range():
+            bj = np.zeros_like(coeffs["z"].iterated)
+            bj[j] = 1
+            bz = interpolate.splev(z,(tz,bj,kz),ext=1)
+            grad["z"][j] = integrate_2D(kernel*bz[:,None]*g_c)
+
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
+            plt.title("Gradient",fontsize=16)
+            plt.xlim(-50,50)
+            plt.ylim(-6,z[-1])
+            plt.xlabel("x (Mm)",fontsize=16)
+            plt.ylabel("z (Mm)",fontsize=16)
+
+            plt.subplot(1,2,2)
+            plt.pcolormesh(x,z,kernel*bz[:,None]*g_c/abs(kernel*bz[:,None]*g_c).max(),
+                            cmap="RdBu_r",vmax=1,vmin=-1)
+            plt.title("Integral: {:.1e}".format(grad["z"][j]),fontsize=16)
+            plt.xlim(-50,50)
+            plt.ylim(-6,z[-1])
+            plt.xlabel("x (Mm)",fontsize=16)
+            plt.ylabel("z (Mm)",fontsize=16)
+
+            plt.gcf().set_size_inches(8,3.5)
+            plt.tight_layout()
+            plt.savefig(os.path.join(datadir,"update","basis_kernels",
+                    "iter_{:02d}".format(iterno),"{:02d}.png".format(j)))
+            plt.clf()
+
+        return grad
 
     #~ Write out gradients for this iteration
-    if sound_speed_perturbed:
-        fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),-totkern_c)
-    if flows:
-        if continuity_enforced and psi_cont:
-            fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
-        elif continuity_enforced and vx_cont:
-            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-        elif continuity_enforced and vz_cont:
-            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-        elif not continuity_enforced:
-            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vz)
-            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),
+        **compute_grad_basis(coeffs))
+
+    ############################################################################
+    # Optimization
+    ############################################################################
+
+    def normalize(d):
+        for key,value in d.items():
+            if value.max()!=0:
+                d[key] = value/value.max()
+
+    update={}
 
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
 
         def sd_update(var='psi'):
-            grad = read_grad(var=var,iterno=iterno)
-            update = -grad
-            fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
+            grad = read_grad(var='psi',iterno=iterno)
+            update = {p:-grad[p] for p in grad.keys()}
+            # normalize(update)
+            # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            # np.savez(updatefile,**update)
             print "Steepest descent"
+            return update
 
-        if sound_speed_perturbed: sd_update(var='c')
-
-        if flows:
-            if continuity_enforced and psi_cont: sd_update(var='psi')
-
-            elif continuity_enforced and vx_cont: sd_update(var='vx')
-
-            elif continuity_enforced and vz_cont: sd_update(var='vz')
-
-            elif not continuity_enforced:
-                sd_update(var='vz')
-                sd_update(var='vx')
+        update = sd_update(var='psi')
 
         if iterno > 0: print 'Forcing steepest descent'
 
@@ -273,20 +463,15 @@ def main():
             polak_ribiere = True
             hestenes_stiefel = True and (not polak_ribiere)
 
-            if polak_ribiere:
-                print "Conjugate gradient, Polak Ribiere method"
-                beta = np.sum(grad*(grad - lastgrad))
-                beta/= np.sum(lastgrad**2.)
-
-            elif hestenes_stiefel:
-                print "Conjugate gradient, Hestenes Stiefel method"
-                beta = np.sum(grad*(grad - lastgrad))
-                beta/= np.sum((grad - lastgrad)*lastupdate)
-
-            print "beta",beta
-            if beta==0: print "Conjugate gradient reduces to steepest descent"
-            elif beta<0:
-                print "Stepping away from previous update direction"
+            np.seterr(divide="raise")
+            try:
+                beta = grad.dot(grad - lastgrad)
+                if polak_ribiere:
+                    beta/= np.sum(lastgrad**2.)
+                elif hestenes_stiefel:
+                    beta/= np.dot(grad - lastgrad,lastupdate)
+            except FloatingPointError:
+                beta=0
 
             return beta
 
@@ -295,24 +480,20 @@ def main():
             grad_km1 = read_grad(var=var,iterno=iterno-1)
             p_km1 = read_update(var=var,iterno=iterno-1)
 
-            beta_k = get_beta(grad_k,grad_km1,p_km1)
-            update=-grad_k +  beta_k*p_km1
+            beta_k = {}
+            update = {}
+            for param in grad_k.keys():
+                beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
+                update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
+                np.set_printoptions(linewidth=200,precision=4)
+            print "beta",dict((k,round(v,2)) for k,v in beta_k.iteritems())
+            # normalize(update)
+            # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            # np.savez(updatefile,**update)
 
-            fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
+            return update
 
-        if sound_speed_perturbed: cg_update(var='c')
-
-        if flows:
-            if continuity_enforced and psi_cont: cg_update(var='psi')
-
-            elif continuity_enforced and vx_cont: cg_update(var='vx')
-
-            elif continuity_enforced and vz_cont: cg_update(var='vz')
-
-            elif not continuity_enforced:
-                cg_update(var='vz')
-                cg_update(var='vx')
-
+        update = cg_update(var='psi')
 
     elif LBFGS:
 
@@ -393,80 +574,180 @@ def main():
             data=None
         except IOError: LBFGS_data={}
 
-        if sound_speed_perturbed: LBFGS_update(var='c')
-
-        if flows:
-            if continuity_enforced and psi_cont: LBFGS_update(var='psi')
-
-            elif continuity_enforced and vx_cont: LBFGS_update(var='vx')
-
-            elif continuity_enforced and vz_cont: LBFGS_update(var='vz')
-
-            elif not continuity_enforced:
-                LBFGS_update(var='vx')
-                LBFGS_update(var='vz')
+        LBFGS_update(var='psi')
 
         np.savez(LBFGS_data_file,**LBFGS_data)
 
+    elif BFGS:
+        def BFGS_update(var='psi'):
+            print "Using BFGS"
+            grad_k = read_grad(var=var,iterno=iterno)
+            grad_km1 = read_grad(var=var,iterno=iterno-1)
+
+            model_k  = read_model(var=var,iterno=iterno)
+            model_km1  = read_model(var=var,iterno=iterno-1)
+
+            try:
+                Hkm1 = read_BFGS_hessian(var=var,iterno=iterno)
+            except IOError:
+                Hkm1 = {}
+                for key in grad_k.keys():
+                    Hkm1[key] = np.identity(grad_k[key].size)
+
+
+            Hk = {}
+            for key in grad_k.keys():
+                y_km1 = grad_k[key] - grad_km1[key]
+                s_km1 = model_k[key] - model_km1[key]
+
+                if (not y_km1.any()) or (not s_km1.any()):
+                    Hk[key] = Hkm1[key]
+                else:
+
+                    rho_km1 = 1/y_km1.dot(s_km1)
+
+                    left = np.identity(s_km1.size) - rho_km1*np.outer(s_km1,y_km1)
+                    right = np.identity(s_km1.size) - rho_km1*np.outer(y_km1,s_km1)
+
+                    Hk[key] = left.dot(Hkm1[key]).dot(right) + rho_km1*np.outer(s_km1,s_km1)
+
+                update[key] = -Hk[key].dot(grad_k[key])
+
+            hessfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            np.savez(hessfile,**Hk)
+
+            return update
+
+        update = BFGS_update(var='psi')
+
+    normalize(update)
+    updatefile = updatedir('update_psi_'+str(iterno).zfill(2)+'.npz')
+    np.savez(updatefile,**update)
+
+    ############################################################################
+
+    # Deep z cutoff
+
+    b_i_surf = np.zeros_like(coeffs.get("z").true)
+    for i in xrange(b_i_surf.size):
+        c_i = np.zeros_like(b_i_surf)
+        c_i[i] = 1
+        b_i_surf[i] = interpolate.splev(deep_z_cutoff,(tz,c_i,kz))
+
+    c_deep_z_cutoff_index = b_i_surf.argmax()
+
+    update["z"] *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
+
+    ############################################################################
+
+    # Plot update coefficients
+
+    model_grad_coeffs_fig=plt.figure()
+    ax = [plt.subplot(len(coeffs.keys()),1,i) for i in xrange(1,len(coeffs.keys())+1)]
+
+    for ind,(param,coeff) in enumerate(coeffs.items()):
+
+        # True model coefficients
+        ax[ind].plot(coeff.get_range(),coeff.get_true(),
+        'o-',markersize=4,color="teal",label="True")
+        # Iterated model coefficients
+        ax[ind].plot(coeff.get_range(),coeff.get_iterated(),
+        'o-',markersize=4,color="brown",label="Iter")
+
+        # Read grad and plot in twin axis
+
+        ax2 = ax[ind].twinx()
+        ax2.bar(coeff.get_range()-0.3,update[param][coeff.get_range()],
+        width=0.6,bottom=0,color="goldenrod",label="Update",
+        edgecolor="peru",alpha=0.4)
+
+        s = ticker.ScalarFormatter()
+        s.set_scientific(True)
+        s.set_powerlimits((0,0))
+        ax2.yaxis.set_major_formatter(s)
+        ax[ind].yaxis.set_major_formatter(s)
+        ax[ind].set_title(param,fontsize=16)
+
+        handles1,labels1 = ax[ind].get_legend_handles_labels()
+        handles2,labels2 = ax2.get_legend_handles_labels()
+        ax[ind].legend(handles1+handles2,labels1+labels2,loc="upper right")
+
+    sp_ind_z = map(lambda x: x.get_title(),ax).index("z")
+
+    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
+    (cz_ref_top + cz_ref_bot)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
+    'o--',markersize=4,color="teal")
+
+    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
+    (cz_ref_top + coeffs["z"].iterated)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
+    '--',color="brown")
+
+    ax[sp_ind_z].axvspan(0,kz+0.5,color="thistle",zorder=0)
+    ax[sp_ind_z].axvspan(cz_ref_top.size-kz-1.5,cz_ref_top.size-1,color="thistle",
+    zorder=0,label="set to zero")
+    ax[sp_ind_z].axvspan(coeff_surf_cutoff_ind-0.5,cz_ref_top.size-kz-1.5,color="lightgrey",
+    zorder=0,label="clamped")
+
+    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].iterated[:kz+2],'--',color="brown",zorder=1)
+    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].true[:kz+2],'--',color="teal",zorder=1)
+    ax[sp_ind_z].plot(range(kz+1),coeffs["z"].true[:kz+1],marker="o",mfc="thistle",
+    ls="None",zorder=2)
+
+    ax[sp_ind_z].plot(range(coeffs["z"].iterated.size-(kz+2),coeffs["z"].iterated.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="brown")
+    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+2),coeffs["z"].true.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="teal")
+    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+1),coeffs["z"].true.size),
+    (cz_ref_top + coeffs["z"].true)[-(kz+1):],marker="o",mfc="thistle",
+    ls="None",zorder=2)
+
+    for ax_i in ax:
+        ax_i.margins(x=0.1)
+        ax_i.legend(loc="best")
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
+
+    ############################################################################
 
     def create_ls_model(var='psi',eps=0,kind='linear'):
-        model = read_model(var=var,iterno=iterno)
-        update = read_update(var=var,iterno=iterno)
 
-        updatemax=update.max()
-        if updatemax!=0: update/=updatemax
-
-        cutoff_switch,cutoff_dist=read_params.get_cutoff_dist()
-        cutoff_x = 1.0
-
-        if cutoff_switch:
-            pix = np.arange(nx)
-            xcutoffpix = cutoff_dist/Lx*nx
-            cutoff_x =  1./(1+np.exp((pix-(nx/2+xcutoffpix))/2.))+1./(1+np.exp(-(pix-(nx/2-xcutoffpix))/2.))-1.
-            cutoff_x = cutoff_x.reshape(nx,1,1)
-
-        deep_z_cutoff = -4
-        z_surf_cutoff = 0
-        cutoff_z = (0.5/(1+np.exp(-(z - deep_z_cutoff)/0.3))
-                    +0.5/(1+np.exp((z - z_surf_cutoff)/0.15)))
-        cutoff_z = cutoff_z[None,None,:]
+        ls_cz = coeffs.get("z").iterated.copy()
+        ls_cR = coeffs.get("R")
+        if ls_cR is not None: ls_cR = ls_cR.iterated.copy()
 
         if kind=='linear':
-            model_scale = rms(model)
-            if model_scale == 0: model_scale = 100
-            test= model+eps*update*model_scale*cutoff_x*cutoff_z
-        elif kind=='exp':
-            test= model*(1+eps*update*cutoff_x*cutoff_z)
+            cz_scale = rms(coeffs["z"].get_iterated())
+            if cz_scale==0: cz_scale=cz_ref_top.max()
+            ls_cz += eps*update["z"]*cz_scale
 
-        return test
+            if ls_cR is not None:
+                cR_scale = rms(coeffs.get("R").get_iterated())
+                if cR_scale==0: cR_scale=0.1
+                ls_cR += eps*update.get("R")*cR_scale
+
+        elif kind=='exp':
+            ls_cz *= 1+eps*update
+            if ls_cR is not None:
+                ls_cR *= 1+eps*update
+
+        lsmodel = coeff_to_model((tz,ls_cz+cz_ref_top,kz),(tR,ls_cR,kR))
+
+        lsmodel += iter_model["back"]
+
+        lsmodel = lsmodel[:,np.newaxis,:]
+        lsmodel = np.transpose(lsmodel,(2,1,0))
+
+        coeffdict = {"z":ls_cz,"back":iter_model["back"]}
+        if ls_cR is not None:
+            coeffdict["R"] = ls_cR
+        return lsmodel,coeffdict
 
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
-
-        if sound_speed_perturbed:
-            lsmodel = create_ls_model(var='c',eps=eps_i,kind='exp')
-            fitswrite(updatedir('test_c_'+str(i+1)+'.fits'), lsmodel)
-
-        if flows:
-            if continuity_enforced and psi_cont:
-                lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
-
-            elif continuity_enforced and vx_cont:
-                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
-
-            elif continuity_enforced and vz_cont:
-                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
-
-            elif not continuity_enforced:
-                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
-
-                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
-
+        lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
+        fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
+        np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
 
     #~ Update epslist
     epslist_path = os.path.join(datadir,"epslist.npz")
@@ -485,15 +766,11 @@ def main():
             arr[0] = eps
             epslist = {i:epslist[i] for i in iter_done_list}
             epslist[str(iterno)] = arr
-
     except IOError:
         arr = np.zeros((4,6))
         arr[0] = eps
         epslist = {str(iterno):arr}
 
-    #~ np.set_printoptions(precision=5)
-    #~ print "Updated epslist in grad"
-    #~ print epslist[str(iterno)]
     np.savez(epslist_path,**epslist)
 
 

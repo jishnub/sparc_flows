@@ -254,7 +254,10 @@ def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=No
         if isinstance(default,(list,)) and mapto is not None:
             retval=map(mapto,default)
         elif mapto is not None:
-            retval = mapto(default)
+            try:
+                retval = mapto(default)
+            except:
+                retval = default
         else:
             retval=default
 

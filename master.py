@@ -54,14 +54,9 @@ iter_var="psi"
 
 num_linesearches = 6
 
-def grad_command(algo="cg",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
-    eps = [str(i) for i in eps]
-    eps_str = ' '.join(eps)
-    basis = read_params.parse_cmd_line_params(key="basis")
-    if basis is None:
-        return "python grad.py algo="+algo+" "+str(eps_str)
-    elif basis=="spline":
-        return "python grad_spline.py algo="+algo+" "+str(eps_str)
+def grad_command(algo="bfgs",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
+    eps_str = ' '.join([str(i) for i in eps])
+    return "python grad.py algo="+algo+" "+str(eps_str)
 
 id_text = read_params.parse_cmd_line_params(key="id")
 opt_algo = read_params.parse_cmd_line_params(key="opt_algo")
