@@ -2635,7 +2635,7 @@ SUBROUTINE MISFIT_ALL(nt)
      enddo
      read(97,*) mindist, maxdist
      close(97)
-     window = 12D0
+     window = 75D0
 
      halftime = nint(window/(2.*dt))
      leng = 2*halftime+1
@@ -2654,7 +2654,7 @@ SUBROUTINE MISFIT_ALL(nt)
 
 
 
-     freq_intervals = 4
+     freq_intervals = 1
      do freq_ind=0,(freq_intervals-1)
 
       call convert_to_string(freq_ind, ffstr, 1)

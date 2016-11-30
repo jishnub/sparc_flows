@@ -99,7 +99,10 @@ for modeno,mode in enumerate(ridge_filters[:8]):
     ax = fig.add_subplot(3,3,modeno+1)
     axlist.append(ax)
 
-    for color_index,iter_no in enumerate(iters_to_plot_ridge[::3]):
+    if len(iters_to_plot_ridge)>3:
+        iters_to_plot_ridge= iters_to_plot_ridge[::3]
+
+    for color_index,iter_no in enumerate(iters_to_plot_ridge):
 
         index_of_iteration=ttdiff_ridges[mode]["iter_no"].index(iter_no)
         td=ttdiff_ridges[mode]["misfits"][index_of_iteration]
@@ -139,9 +142,10 @@ for modeno,mode in enumerate(ridge_filters[:8]):
         ax.axvspan(span_left,span_right,color=span_color,zorder=0)
 
 
+
 for axno,ax in enumerate(axlist):
-    ncols = 3
-    nrows = int(np.ceil(len(axlist)//ncols))
+    ncols = min(3,len(axlist))
+    nrows = int(np.ceil(len(axlist)/ncols))
     ax.change_geometry(nrows,ncols,axno+1)
 
 plt.tight_layout()

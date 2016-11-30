@@ -59,9 +59,7 @@ def grad_command(algo="bfgs",eps=[0.01*i for i in xrange(1,num_linesearches+1)])
     return "python grad.py algo="+algo+" "+str(eps_str)
 
 id_text = read_params.parse_cmd_line_params(key="id")
-opt_algo = read_params.parse_cmd_line_params(key="opt_algo")
-if opt_algo is None:
-    opt_algo = "cg"
+opt_algo = read_params.parse_cmd_line_params(key="opt_algo",default="bfgs")
 
 data_command = "qsub -N data_{} data_forward.sh".format(id_text)
 full_command = "qsub -N full_{} full.sh".format(id_text)

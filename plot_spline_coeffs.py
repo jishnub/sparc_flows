@@ -18,7 +18,7 @@ true_coeffs_z = true_coeffs["cz_bot"]
 
 
 
-colors = itertools.cycle(["mediumseagreen","darkgoldenrod","midnightblue","chocolate"])
+colors = itertools.cycle(["mediumseagreen","darkgoldenrod","midnightblue","cadetblue"])
 
 for iterno in xrange(0,len(spline_basis_z)-1,max(1,len(spline_basis_z)//3)):
     plt.plot(spline_basis_z[iterno],ls="dotted",marker="o",

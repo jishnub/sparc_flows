@@ -159,10 +159,7 @@ def main():
     iterno=get_iter_no()
 
     args=sys.argv[1:]
-    optimization_algo=filter(lambda temp: temp.startswith('algo='),args)
-    if len(optimization_algo)>0:
-        optimization_algo = optimization_algo[0].split("=")[-1]
-    else: optimization_algo="cg"
+    optimization_algo=read_params.parse_cmd_line_params(key="algo",default="bfgs")
 
     steepest_descent = optimization_algo.lower()=='sd'
     conjugate_gradient = optimization_algo.lower()=='cg'
@@ -297,11 +294,11 @@ def main():
 
     coeffs = {
     "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["z"],
-    low_ind=kz+1,high_ind=coeff_surf_cutoff_ind)}
+    low_ind=0,high_ind=coeff_surf_cutoff_ind)}
 
     if iter_model.get("cR") is not None:
         coeffs["R"]=spline_basis_coeffs(true_coeffs=np.zeros_like(iter_model.get("R")),
-        iter_coeffs=iter_model.get("R"),low_ind=kR+1,
+        iter_coeffs=iter_model.get("R"),low_ind=0,
         high_ind=R_surf_cutoff)
 
     ############################################################################
@@ -328,7 +325,6 @@ def main():
                     kx_filt_pix=kx_filt_pix)
 
     kernel = np.squeeze(totkern_psi).T
-
 
     cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
     kernel = kernel*cutoff_x[None,:]
@@ -638,6 +634,11 @@ def main():
 
     update["z"] *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
 
+    eps_possible = (np.sum((coeffs["z"].get_true() - coeffs["z"].get_iterated())
+                            *update["z"][coeffs["z"].get_range()])/
+                            np.sum(update["z"][coeffs["z"].get_range()]**2))
+    print "Possible eps",eps_possible
+
     ############################################################################
 
     # Plot update coefficients
@@ -682,7 +683,7 @@ def main():
     (cz_ref_top + coeffs["z"].iterated)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
     '--',color="brown")
 
-    ax[sp_ind_z].axvspan(0,kz+0.5,color="thistle",zorder=0)
+    # ax[sp_ind_z].axvspan(0,kz+0.5,color="thistle",zorder=0)
     ax[sp_ind_z].axvspan(cz_ref_top.size-kz-1.5,cz_ref_top.size-1,color="thistle",
     zorder=0,label="set to zero")
     ax[sp_ind_z].axvspan(coeff_surf_cutoff_ind-0.5,cz_ref_top.size-kz-1.5,color="lightgrey",
@@ -690,8 +691,8 @@ def main():
 
     ax[sp_ind_z].plot(range(kz+2),coeffs["z"].iterated[:kz+2],'--',color="brown",zorder=1)
     ax[sp_ind_z].plot(range(kz+2),coeffs["z"].true[:kz+2],'--',color="teal",zorder=1)
-    ax[sp_ind_z].plot(range(kz+1),coeffs["z"].true[:kz+1],marker="o",mfc="thistle",
-    ls="None",zorder=2)
+    # ax[sp_ind_z].plot(range(kz+1),coeffs["z"].true[:kz+1],marker="o",mfc="thistle",
+    # ls="None",zorder=2)
 
     ax[sp_ind_z].plot(range(coeffs["z"].iterated.size-(kz+2),coeffs["z"].iterated.size),
     (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="brown")
@@ -718,7 +719,7 @@ def main():
 
         if kind=='linear':
             cz_scale = rms(coeffs["z"].get_iterated())
-            if cz_scale==0: cz_scale=cz_ref_top.max()
+            if cz_scale==0: cz_scale=0.01
             ls_cz += eps*update["z"]*cz_scale
 
             if ls_cR is not None:
