@@ -124,34 +124,34 @@ Program driver
 
             !    call fourier_smooth_x(psivar,90,psivar)
 
-           psivar = (rho0*c_speed)*psivar*(diml/1.0D8)
-
-           call ddz(psivar, v0_x, 1)
-           v0_x = -v0_x/rho0/(diml/1D8)*dimc/1D2 ! m/s
-
-           call ddx(psivar, v0_z, 1)
-           v0_z = v0_z/rho0/(diml/1D8)*dimc/1D2 ! m/s
-
-           psivar = psivar/(rho0*c_speed)
+           ! psivar = (rho0*c_speed)*psivar*(diml/1.0D8)
+           !
+           ! call ddz(psivar, v0_x, 1)
+           ! v0_x = -v0_x/rho0/(diml/1D8)*dimc/1D2 ! m/s
+           !
+           ! call ddx(psivar, v0_z, 1)
+           ! v0_z = v0_z/rho0/(diml/1D8)*dimc/1D2 ! m/s
+           !
+           ! psivar = psivar/(rho0*c_speed)
 
            !   Save psi in Mm
 
-           if (contrib=="01") then
-               call writefits_3d(true_psi_filename,psivar,nz)
-               print *,"Max psi",maxval(abs(psivar))
-               print *,"max vx",maxval(abs(v0_x)),"max vz",maxval(abs(v0_z))," m/s"
-               call writefits_3d(true_vz_filename,v0_z,nz)
-               call writefits_3d(true_vx_filename,v0_x,nz)
-           endif
+           ! if (contrib=="01") then
+           !     call writefits_3d(true_psi_filename,psivar,nz)
+           !     print *,"Max psi",maxval(abs(psivar))
+           !     print *,"max vx",maxval(abs(v0_x)),"max vz",maxval(abs(v0_z))," m/s"
+           !     call writefits_3d(true_vz_filename,v0_z,nz)
+           !     call writefits_3d(true_vx_filename,v0_x,nz)
+           ! endif
 
-            ! call readfits(true_psi_filename,psivar,nz)
-            ! psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
-            deallocate(psivar)
+            call readfits(true_psi_filename,psivar,nz)
+            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
+            ! deallocate(psivar)
 
-            ! call readfits(true_vx_filename,v0_x,nz)
+            call readfits(true_vx_filename,v0_x,nz)
             v0_x = v0_x*1D2/dimc
 
-            ! call readfits(true_vz_filename,v0_z,nz)
+            call readfits(true_vz_filename,v0_z,nz)
             v0_z = v0_z*1D2/dimc
 
             !~ CONTINUITY

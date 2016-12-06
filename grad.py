@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import scipy
 from scipy.ndimage.filters import gaussian_filter1d
 from scipy import interpolate,integrate
 from scipy.special import j1,j0,jn
@@ -45,7 +46,7 @@ def fitswrite(f,arr):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         # Change dimensions from (nx,ny,nz) to (nz,ny,nx)
-        arr=arr.transpose(2,1,0)
+        # arr=arr.transpose(2,1,0)
         # clobber=True rewrites a pre-existing file
         pyfits.writeto(f,arr,clobber=True)
 
@@ -163,10 +164,9 @@ def main():
 
     steepest_descent = optimization_algo.lower()=='sd'
     conjugate_gradient = optimization_algo.lower()=='cg'
-    LBFGS = optimization_algo.lower()=='lbfgs'
     BFGS = optimization_algo.lower()=='bfgs'
 
-    if not (BFGS or LBFGS or steepest_descent or conjugate_gradient):
+    if not (BFGS or steepest_descent or conjugate_gradient):
         print "No matching optimization algorithm, quitting"
         quit()
 
@@ -180,7 +180,7 @@ def main():
     eps = map(float,filter(isfloat,args))
     if eps==[]: eps=[0.1*i for i in xrange(1,7)]
 
-    Rsun=695.9895 # Mm
+    Rsun=6.95989467700E2 # Mm
     z = np.loadtxt(read_params.get_solarmodel(),usecols=[0]); z=(z-1)*Rsun
 
     #~ Get shape
@@ -235,23 +235,21 @@ def main():
     # Spline
     ############################################################################
 
+    f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
     def coeff_to_model(tck_z,tck_R):
-        f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
-        f0_x_max = f0_x.max()
-        f0_x/=f0_x_max
-
-        h_z=interpolate.splev(z,tck_z,ext=1)
-
-        # f1_x is the derivative of f0_x wrt R
-        f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
-        f1_x/=f0_x_max
-        if tck_R[1] is not None:
-            R1_z = interpolate.splev(z,tck_R,ext=1)
-        else:
-            R1_z = np.zeros_like(h_z)
+        pass
 
 
-        return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
+        # # f1_x is the derivative of f0_x wrt R
+        # f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
+        # # f1_x/=f0_x_max
+        # if tck_R[1] is not None:
+        #     R1_z = interpolate.splev(z,tck_R,ext=1)
+        # else:
+        #     R1_z = np.zeros_like(h_z)
+
+
+        # return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
 
     f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
     coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
@@ -329,10 +327,8 @@ def main():
     cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
     kernel = kernel*cutoff_x[None,:]
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        pyfits.writeto(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),
-                        kernel,clobber=True)
+
+    fitswrite(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),kernel)
 
     # Plot gradient (kernel)
     f=plt.figure()
@@ -360,8 +356,8 @@ def main():
     def compute_grad_basis(coeffs):
 
         f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
-        f0_x_max = f0_x.max()
-        f0_x/=f0_x_max
+        # f0_x_max = f0_x.max()
+        # f0_x/=f0_x_max
         hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
         g_c = f0_x[None,:]
 
@@ -372,7 +368,7 @@ def main():
         if "R" in coeffs.keys() and coeffs["R"].iterated is not None:
             # f1_x is the derivative of f0_x wrt R
             f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
-            f1_x/=f0_x_max
+            # f1_x/=f0_x_max
             R1 = interpolate.splev(z,(tR,coeffs["R"].iterated,kR),ext=1)
             g_c = g_c + f1_x[None,:]*R1[:,None]
             g_R = f1_x[None,:]*hs[:,None]
@@ -491,89 +487,6 @@ def main():
 
         update = cg_update(var='psi')
 
-    elif LBFGS:
-
-        m=4
-        k = iterno
-
-        def LBFGS_update(var='psi'):
-            model_k= read_model(var=var,iterno=iterno)
-            grad_k = read_grad(var=var,iterno=iterno)
-            model_iplus1 = model_k
-            grad_iplus1 = grad_k
-            q = grad_k
-
-            for i in xrange(k-1,k-m-1,-1):
-
-                if var+'_y_'+str(i) in LBFGS_data.keys():
-                    y_i=LBFGS_data[var+'_y_'+str(i)]
-                else:
-                    grad_i= read_grad(var=var,iterno=i)
-                    y_i = grad_iplus1 - grad_i
-                    LBFGS_data[var+'_y_'+str(i)] = y_i
-                    grad_iplus1 = grad_i
-
-                if var+'_s_'+str(i) in LBFGS_data.keys():
-                    s_i=LBFGS_data[var+'_s_'+str(i)]
-                else:
-                    model_i= read_grad(var=var,iterno=i)
-                    s_i = model_iplus1 - model_i
-                    LBFGS_data[var+'_s_'+str(i)] = s_i
-                    model_iplus1 = model_i
-
-                if var+'_rho_'+str(i) in LBFGS_data.keys():
-                    rho_i = LBFGS_data[var+'_rho_'+str(i)]
-                else:
-                    rho_i = 1/np.sum(y_i*s_i)
-                    LBFGS_data[var+'_rho_'+str(i)] = rho_i
-
-                if var+'_alpha_'+str(i) in LBFGS_data.keys():
-                    alpha_i = LBFGS_data[var+'_alpha_'+str(i)]
-                else:
-                    alpha_i = rho_i*np.sum(s_i*q)
-                    LBFGS_data[var+'_alpha_'+str(i)] = rho_i
-
-                q = q - alpha_i * y_i
-
-            model_iplus1=None; grad_iplus1=None; model_i=None; grad_i=None
-
-            s_kminus1 = LBFGS_data[var+'_s_'+str(i)]
-            y_kminus1 = LBFGS_data[var+'_y_'+str(i)]
-
-            H0_k = np.dot(s_kminus1*y_kminus1)/np.sum(y_kminus1**2)
-            r = np.dot(H0_k,q)
-
-            for i in xrange(k-m,k):
-
-                rho_i = LBFGS_data[var+'_rho_'+str(i)]
-                y_i = LBFGS_data[var+'_y_'+str(i)]
-                s_i = LBFGS_data[var+'_s_'+str(i)]
-                alpha_i = LBFGS_data[var+'_alpha_'+str(i)]
-
-                beta = rho_i* np.sum(y_i*r)
-                r = r + s_i*(alpha_i - beta)
-
-            for i in xrange(0,k-m):
-                if var+'_s_'+str(i) in LBFGS_data: del LBFGS_data[var+'_s_'+str(i)]
-                if var+'_y_'+str(i) in LBFGS_data: del LBFGS_data[var+'_y_'+str(i)]
-                if var+'_rho_'+str(i) in LBFGS_data: del LBFGS_data[var+'_rho_'+str(i)]
-                if var+'_alpha_'+str(i) in LBFGS_data: del LBFGS_data[var+'_alpha_'+str(i)]
-
-
-            fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),r)
-
-        LBFGS_data_file = updatedir('LBFGS_data.npz')
-        try:
-            LBFGS_data={}
-            data=np.load(LBFGS_data_file)
-            for key,val in data.items(): LBFGS_data[key]=val
-            data=None
-        except IOError: LBFGS_data={}
-
-        LBFGS_update(var='psi')
-
-        np.savez(LBFGS_data_file,**LBFGS_data)
-
     elif BFGS:
         def BFGS_update(var='psi'):
             print "Using BFGS"
@@ -641,76 +554,6 @@ def main():
 
     ############################################################################
 
-    # Plot update coefficients
-
-    model_grad_coeffs_fig=plt.figure()
-    ax = [plt.subplot(len(coeffs.keys()),1,i) for i in xrange(1,len(coeffs.keys())+1)]
-
-    for ind,(param,coeff) in enumerate(coeffs.items()):
-
-        # True model coefficients
-        ax[ind].plot(coeff.get_range(),coeff.get_true(),
-        'o-',markersize=4,color="teal",label="True")
-        # Iterated model coefficients
-        ax[ind].plot(coeff.get_range(),coeff.get_iterated(),
-        'o-',markersize=4,color="brown",label="Iter")
-
-        # Read grad and plot in twin axis
-
-        ax2 = ax[ind].twinx()
-        ax2.bar(coeff.get_range()-0.3,update[param][coeff.get_range()],
-        width=0.6,bottom=0,color="goldenrod",label="Update",
-        edgecolor="peru",alpha=0.4)
-
-        s = ticker.ScalarFormatter()
-        s.set_scientific(True)
-        s.set_powerlimits((0,0))
-        ax2.yaxis.set_major_formatter(s)
-        ax[ind].yaxis.set_major_formatter(s)
-        ax[ind].set_title(param,fontsize=16)
-
-        handles1,labels1 = ax[ind].get_legend_handles_labels()
-        handles2,labels2 = ax2.get_legend_handles_labels()
-        ax[ind].legend(handles1+handles2,labels1+labels2,loc="upper right")
-
-    sp_ind_z = map(lambda x: x.get_title(),ax).index("z")
-
-    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
-    (cz_ref_top + cz_ref_bot)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
-    'o--',markersize=4,color="teal")
-
-    ax[sp_ind_z].plot(range(coeff_surf_cutoff_ind-1,cz_ref_top.size-kz-1),
-    (cz_ref_top + coeffs["z"].iterated)[coeff_surf_cutoff_ind-1:cz_ref_top.size-kz-1],
-    '--',color="brown")
-
-    # ax[sp_ind_z].axvspan(0,kz+0.5,color="thistle",zorder=0)
-    ax[sp_ind_z].axvspan(cz_ref_top.size-kz-1.5,cz_ref_top.size-1,color="thistle",
-    zorder=0,label="set to zero")
-    ax[sp_ind_z].axvspan(coeff_surf_cutoff_ind-0.5,cz_ref_top.size-kz-1.5,color="lightgrey",
-    zorder=0,label="clamped")
-
-    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].iterated[:kz+2],'--',color="brown",zorder=1)
-    ax[sp_ind_z].plot(range(kz+2),coeffs["z"].true[:kz+2],'--',color="teal",zorder=1)
-    # ax[sp_ind_z].plot(range(kz+1),coeffs["z"].true[:kz+1],marker="o",mfc="thistle",
-    # ls="None",zorder=2)
-
-    ax[sp_ind_z].plot(range(coeffs["z"].iterated.size-(kz+2),coeffs["z"].iterated.size),
-    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="brown")
-    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+2),coeffs["z"].true.size),
-    (cz_ref_top + coeffs["z"].true)[-(kz+2):],'--',color="teal")
-    ax[sp_ind_z].plot(range(coeffs["z"].true.size-(kz+1),coeffs["z"].true.size),
-    (cz_ref_top + coeffs["z"].true)[-(kz+1):],marker="o",mfc="thistle",
-    ls="None",zorder=2)
-
-    for ax_i in ax:
-        ax_i.margins(x=0.1)
-        ax_i.legend(loc="best")
-
-    plt.tight_layout()
-    plt.savefig(os.path.join(datadir,"update","coeffs_1D_"+str(iterno).zfill(2)+".png"))
-
-    ############################################################################
-
     def create_ls_model(var='psi',eps=0,kind='linear'):
 
         ls_cz = coeffs.get("z").iterated.copy()
@@ -732,12 +575,11 @@ def main():
             if ls_cR is not None:
                 ls_cR *= 1+eps*update
 
-        lsmodel = coeff_to_model((tz,ls_cz+cz_ref_top,kz),(tR,ls_cR,kR))
+        h_z=interpolate.splev(z,(tz,ls_cz+cz_ref_top,kz),ext=1)
+        lsmodel = f0_x[None,:]*h_z[:,None]
 
         lsmodel += iter_model["back"]
-
         lsmodel = lsmodel[:,np.newaxis,:]
-        lsmodel = np.transpose(lsmodel,(2,1,0))
 
         coeffdict = {"z":ls_cz,"back":iter_model["back"]}
         if ls_cR is not None:
@@ -747,6 +589,16 @@ def main():
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
         lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
+
+        _,lsmodel_max_col = divmod(np.squeeze(lsmodel).argmax(),nx)
+        plt.figure()
+        plt.plot(z,psi_true[:,lsmodel_max_col],ls='solid',lw=2,label="true")
+        plt.plot(z,lsmodel[:,0,lsmodel_max_col]-model_coeffs['back'],'o',
+        mfc='tomato',ms=4,label="model")
+        plt.legend(loc="best")
+        plt.xlim(-6,z[-1]*1.1)
+        plt.savefig(updatedir('test_psi_{:d}.png'.format(i+1)))
+
         fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
         np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
 

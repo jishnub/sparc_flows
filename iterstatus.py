@@ -7,7 +7,7 @@ if not os.path.exists(datadir):
     print datadir,"doesn't exist. Modify params.i"
     quit()
 
-if not os.path.exists(os.path.join(datadir,"update")):
+if not os.path.exists(os.path.join(datadir,"data","01.fits")):
     print "No iterations done"
     print "qsub data_forward.sh"
     quit()

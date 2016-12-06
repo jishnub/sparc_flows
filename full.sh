@@ -25,6 +25,9 @@ find . -name "compute_synth" -delete
 iter=`find $directory/update -maxdepth 1 -name 'misfit_[0-9][0-9]'|wc -l`
 itername=`printf "%02d" $iter`
 
+[[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
+[[ -e $directory/model_psi_ls00_coeffs.npz ]] && cp $directory/model_psi_ls00_coeffs.npz $directory/update/model_psi_"$itername"_coeffs.npz
+
 /usr/local/bin/pbsdsh python $PBS_O_WORKDIR/full.py
 
 # Concatenate misfit files only after everything is complete
@@ -54,9 +57,6 @@ find $directory/status -name "forward*" -delete
 find $directory/status -name "adjoint*" -delete
 find $directory/status -name "kernel*" -delete
 
-[[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
-[[ -e $directory/model_psi_ls00_coeffs.npz ]] && cp $directory/model_psi_ls00_coeffs.npz $directory/update/model_psi_"$itername"_coeffs.npz
-[[ -e $directory/model_c_ls00.fits ]] && cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
 [[ -e vx_00.fits ]] && cp vx_00.fits "$directory"/update/vx_"$itername".fits
 [[ -e vz_00.fits ]] && cp vz_00.fits "$directory"/update/vz_"$itername".fits
 
