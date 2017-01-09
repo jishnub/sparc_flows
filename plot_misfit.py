@@ -103,6 +103,7 @@ if mistype == "data":
     plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid',zorder=1)
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.ylabel('Total misfit',fontsize=20)
+    plt.title("Misfit reduction by {:.1E}".format(total_misfit[0]/total_misfit[-1]),fontsize=16)
 
     try:
         with open(os.path.join(datadir,'iter_modes')) as f:
