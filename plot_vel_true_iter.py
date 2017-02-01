@@ -13,7 +13,7 @@ matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['font.family'] = "serif"
 
 def fitsread(f): return np.squeeze(pyfits.getdata(f))
-    
+
 datadir=read_params.get_directory()
 
 def get_iter_no():
@@ -63,14 +63,14 @@ def add_subplot(sp_index,array,title=""):
     axlist.append(ax)
     cblist.append(cb)
 
-add_subplot(221,true_vx,title="True $v_x$")
+add_subplot(221,true_vx,title="Reference $v_x$")
 add_subplot(222,current_vx,title="Iterated $v_x$")
-add_subplot(223,true_vz,title="True $v_z$")
+add_subplot(223,true_vz,title="Reference $v_z$")
 add_subplot(224,current_vz,title="Iterated $v_z$")
 
 for ax in axlist:
-    ax.set_xlim(-80,80)
-    ax.set_ylim(-8,z.max())
+    ax.set_xlim(-40,40)
+    ax.set_ylim(-6,z.max())
     ax.set_xlabel("x (Mm)",fontsize=18)
     ax.xaxis.set_major_locator(MaxNLocator(4,prune="both"))
     ax.yaxis.set_major_locator(MaxNLocator(5,prune="both"))
@@ -80,15 +80,15 @@ axlist[0].set_ylabel("Depth (Mm)",fontsize=18)
 plt.setp(axlist[1].get_yticklabels(),visible=False)
 axlist[2].set_ylabel("Depth (Mm)",fontsize=18)
 plt.setp(axlist[3].get_yticklabels(),visible=False)
-    
-for cb in cblist: 
+
+for cb in cblist:
     cb.ax.set_ylabel("$\mathrm{m}/\mathrm{s}$",rotation=90,fontsize=16)
     cb.ax.tick_params(axis="x",labelsize=16)
-    
+
 plt.gcf().set_size_inches(8,6)
 plt.tight_layout()
 plt.subplots_adjust(wspace=0,hspace=0.3)
-    
+
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
@@ -99,7 +99,3 @@ else:
     print "Not saving plot to file"
 
 plt.show()
-    
-    
-
-

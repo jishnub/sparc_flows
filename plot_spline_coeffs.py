@@ -15,48 +15,45 @@ spline_basis_z = [s["z"] for s in spline_basis_coeffs]
 
 true_coeffs = np.load(os.path.join(datadir,"true_psi_coeffs.npz"))
 true_coeffs_z = true_coeffs["cz_bot"]
+true_coeffs_top = true_coeffs["cz_top"]
+c_surf_cutoff = true_coeffs['c_surf_cutoff']
 
 modenames = {'0':'f'}
 for i in xrange(1,8): modenames[str(i)] = 'p{:d}'.format(i)
 
-try:
-    with open(os.path.join(datadir,'iter_modes')) as f:
-        iter_mode_details = f.readlines()
-    iters_to_plot = []
-    modes = []
-    for l in iter_mode_details:
-        iters_to_plot.append(int(l.split()[0]))
-        modes.append(map(lambda x: modenames[x],l.split()[1:]))
-except IOError:
-    iters_to_plot = None
+iterno = read_params.parse_cmd_line_params(key="iter",
+        default=len(spline_basis_z)-1,mapto=int)
 
-if iters_to_plot is None:
-    colors = itertools.cycle(["mediumseagreen","darkgoldenrod","midnightblue","cadetblue"])
-    for iterno in xrange(0,len(spline_basis_z)-1,max(1,len(spline_basis_z)//3)):
-        plt.plot(spline_basis_z[iterno],ls="dotted",marker="o",
-        markersize=3,label="iter "+str(iterno),
-        color=next(colors),zorder=1)
-    iterno = len(spline_basis_z)-1
-    plt.plot(spline_basis_z[iterno],ls="solid",marker="o",markersize=3,label="iter "+str(iterno),
-    color=next(colors),lw=1.5,zorder=2)
-else:
-    colors = itertools.cycle(["mediumseagreen","darkgoldenrod","cadetblue"])
-    for iterind,iterno in enumerate(iters_to_plot):
-        if iterno == len(spline_basis_z)-1: continue
-        plt.plot(spline_basis_z[iterno],ls="dashed",marker="o",
-        markersize=3,label="iter {:d}, {}".format(iterno,"+".join(modes[iterind])),
-        color=next(colors),zorder=1)
 
-    iterno = len(spline_basis_z)-1
-    plt.plot(spline_basis_z[iterno],ls="solid",marker="o",markersize=3,
-    label="iter {:d}, {}".format(iterno,"+".join(modes[iterind])),
-    color=next(colors),lw=1.5,zorder=2)
+plt.plot(spline_basis_z[iterno][:c_surf_cutoff],ls="solid",
+marker="o",markersize=6,label="Iterated\ncoefficients",
+color="saddlebrown",lw=1.5,zorder=4)
 
+bridge = [spline_basis_z[iterno][c_surf_cutoff-1],true_coeffs_top[c_surf_cutoff]]
+
+plt.plot(np.arange(c_surf_cutoff-1,c_surf_cutoff+1),
+bridge,ls="dashed",color='darkmagenta',lw=1,zorder=3)
+
+plt.plot(np.arange(c_surf_cutoff,true_coeffs_top.size),
+true_coeffs_top[c_surf_cutoff:],ls="dashed",marker='o',ms=8,color='darkmagenta',
+mec='darkmagenta',mfc="lightcoral",lw=1,zorder=3,
+label="Coefficients\nabove surface,\nclamped")
 
 plt.gca().margins(y=0.1)
 
-plt.bar(np.arange(true_coeffs_z.size)-0.4,true_coeffs_z,width=0.8,
-        facecolor="papayawhip",edgecolor="peru",label="true",zorder=0)
+plt.bar(np.arange(true_coeffs_z.size)-0.4,true_coeffs_z+true_coeffs_top,width=0.8,
+        facecolor="burlywood",edgecolor="peru",label="Coefficients\nfor reference\nmodel"
+        ,zorder=1)
+
+plt.xlabel("Coefficient number",fontsize=20)
+plt.ylabel("Coefficient value",fontsize=20)
+
+plt.tick_params(labelsize=13)
 
 plt.legend(loc="best")
+
+if not os.path.exists("plots"): os.makedirs("plots")
+
+plt.savefig("plots/iterated_coefficients.eps")
+
 plt.show()

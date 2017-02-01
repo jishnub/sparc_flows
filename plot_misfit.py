@@ -20,8 +20,13 @@ num_misfit_files=0
 misfitfiles=sorted([os.path.join(updatedir,f) for f in fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]')])
 misfit_all_files=sorted([os.path.join(updatedir,f) for f in fnmatch.filter(os.listdir(updatedir),'misfit_all_[0-9][0-9]')])
 
+coeff_files=sorted([os.path.join(updatedir,f)
+            for f in fnmatch.filter(os.listdir(updatedir),
+            'model_psi_[0-9][0-9]_coeffs.npz')])
+
 num_misfit_files=len(misfitfiles)
 num_misfit_all_files=len(misfit_all_files)
+num_coeff_files = len(coeff_files)
 
 if num_misfit_files==0:
     print "No misfit files found"
@@ -32,6 +37,7 @@ itercutoff = read_params.parse_cmd_line_params('iter',mapto=int,default=np.inf)
 
 num_misfit_files = min(itercutoff,num_misfit_files)
 num_misfit_all_files = min(itercutoff,num_misfit_all_files)
+num_coeff_files = min(itercutoff,num_coeff_files)
 
 #~ What to plot - data or model misfit?
 mistype = read_params.parse_cmd_line_params("type",default="data")
@@ -50,10 +56,14 @@ np.set_printoptions(linewidth=200,precision=4)
 
 #~ Get filename to save to
 save = read_params.parse_cmd_line_params("save")
+plotcolors = read_params.parse_cmd_line_params("color",mapto=bool,default=False)
+
+modecolors = iter(["indianred","seagreen","darkorange","blueviolet",
+                    "olive","darkcyan"])
 
 if mistype == "data":
     markers = iter(('o', 'v', '8','s','<', 7, '*', 'h', '^', 'D', 'd'))
-    linestyles = itertools.cycle(('solid','dashed','dotted'))
+    linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
     modemisfit = np.zeros((len(ridges),num_misfit_files))
 
     rc('text', usetex=True)
@@ -85,12 +95,18 @@ if mistype == "data":
             print ridge,nsources_found
 
         try:
-            plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],marker=next(markers),color='black',
-            ls=next(linestyles),label=modes[ridge])
-        except: pass
+            plotdict=dict(label=modes[ridge],marker=next(markers),color="black")
+            if plotcolors==False:
+                plotdict["ls"]=next(linestyles)
+            else:
+                plotdict["color"]=next(modecolors)
+
+
+            plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],**plotdict)
+        except Exception as e: print(e)
 
     plt.tick_params(axis='both', which='major', labelsize=14)
-    plt.ylabel('Mean misfit',fontsize=20)
+    plt.ylabel('Mean misfit per mode',fontsize=20)
     plt.legend(ncol=2)
 
 
@@ -100,7 +116,10 @@ if mistype == "data":
 
     plt.subplot(122)
 
-    plt.semilogy(range(num_misfit_files),total_misfit,color='black',marker='o',ls='solid',zorder=1)
+    plotdict = dict(color='black',marker='o',ls='solid',zorder=1)
+    if plotcolors:
+        plotdict["color"]="darkorchid"
+    plt.semilogy(range(num_misfit_files),total_misfit,**plotdict)
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.ylabel('Total misfit',fontsize=20)
     plt.title("Misfit reduction by {:.1E}".format(total_misfit[0]/total_misfit[-1]),fontsize=16)
@@ -156,7 +175,7 @@ elif mistype == "model":
     misfit_vx = []
     misfit_vz = []
 
-    for iterno in xrange(num_misfit_files):
+    for iterno in xrange(num_coeff_files):
         with np.load(os.path.join(datadir,'update',
             'model_psi_{:02d}_coeffs.npz'.format(iterno))) as f:
             cz_model = f['z'] + cz_top
@@ -187,6 +206,8 @@ elif mistype == "model":
 
     plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(percent))
 
+    plt.gca().xaxis.set_major_locator(ticker.MaxNLocator(nbins=8,integer=True,prune="lower"))
+
     plt.grid(color='dimgrey')
     plt.legend(loc="best")
 
@@ -209,8 +230,10 @@ elif mistype == "model":
 
     plt.xlim(-1,num_misfit_files+0.5)
     plt.ylim(plt.gca().dataLim.extents[1]/2,1.5)
-    plt.xlabel("Iteration number")
-    plt.ylabel("Model misfit")
+    plt.xlabel("Iteration number",fontsize=20)
+    plt.ylabel("Model misfit",fontsize=20)
+
+    plt.tick_params(labelsize=13)
 
     plt.tight_layout()
 

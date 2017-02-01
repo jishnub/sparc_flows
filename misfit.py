@@ -1,4 +1,4 @@
-import sys,os,glob,re
+import sys,os,glob,re,fnmatch
 import numpy as np
 import pyfits
 import read_params
@@ -21,7 +21,8 @@ except StopIteration:
 try:
     iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
 except StopIteration:
-    lsfiles=[f for f in glob.glob(os.path.join(datadir,"update","misfit_*")) if "all" not in f]
+    lsfiles=fnmatch.filter(os.listdir(os.path.join(datadir,"update")),"misfit_[0-9][0-9]")
+    lsfiles = [os.path.join(datadir,"update",f) for f in lsfiles]
     nfiles=len(lsfiles)
     if nfiles==0:
         print "No misfit files found"
