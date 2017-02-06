@@ -139,18 +139,15 @@ def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',
     filterz(kern,algo=z_filt_algo,sp=z_filt_pix)
     return kern
 
-
-
 ########################################################################
 
 def main():
 
     #######################################################################
-    # Inversion parameters
+    # Regularization parameters
     #######################################################################
 
-    large_x_cutoff = 40
-    deep_z_cutoff = -4
+    large_x_cutoff = 50
     kx_filt_pix = 60
     z_filt_pix = 2
 
@@ -236,20 +233,6 @@ def main():
     ############################################################################
 
     f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
-    def coeff_to_model(tck_z,tck_R):
-        pass
-
-
-        # # f1_x is the derivative of f0_x wrt R
-        # f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
-        # # f1_x/=f0_x_max
-        # if tck_R[1] is not None:
-        #     R1_z = interpolate.splev(z,tck_R,ext=1)
-        # else:
-        #     R1_z = np.zeros_like(h_z)
-
-
-        # return (f0_x[None,:]+f1_x[None,:]*R1_z[:,None])*h_z[:,None]
 
     f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
     coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
@@ -260,8 +243,10 @@ def main():
     kR = f.get("kR")
     kz = f.get("kz")
 
-    z_spl_cutoff = f.get("z_spline_cutoff")
+    z_spl_cutoff = f.get("z_cutoff")
     R_surf_cutoff = f.get("R_surf_cutoff")
+
+    c_deep_z_cutoff_index = f.get("deep_z_cutoff_ind")
 
     class spline_basis_coeffs():
         def __init__(self,true_coeffs,iter_coeffs,low_ind=0,high_ind=None):
@@ -537,20 +522,7 @@ def main():
 
     # Deep z cutoff
 
-    b_i_surf = np.zeros_like(coeffs.get("z").true)
-    for i in xrange(b_i_surf.size):
-        c_i = np.zeros_like(b_i_surf)
-        c_i[i] = 1
-        b_i_surf[i] = interpolate.splev(deep_z_cutoff,(tz,c_i,kz))
-
-    c_deep_z_cutoff_index = b_i_surf.argmax()
-
-    update["z"] *= 1/(1+np.exp(-(np.arange(b_i_surf.size)-c_deep_z_cutoff_index)/1))
-
-    eps_possible = (np.sum((coeffs["z"].get_true() - coeffs["z"].get_iterated())
-                            *update["z"][coeffs["z"].get_range()])/
-                            np.sum(update["z"][coeffs["z"].get_range()]**2))
-    print "Possible eps",eps_possible
+    update["z"] *= 1/(1+np.exp(-(np.arange(cz_ref_bot.size)-c_deep_z_cutoff_index)/0.2))
 
     ############################################################################
 
