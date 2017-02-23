@@ -96,6 +96,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
         elseif (i .eq. 3) then
             functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
                 +(-u+u0)*u0dot(:,4))/3.0
+
         endif
 
         call integrate_time(window*functemp,&
@@ -112,6 +113,232 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
 
 
 END SUBROUTINE COMPUTE_TT_GIZONBIRCH
+
+!===============================================================================
+
+SUBROUTINE COMPUTE_TT_GIZONBIRCH3(u0,u,tau,dt,nt, lef, rig)
+
+    implicit none
+    INCLUDE 'fftw3.f'
+    integer, parameter :: degree=3
+    integer, intent(in) :: nt, lef, rig
+    real*8, intent(in) :: u0(nt), u(nt)
+    real*8 dt
+    real*8, intent(out) :: tau
+    real*8 window(nt),functemp(nt)
+    integer k,i,num_real_roots
+    integer*8 plan
+    real*8 polycoeffs(0:degree)
+    real*8 :: roots(degree)
+    complex*16 wu0(nt/2+1,1:degree+1)
+    real*8 u0dot(nt,1:degree+1)
+    complex*16, parameter :: eye = (0.0,1.0)
+    real*8, parameter :: pi=acos(dble(-1.0))
+
+
+    polycoeffs = 0
+
+    window = 0.0
+    window(lef:rig) = 1.0
+
+    do i=1,degree+1
+       call dfftw_plan_dft_r2c_1d(plan,nt,u0,wu0(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_r2c(plan, u0, wu0(:,i))
+       call dfftw_destroy_plan(plan)
+
+       do k=1,nt/2
+           wu0(k,i)=wu0(k,i)*(eye*2*pi*(k-1.0)/(nt*dt))**i
+       end do
+
+       call dfftw_plan_dft_c2r_1d(plan,nt,wu0(:,i),u0dot(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_c2r(plan, wu0(:,i),u0dot(:,i))
+       call dfftw_destroy_plan(plan)
+    enddo
+
+    u0dot=u0dot/nt
+
+    ! coefficients of dchi/dt
+
+    do i=0,degree
+        functemp = 0
+        if (i .eq. 0) then
+            functemp = 2*u0dot(:,1)*(u-u0)
+        elseif (i .eq. 1) then
+            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+        elseif (i .eq. 2) then
+            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
+                (u-u0)*u0dot(:,3)
+        elseif (i .eq. 3) then
+            functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
+                +(-u+u0)*u0dot(:,4))/3.0
+
+        endif
+
+        call integrate_time(window*functemp,&
+                polycoeffs(degree-i),dt,nt)
+    end do
+
+    polycoeffs = polycoeffs/polycoeffs(0)
+
+    tau=-polycoeffs(degree)/polycoeffs(degree-1)
+
+    call polyroots(polycoeffs,degree,num_real_roots,roots)
+
+    tau=roots(minloc(abs(roots(1:num_real_roots)-tau),dim=1))
+
+
+END SUBROUTINE COMPUTE_TT_GIZONBIRCH3
+
+SUBROUTINE COMPUTE_TT_GIZONBIRCH2(u0,u,tau,dt,nt, lef, rig)
+
+    implicit none
+    INCLUDE 'fftw3.f'
+    integer, parameter :: degree=2
+    integer, intent(in) :: nt, lef, rig
+    real*8, intent(in) :: u0(nt), u(nt)
+    real*8 dt
+    real*8, intent(out) :: tau
+    real*8 window(nt),functemp(nt)
+    integer k,i,num_real_roots
+    integer*8 plan
+    real*8 polycoeffs(0:degree)
+    real*8 :: roots(degree)
+    complex*16 wu0(nt/2+1,1:degree+1)
+    real*8 u0dot(nt,1:degree+1)
+    complex*16, parameter :: eye = (0.0,1.0)
+    real*8, parameter :: pi=acos(dble(-1.0))
+
+
+    polycoeffs = 0
+
+    window = 0.0
+    window(lef:rig) = 1.0
+
+    do i=1,degree+1
+       call dfftw_plan_dft_r2c_1d(plan,nt,u0,wu0(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_r2c(plan, u0, wu0(:,i))
+       call dfftw_destroy_plan(plan)
+
+       do k=1,nt/2
+           wu0(k,i)=wu0(k,i)*(eye*2*pi*(k-1.0)/(nt*dt))**i
+       end do
+
+       call dfftw_plan_dft_c2r_1d(plan,nt,wu0(:,i),u0dot(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_c2r(plan, wu0(:,i),u0dot(:,i))
+       call dfftw_destroy_plan(plan)
+    enddo
+
+    u0dot=u0dot/nt
+
+    ! coefficients of dchi/dt
+
+    do i=0,degree
+        functemp = 0
+        if (i .eq. 0) then
+            functemp = 2*u0dot(:,1)*(u-u0)
+        elseif (i .eq. 1) then
+            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+        elseif (i .eq. 2) then
+            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
+                (u-u0)*u0dot(:,3)
+        elseif (i .eq. 3) then
+            functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
+                +(-u+u0)*u0dot(:,4))/3.0
+
+        endif
+
+        call integrate_time(window*functemp,&
+                polycoeffs(degree-i),dt,nt)
+    end do
+
+    polycoeffs = polycoeffs/polycoeffs(0)
+
+    tau=-polycoeffs(degree)/polycoeffs(degree-1)
+
+    call polyroots(polycoeffs,degree,num_real_roots,roots)
+
+    tau=roots(minloc(abs(roots(1:num_real_roots)-tau),dim=1))
+
+
+END SUBROUTINE COMPUTE_TT_GIZONBIRCH2
+
+SUBROUTINE COMPUTE_TT_GIZONBIRCH1(u0,u,tau,dt,nt, lef, rig)
+
+    implicit none
+    INCLUDE 'fftw3.f'
+    integer, parameter :: degree=1
+    integer, intent(in) :: nt, lef, rig
+    real*8, intent(in) :: u0(nt), u(nt)
+    real*8 dt
+    real*8, intent(out) :: tau
+    real*8 window(nt),functemp(nt)
+    integer k,i,num_real_roots
+    integer*8 plan
+    real*8 polycoeffs(0:degree)
+    real*8 :: roots(degree)
+    complex*16 wu0(nt/2+1,1:degree+1)
+    real*8 u0dot(nt,1:degree+1)
+    complex*16, parameter :: eye = (0.0,1.0)
+    real*8, parameter :: pi=acos(dble(-1.0))
+
+
+    polycoeffs = 0
+
+    window = 0.0
+    window(lef:rig) = 1.0
+
+    do i=1,degree+1
+       call dfftw_plan_dft_r2c_1d(plan,nt,u0,wu0(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_r2c(plan, u0, wu0(:,i))
+       call dfftw_destroy_plan(plan)
+
+       do k=1,nt/2
+           wu0(k,i)=wu0(k,i)*(eye*2*pi*(k-1.0)/(nt*dt))**i
+       end do
+
+       call dfftw_plan_dft_c2r_1d(plan,nt,wu0(:,i),u0dot(:,i),&
+               FFTW_ESTIMATE)
+       call dfftw_execute_dft_c2r(plan, wu0(:,i),u0dot(:,i))
+       call dfftw_destroy_plan(plan)
+    enddo
+
+    u0dot=u0dot/nt
+
+    ! coefficients of dchi/dt
+
+    do i=0,degree
+        functemp = 0
+        if (i .eq. 0) then
+            functemp = 2*u0dot(:,1)*(u-u0)
+        elseif (i .eq. 1) then
+            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+        elseif (i .eq. 2) then
+            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
+                (u-u0)*u0dot(:,3)
+        elseif (i .eq. 3) then
+            functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
+                +(-u+u0)*u0dot(:,4))/3.0
+        endif
+
+        call integrate_time(window*functemp,&
+                polycoeffs(degree-i),dt,nt)
+    end do
+
+    polycoeffs = polycoeffs/polycoeffs(0)
+
+    tau=-polycoeffs(degree)/polycoeffs(degree-1)
+
+    call polyroots(polycoeffs,degree,num_real_roots,roots)
+
+    tau=roots(minloc(abs(roots(1:num_real_roots)-tau),dim=1))
+
+
+END SUBROUTINE COMPUTE_TT_GIZONBIRCH1
 
 !================================================================================
 
