@@ -201,13 +201,13 @@ Program driver
                     !psivar(:,:,1:10) = 0.0
                     !psivar(:,:,nz-9:nz) = 0.0
 
-                    if (cutoff_switch) then
-                        xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
-                        do i=1,nx
-                            xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
-                            psivar(i,:,:) = psivar(i,:,:)*xcutoff
-                        end do
-                    end if
+                    ! if (cutoff_switch) then
+                    !     xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
+                    !     do i=1,nx
+                    !         xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
+                    !         psivar(i,:,:) = psivar(i,:,:)*xcutoff
+                    !     end do
+                    ! end if
 
                     ! call writefits_3d("psivar_used.fits",psivar,nz)
 
