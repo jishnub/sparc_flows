@@ -201,13 +201,13 @@ Program driver
                     !psivar(:,:,1:10) = 0.0
                     !psivar(:,:,nz-9:nz) = 0.0
 
-                    if (cutoff_switch) then
-                        xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
-                        do i=1,nx
-                            xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
-                            psivar(i,:,:) = psivar(i,:,:)*xcutoff
-                        end do
-                    end if
+                    ! if (cutoff_switch) then
+                    !     xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
+                    !     do i=1,nx
+                    !         xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
+                    !         psivar(i,:,:) = psivar(i,:,:)*xcutoff
+                    !     end do
+                    ! end if
 
                     ! call writefits_3d("psivar_used.fits",psivar,nz)
 
@@ -1021,6 +1021,74 @@ SUBROUTINE COMPUTE_TT(u0, u, tau, dt, nt)
 END SUBROUTINE COMPUTE_TT
 
 !================================================================================
+SUBROUTINE COMPUTE_TT_GB02(u0,u,tau,dt,nt, lef, rig)
+ implicit none
+ include 'fftw3.f'
+ integer, parameter :: degree=1
+ integer, intent(in) :: nt, lef, rig
+ real*8, intent(in) :: u0(nt), u(nt)
+ real*8 dt
+ real*8, intent(out) :: tau
+ real*8 window(nt),functemp(nt)
+ integer k,i,num_real_roots
+ integer*8 plan
+ real*8 temp,polycoeffs(0:degree)
+ real*8 :: roots(degree)
+ complex*16 wu0(nt/2+1,1:degree+1)
+ real*8 u0dot(nt,1:degree+1)
+ complex*16, parameter :: eye = (0.0,1.0)
+ real*8, parameter :: pi=acos(dble(-1.0))
+
+ polycoeffs = 0
+
+ window = 0.0
+ window(lef:rig) = 1.0
+
+ do i=1,degree+1
+    call dfftw_plan_dft_r2c_1d(plan,nt,u0,wu0(:,i),&
+            FFTW_ESTIMATE)
+    call dfftw_execute_dft_r2c(plan, u0, wu0(:,i))
+    call dfftw_destroy_plan(plan)
+
+    do k=1,nt/2
+        wu0(k,i)=wu0(k,i)*(eye*2*pi*(k-1.0)/(nt*dt))**i
+    end do
+
+    call dfftw_plan_dft_c2r_1d(plan,nt,wu0(:,i),u0dot(:,i),&
+            FFTW_ESTIMATE)
+    call dfftw_execute_dft_c2r(plan, wu0(:,i),u0dot(:,i))
+    call dfftw_destroy_plan(plan)
+ enddo
+
+ u0dot=u0dot/nt
+
+ ! coefficients of dchi/dt
+
+ do i=0,degree
+     functemp = 0
+     if (i .eq. 0) then
+         functemp = 2*u0dot(:,1)*(u-u0)
+     elseif (i .eq. 1) then
+         functemp = 2*u0dot(:,1)**2
+     elseif (i .eq. 2) then
+         functemp = -3*u0dot(:,1)*u0dot(:,2)+&
+             (u-u0)*u0dot(:,3)
+     elseif (i .eq. 3) then
+         functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
+             +(-u+u0)*u0dot(:,4))/3.0
+     endif
+
+     call integrate_time(window*functemp,&
+             polycoeffs(degree-i),dt,nt)
+ end do
+
+ polycoeffs = polycoeffs/polycoeffs(0)
+
+ tau=-polycoeffs(degree)/polycoeffs(degree-1)
+
+END SUBROUTINE COMPUTE_TT_GB02
+
+!================================================================================
 
 SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
  implicit none
@@ -1328,7 +1396,6 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
     Polylow(2)=-0.2
 
   f_low = 1.1
-  df = 0.5
 
   call distmat(nx,1,k)
   call distmat(nt,1,w)
@@ -1340,19 +1407,26 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
   f = w/(2.*pi)*1e3
 
 
+  df = f(2)-f(1)
+
   fmode = 0.0
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d>0)) &
-        fmode(i,1,j) = 0.5*(1.+cos(pi*(d-delta/2.0)/(delta/2.0)))
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     fmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
-    if (f(j) .lt. f_low+df) &
-      fmode(:,1,j) = fmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      fmode(:,1,j) = fmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
     if (f(j) .lt. f_low) fmode(:,1,j) = 0.
    enddo
 
@@ -1375,7 +1449,7 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
   Poly(1)=0.02369524
   Poly(2)=-0.00460597
 
-  df = 0.5
+  ! df = 0.5
   f_low = 1.6
 
   call distmat(nx,1,k)
@@ -1389,21 +1463,36 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
 
 
   pmode = 0.0
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))*0.5
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if (abs(d) .gt. delta) pmode(i,1,j) = 0.
+  !    if (abs(d) .lt. delta) pmode(i,1,j) = 1.
+  !    if ((abs(d) .lt. delta) .and. (abs(d) .gt. delta*0.5)) &
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !   enddo
+  !  enddo
+
   do i=1,nx
-   delta = (f1(i) - f0(i))*0.5
-    do j=1,nt
-     d = f(j) - f0(i)
-     if (abs(d) .gt. delta) pmode(i,1,j) = 0.
-     if (abs(d) .lt. delta) pmode(i,1,j) = 1.
-     if ((abs(d) .lt. delta) .and. (abs(d) .gt. delta*0.5)) &
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  df = f(2) - f(1)
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
 END SUBROUTINE HIGHPMODE_FILTER
@@ -1445,20 +1534,35 @@ SUBROUTINE P1MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+  df = f(2) - f(1)
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1489,7 +1593,7 @@ SUBROUTINE P2MODE_FILTER(nt, pmode)
     Polylow(2)=-0.62
 
   f_low = 1.6
-  df = 0.5
+  ! df = 0.5
 
   call distmat(nx,1,k)
   call distmat(nt,1,w)
@@ -1501,20 +1605,35 @@ SUBROUTINE P2MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+  df = f(2) - f(1)
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1557,20 +1676,35 @@ SUBROUTINE P3MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+
+  df = f(2) - f(1)
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1613,20 +1747,35 @@ SUBROUTINE P4MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  df = f(2) - f(1)
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1672,20 +1821,34 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  df =f(2) - f(1)
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1738,20 +1901,34 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
-  do i=1,nx
+  df = f(2) - f(1)
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+   do i=1,nx
    delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
+   do j=1,nt
+    d = f(j) - f0(i)
+    if ((d .lt. delta) .and. (d>(delta-2*df))) then
+       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+   else if ((d .lt. (2*df)) .and. (d>0)) then
+       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+    elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+      pmode(i,1,j) = 1.0
+    endif
+   enddo
    enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1804,20 +1981,35 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
+  df = f(2) - f(1)
+  ! do i=1,nx
+  !  delta = (f1(i) - f0(i))
+  !   do j=1,nt
+  !    d = f(j) - f0(i)
+  !    if ((d .lt. delta) .and. (d .gt. 0)) then
+  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
+  !    end if
+  !   enddo
+  !  enddo
+
   do i=1,nx
-   delta = (f1(i) - f0(i))
-    do j=1,nt
-     d = f(j) - f0(i)
-     if ((d .lt. delta) .and. (d .gt. 0)) then
-        pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-     end if
-    enddo
-   enddo
+  delta = (f1(i) - f0(i))
+  do j=1,nt
+   d = f(j) - f0(i)
+   if ((d .lt. delta) .and. (d>(delta-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+  else if ((d .lt. (2*df)) .and. (d>0)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+     pmode(i,1,j) = 1.0
+   endif
+  enddo
+  enddo
 
    do j=1,nt
     if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
    enddo
 
    close(32)
@@ -2202,7 +2394,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
          call freq_filter(leftcorner, rightcorner, nt, filt)
          do i=1,nt
-            filter(:,1,i) = filter(:,1,i) * filt(i)
+            filter(:,1,i) = filter(:,1,i) !* filt(i)
          enddo
 
          open(238, file = directory//'forward_src'//contrib//'_ls'//jobno//&
@@ -2272,7 +2464,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                  endif
 
                  ! print*,"calling compute tt with i=",i,"lef",lef,"rig",rig
-                 call compute_tt_gizonbirch(real(dat(i,1,:)),real(acc(i,1,:)),&
+                 call compute_tt_gb02(real(dat(i,1,:)),real(acc(i,1,:)),&
                                             tau,dt,nt, lef, rig)
 
                  138 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)

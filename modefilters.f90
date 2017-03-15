@@ -53,6 +53,68 @@ END SUBROUTINE FMODE_FILTER
 
 !=======================================================================
 
+!=======================================================================
+
+SUBROUTINE FMODE_FILTER_ALT(nt,outputcad,nx,xlength,fmode)
+    implicit none
+    integer, intent(in) :: nt,nx
+    real*8, intent(in) :: xlength,outputcad
+    integer i,j
+    real*8, intent(out) :: fmode(nx, 1, nt)
+    real*8 f_low,df,dt
+    real*8 :: f0(nx),f1(nx),k(nx)
+    real*8 :: Poly(0:2),Polylow(0:2), w(nt),d,delta,f(nt)
+    real*8 pi
+    parameter (pi=3.141592654)
+
+    dt = outputcad
+
+    Poly(0)=1.1
+    Poly(1)=1.9
+    Poly(2)=-0.2
+
+    Polylow(0)=0.7
+    Polylow(1)=1.7
+    Polylow(2)=-0.2
+
+    f_low = 1.1
+
+    call distmat(nx,1,k)
+    call distmat(nt,1,w)
+    k = abs(k) * 2.*pi/xlength
+    w = abs(w) * 2.*pi/(nt*dt)
+
+    f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+    f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+
+    f = w/(2.*pi)*1e3
+
+    df = f(2)-f(1)
+
+    fmode = 0.0
+    do i=1,nx
+    delta = (f1(i) - f0(i))
+    do j=1,nt
+     d = f(j) - f0(i)
+     if ((d .lt. delta) .and. (d>(delta-2*df))) then
+        fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
+    else if ((d .lt. (2*df)) .and. (d>0)) then
+        fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
+     elseif ((d > 2*df ) .and. (d<(delta-2*df))) then 
+       fmode(i,1,j) = 1.0
+     endif
+    enddo
+    enddo
+
+    do j=1,nt
+    if (f(j) .lt. f_low+0.5) &
+      fmode(:,1,j) = fmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low) fmode(:,1,j) = 0.
+    enddo
+END SUBROUTINE FMODE_FILTER_ALT
+
+!=======================================================================
+
 SUBROUTINE P1MODE_FILTER(nt,outputcad,nx,xlength,pmode)
 
     implicit none

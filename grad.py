@@ -25,9 +25,7 @@ class supergranule():
 
 DH13 = supergranule(R = 15,
                     k = 2*np.pi/30,
-                    sigmaz = 0.912,
-                    z0 = -2.3,
-                    v0 = 240)
+                    )
 
 ########################################################################
 
@@ -131,12 +129,12 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',
     z_filt_pix=0.3,kx_filt_pix=100):
     kern = totkern/hess
-    kern = filterx(kern,nk=kx_filt_pix)
+    # kern = filterx(kern,nk=kx_filt_pix)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
         antisymmetrize(kern)
-    filterz(kern,algo=z_filt_algo,sp=z_filt_pix)
+    # filterz(kern,algo=z_filt_algo,sp=z_filt_pix)
     return kern
 
 ########################################################################
@@ -310,26 +308,26 @@ def main():
     kernel = np.squeeze(totkern_psi).T
 
     cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
-    kernel = kernel*cutoff_x[None,:]
+    # kernel = kernel*cutoff_x[None,:]
 
 
     fitswrite(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),kernel)
 
     # Plot gradient (kernel)
     f=plt.figure()
-    plt.subplot(121)
+    ax1=plt.subplot(121)
     plt.pcolormesh(x,z,psi_true,cmap="RdBu_r")
     plt.title("True psi",fontsize=16)
-    plt.xlim(-50,50)
-    plt.ylim(-6,z[-1])
+    plt.xlim(-100,100)
+    plt.ylim(-20,z[-1])
     plt.xlabel("x (Mm)",fontsize=16)
     plt.ylabel("z (Mm)",fontsize=16)
 
-    plt.subplot(122)
+    ax2=plt.subplot(122)
     plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
     plt.title("Gradient",fontsize=16)
-    plt.xlim(-50,50)
-    plt.ylim(-6,z[-1])
+    ax2.set_xlim(ax1.get_xlim())
+    ax2.set_ylim(ax1.get_ylim())
     plt.xlabel("x (Mm)",fontsize=16)
     plt.ylabel("z (Mm)",fontsize=16)
 
@@ -375,11 +373,11 @@ def main():
             grad["z"][j] = integrate_2D(kernel*bz[:,None]*g_c)
 
             plt.figure()
-            plt.subplot(1,2,1)
+            ax=plt.subplot(1,2,1)
             plt.pcolormesh(x,z,kernel/abs(kernel).max(),cmap="RdBu_r",vmax=1,vmin=-1)
             plt.title("Gradient",fontsize=16)
-            plt.xlim(-50,50)
-            plt.ylim(-6,z[-1])
+            ax.set_xlim(ax1.get_xlim())
+            ax.set_ylim(ax1.get_ylim())
             plt.xlabel("x (Mm)",fontsize=16)
             plt.ylabel("z (Mm)",fontsize=16)
 
@@ -387,8 +385,8 @@ def main():
             plt.pcolormesh(x,z,kernel*bz[:,None]*g_c/abs(kernel*bz[:,None]*g_c).max(),
                             cmap="RdBu_r",vmax=1,vmin=-1)
             plt.title("Integral: {:.1e}".format(grad["z"][j]),fontsize=16)
-            plt.xlim(-50,50)
-            plt.ylim(-6,z[-1])
+            plt.xlim(ax1.get_xlim())
+            plt.ylim(ax1.get_ylim())
             plt.xlabel("x (Mm)",fontsize=16)
             plt.ylabel("z (Mm)",fontsize=16)
 
@@ -568,8 +566,9 @@ def main():
         plt.plot(z,lsmodel[:,0,lsmodel_max_col]-model_coeffs['back'],'o',
         mfc='tomato',ms=4,label="model")
         plt.legend(loc="best")
-        plt.xlim(-6,z[-1]*1.1)
+        plt.xlim(ax1.get_ylim())
         plt.savefig(updatedir('test_psi_{:d}.png'.format(i+1)))
+        plt.margins(x=0.1)
 
         fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
         np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
