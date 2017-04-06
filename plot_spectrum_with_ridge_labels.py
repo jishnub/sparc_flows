@@ -16,7 +16,7 @@ def fitsread(f): return np.squeeze(pyfits.getdata(f))
 datadir = read_params.get_directory()
 src=1
 srcloc = np.loadtxt(os.path.join(datadir,"master.pixels"),ndmin=1)[src-1]
-data = fitsread(os.path.join(datadir,"tt","data","data"+str(src).zfill(2)+".fits"))
+data = fitsread(os.path.join(datadir,"data",str(src).zfill(2)+".fits"))
 
 data_spec= np.fft.fftshift(abs(np.fft.fft2(data))**2)
 
@@ -78,10 +78,49 @@ else:
 
 #############################################################################################
 #~ Spectrum
+mode = read_params.parse_cmd_line_params(key="mode",default=None)
+if mode is not None:
+    modefilter = np.fft.fftshift(np.squeeze(pyfits.getdata(os.path.join(
+                '{}mode_filter.fits'.format(mode)))))
+    data_spec*=modefilter
+    # nu_ind_max,k_ind_max=np.unravel_index(data_spec.argmax(),data_spec.shape)
+
+    nu_ind_sigma,k_ind_sigma=np.unravel_index(
+            abs(data_spec-data_spec.max()*np.exp(-0.5)).argmin(),
+            data_spec.shape)
+
+    power = np.zeros_like(k)
+    nu_ridge = np.zeros_like(nu)
+    for l_ind,l_row in enumerate(data_spec.T):
+        power[l_ind]=l_row.max()
+        nu_ridge[l_ind] = nu[l_row.argmax()]
+
+    from scipy.optimize import curve_fit
+
+    def gaus(x,a,x0,sigma):
+        return a*np.exp(-(x-x0)**2/(2*sigma**2))
+
+    popt,pcov = curve_fit(gaus,k[(k*Rsun>200) & (k*Rsun<800)]*Rsun,
+        power[(k*Rsun>200) & (k*Rsun<800)],
+        p0=[2,500,100])
+
+
+    plt.figure()
+    plt.plot(k[k*Rsun>0]*Rsun,power[k*Rsun>0],color="dodgerblue",lw=2)
+    plt.plot(k[k*Rsun>0]*Rsun,gaus(k[k*Rsun>0]*Rsun,*popt),color="black",lw=2)
+    plt.axhline(popt[0]*np.exp(-0.5),ls='dashed',color='red')
+    plt.axhline(popt[0]*0.5,ls='dashed',color='olive')
+
+    print("max",int(popt[1]),abs(nu_ridge[abs(k*Rsun-popt[1]).argmin()]))
+    print("1 sigma",int(popt[1]-popt[2]),abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]).argmin()]))
+    print("half power",int(popt[1]-popt[2]*np.sqrt(np.log(4))),
+    abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]*np.sqrt(np.log(4))).argmin()]))
 
 fig = plt.figure()
-plt.pcolormesh(k_edges*Rsun,nu_edges,data_spec,cmap='Greys',vmax=data_spec.max()*0.2,rasterized=True)
+plt.pcolormesh(k_edges*Rsun,nu_edges,data_spec/data_spec.max(),
+cmap='Greys',vmax=1,rasterized=True)
 ax = plt.gca()
+plt.colorbar()
 
 plt.xlim(0,1000)
 plt.ylim(0,8)
@@ -114,7 +153,3 @@ else:
     print "Not saving spectrum plot to file"
 
 plt.show()
-
-
-
-

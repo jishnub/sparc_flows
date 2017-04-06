@@ -129,12 +129,12 @@ def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
 def filter_and_symmetrize(totkern,hess,sym=None,z_filt_algo='gaussian',
     z_filt_pix=0.3,kx_filt_pix=100):
     kern = totkern/hess
-    kern = filterx(kern,nk=kx_filt_pix)
+    # kern = filterx(kern,nk=kx_filt_pix)
     if sym=='sym':
         symmetrize(kern)
     elif sym=='asym':
         antisymmetrize(kern)
-    filterz(kern,algo=z_filt_algo,sp=z_filt_pix)
+    # filterz(kern,algo=z_filt_algo,sp=z_filt_pix)
     return kern
 
 ########################################################################
