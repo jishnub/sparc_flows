@@ -1380,30 +1380,37 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
   implicit none
 
   integer i,j,nt
-  real*8 fmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 fmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:4),Polylow(0:4), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   dt = outputcad
 
-  f_mode_const=2.056565
+    Poly=0
+    Poly(0)=0.6816995666
+    Poly(1)=1.97827975135
+    Poly(2)=-1.12337555632
+    Poly(3)=0.749996956203
+    Poly(4)=-0.175140581889
 
-  Poly(0)=1.1
-    Poly(1)=1.9
-    Poly(2)=-0.2
-
-    Polylow(0)=0.7
-    Polylow(1)=1.7
-    Polylow(2)=-0.2
-
-  f_low = 1.1
+    Polylow=0
+    Polylow(0)=0.623898151707
+    Polylow(1)=3.81510329344
+    Polylow(2)=-2.18073803978
+    Polylow(3)=0.83870962992
+    Polylow(4)=-0.126283442819
 
   call distmat(nx,1,k)
   call distmat(nt,1,w)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-    f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=0
+  f_high=0
+
+  do i=0,4
+   f_low=f_low+Polylow(i)*k**i
+    f_high=f_high+Poly(i)*k**i
+  enddo
   f = w/(2.*pi)*1e3
 
 
@@ -1411,23 +1418,24 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
 
   fmode = 0.0
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d < (delta+2*df)) .and. (d>delta)) then
+      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+  else if ((d < 0) .and. (d>(-2*df))) then
+      fmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      fmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low+0.5) &
-      fmode(:,1,j) = fmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
-    if (f(j) .lt. f_low) fmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      fmode(:,1,j) = fmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) fmode(:,1,j) = 0.
    enddo
 
 END SUBROUTINE FMODE_FILTER
@@ -1440,8 +1448,8 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt
-  real*8 Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt
+  real*8 Poly(0:2), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   dt = outputcad
 
@@ -1449,50 +1457,37 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
   Poly(1)=0.02369524
   Poly(2)=-0.00460597
 
-  ! df = 0.5
-  f_low = 1.6
-
   call distmat(nx,1,k)
   call distmat(nt,1,w)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=2.0*(254e-6*abs(k))**0.5/(2*pi)*1e3
-  f1=1.85*(Poly(0) + Poly(1)*abs(k) +Poly(2)*abs(k)**2.)/(2*pi)*1e3
+  f_low=2.0*(254e-6*abs(k))**0.5/(2*pi)*1e3
+  f_high=1.85*(Poly(0) + Poly(1)*abs(k) +Poly(2)*abs(k)**2.)/(2*pi)*1e3
   f = w/(2.*pi)*1e3
 
-
   pmode = 0.0
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))*0.5
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if (abs(d) .gt. delta) pmode(i,1,j) = 0.
-  !    if (abs(d) .lt. delta) pmode(i,1,j) = 1.
-  !    if ((abs(d) .lt. delta) .and. (abs(d) .gt. delta*0.5)) &
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !   enddo
-  !  enddo
 
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   df = f(2) - f(1)
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   else if ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+  f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
 END SUBROUTINE HIGHPMODE_FILTER
@@ -1504,65 +1499,62 @@ SUBROUTINE P1MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta,Polylow(0:2)
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:4), f_low(nx),w(nt),f(nt),f_high(nx),d,delta,Polylow(0:4)
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-!~   f_mode_const=3.096
+    Poly=0
+    Poly(0)=1.04946787438
+    Poly(1)=4.28500694767
+    Poly(2)=-1.79853784214
+    Poly(3)=0.523240395536
+    Poly(4)=-0.0693528244107
 
-  Poly(0)=1.4
-    Poly(1)=3.0
-    Poly(2)=-0.5
-
-    Polylow(0)=1.1
-    Polylow(1)=2.4
-    Polylow(2)=-0.3
-
-  f_low = 1.6
-  df = 0.5
+    Polylow = 0
+    Polylow(0)=0.88123404174
+    Polylow(1)=3.02499866767
+    Polylow(2)=-1.36638485558
+    Polylow(3)=0.688118939264
+    Polylow(4)=-0.16113216593
 
   call distmat(nx,1,k)
   call distmat(nt,1,w)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-!~   f0=f_mode_const*abs(k)**0.5
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=0
+  f_high=0
+
+  do i=0,4
+   f_low=f_low+Polylow(i)*k**i
+    f_high=f_high+Poly(i)*k**i
+  enddo
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
   df = f(2) - f(1)
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
 
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1576,64 +1568,62 @@ SUBROUTINE P2MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:4),Polylow(0:4), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-  f_mode_const=4.1004
+  Poly=0
+  Poly(0)=1.1406600853
+    Poly(1)=6.17989298938
+    Poly(2)=-3.90117798051
+    Poly(3)=1.50707755921
+    Poly(4)=-0.189573049963
 
-  Poly(0)=1.6
-    Poly(1)=3.8
-    Poly(2)=-0.65
-
-    Polylow(0)=1.4
-    Polylow(1)=3.3
-    Polylow(2)=-0.62
-
-  f_low = 1.6
-  ! df = 0.5
+    Polylow = 0
+    Polylow(0)=0.91217205529
+    Polylow(1)=5.16466338364
+    Polylow(2)=-3.01937028923
+    Polylow(3)=1.11497955424
+    Polylow(4)=-0.14466262072
 
   call distmat(nx,1,k)
   call distmat(nt,1,w)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=f_mode_const*abs(k)**0.5
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=0
+  f_high=0
+
+  do i=0,4
+   f_low=f_low+Polylow(i)*k**i
+    f_high=f_high+Poly(i)*k**i
+  enddo
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
   df = f(2) - f(1)
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
 
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1647,23 +1637,26 @@ SUBROUTINE P3MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt!f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt!f_mode_const
+  real*8 Poly(0:4),Polylow(0:4), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-!~   f_mode_const=4.7
+    Poly=0
+    Poly(0)=1.45
+    Poly(1)=6.87
+    Poly(2)=-5.325
+    Poly(3)=3.192
+    Poly(4)=-0.847
 
-    Poly(0)=2
-    Poly(1)=4.1
-    Poly(2)=-0.8
+    Polylow=0
+    Polylow(0)=1.214
+    Polylow(1)=5.906
+    Polylow(2)=-3.889
+    Polylow(3)=1.9
+    Polylow(4)=-0.387
 
-    Polylow(0)=2
-    Polylow(1)=3.55
-    Polylow(2)=-0.7
-
-    f_low = 1.6
     df = 0.5
 
   call distmat(nx,1,k)
@@ -1671,40 +1664,38 @@ SUBROUTINE P3MODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-    f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=0
+  f_high=0
+
+  do i=0,4
+   f_low=f_low+Polylow(i)*k**i
+    f_high=f_high+Poly(i)*k**i
+  enddo
+
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
 
   df = f(2) - f(1)
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1718,21 +1709,25 @@ SUBROUTINE P4MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:4),Polylow(0:4), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-  f_mode_const=5.4
+    Poly = 0
+    Poly(0)=1.31049991687
+    Poly(1)=9.42269860347
+    Poly(2)=-8.93928345177
+    Poly(3)= 5.61901410549
+    Poly(4)=-1.45560970906
 
-    Poly(0)=2.3
-    Poly(1)=4.4
-    Poly(2)=-0.7
-
-    Polylow(0)=2.15
-    Polylow(1)=4
-    Polylow(2)=-0.7
+    Polylow = 0
+    Polylow(0)=1.20256877128
+    Polylow(1)=8.40378321098
+    Polylow(2)=-8.49203154018
+    Polylow(3)=6.04350284182
+    Polylow(4)=-1.75134643804
 
     f_low = 1.6
     df = 0.5
@@ -1742,40 +1737,37 @@ SUBROUTINE P4MODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-    f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=0
+  f_high=0
+
+  do i=0,4
+   f_low=f_low+Polylow(i)*k**i
+    f_high=f_high+Poly(i)*k**i
+  enddo
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
   df = f(2) - f(1)
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
 
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+  f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1789,25 +1781,22 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-!~   f_mode_const=4.1004
-
-!~   f_mode_const=5.8
-
+    Poly=0
     Poly(0)=2.35
     Poly(1)=5.6
     Poly(2)=-1.1
 
+    Polylow=0
     Polylow(0)=2.2
     Polylow(1)=4.7
     Polylow(2)=-1.0
 
-    f_low = 1.6
     df = 0.5
 
   call distmat(nx,1,k)
@@ -1815,40 +1804,33 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-!~   f0=f_mode_const*abs(k)**0.5
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+!~   f_low=f_mode_const*abs(k)**0.5
+  f_low=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f_high=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
   df =f(2) - f(1)
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
+
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+  f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1862,32 +1844,22 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-!~   f_mode_const=4.1004
-
-!~   f_mode_const=5.8
-
-!~     Poly(0)=2.65
-!~     Poly(1)=5.7
-!~     Poly(2)=-1.2
-!~
-!~     Polylow(0)=2.4
-!~     Polylow(1)=5.4
-!~     Polylow(2)=-1.3
+    Poly = 0
     Poly(0)=1.98567115899
     Poly(1)=8.09108986838
     Poly(2)=-3.20316331815
 
+    Polylow = 0
     Polylow(0)=1.80035417224
     Polylow(1)=7.42939105658
     Polylow(2)=-2.84595764385
 
-    f_low = 1.6
     df = 0.5
 
   call distmat(nx,1,k)
@@ -1895,40 +1867,32 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-!~   f0=f_mode_const*abs(k)**0.5
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+!~   f_low=f_mode_const*abs(k)**0.5
+  f_low=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f_high=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
   df = f(2) - f(1)
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
    do i=1,nx
-   delta = (f1(i) - f0(i))
+   delta = (f_high(i) - f_low(i))
    do j=1,nt
-    d = f(j) - f0(i)
-    if ((d .lt. delta) .and. (d>(delta-2*df))) then
-       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-   else if ((d .lt. (2*df)) .and. (d>0)) then
-       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-    elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+    d = f(j) - f_low(i)
+    if ((d <(delta+2*df)) .and. (d>delta)) then
+       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+    elseif ((d < 0) .and. (d>(-2*df))) then
+       pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+    elseif ((d > 0 ) .and. (d<delta)) then
       pmode(i,1,j) = 1.0
     endif
    enddo
    enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -1942,27 +1906,18 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
-!~   f_mode_const=4.1004
-
-!~   f_mode_const=5.8
-
-!~     Poly(0)=2.9
-!~     Poly(1)=5.9
-!~     Poly(2)=-1.3
-!~
-!~     Polylow(0)=2.65
-!~     Polylow(1)=5.7
-!~     Polylow(2)=-1.2
+    Poly = 0
     Poly(0)=2.18544600032
     Poly(1)=8.68183289647
     Poly(2)=-3.84478880142
 
+    Polylow = 0
     Polylow(0)=1.98297334673
     Polylow(1)=7.94931076885
     Polylow(2)=-3.00725356897
@@ -1975,41 +1930,33 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-!~   f0=f_mode_const*abs(k)**0.5
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+!~   f_low=f_mode_const*abs(k)**0.5
+  f_low=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f_high=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
 
   pmode = 0.0
   df = f(2) - f(1)
-  ! do i=1,nx
-  !  delta = (f1(i) - f0(i))
-  !   do j=1,nt
-  !    d = f(j) - f0(i)
-  !    if ((d .lt. delta) .and. (d .gt. 0)) then
-  !       pmode(i,1,j) = 0.5*(1.+cos(pi*(abs(d)-abs(delta)*0.5)/(abs(delta)*0.5)))
-  !    end if
-  !   enddo
-  !  enddo
 
   do i=1,nx
-  delta = (f1(i) - f0(i))
+  delta = (f_high(i) - f_low(i))
   do j=1,nt
-   d = f(j) - f0(i)
-   if ((d .lt. delta) .and. (d>(delta-2*df))) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f1(i)-2*df)))
-  else if ((d .lt. (2*df)) .and. (d>0)) then
-      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-(f0(i)+2*df)))
-   elseif ((d > 2*df ) .and. (d<(delta-2*df))) then
+   d = f(j) - f_low(i)
+   if ((d <(delta+2*df)) .and. (d>delta)) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_high(i)))
+   elseif ((d < 0) .and. (d>(-2*df))) then
+      pmode(i,1,j) = cos(2*pi/(8*df)*(f(j)-f_low(i)))
+   elseif ((d > 0 ) .and. (d<delta)) then
      pmode(i,1,j) = 1.0
    endif
   enddo
   enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+0.5) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+0.5))/0.5) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/0.5) )
    enddo
 
    close(32)
@@ -2023,21 +1970,22 @@ SUBROUTINE ALL_PMODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real*8 pmode(nx, dim2(rank), nt),f_low_cutoff,df,k(nx),dt,f_mode_const
+  real*8 Poly(0:2),Polylow(0:2), f_low(nx),w(nt),f(nt),f_high(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
 
+    Polylow = 0
     Polylow(0)=1.1
     Polylow(1)=2.4
     Polylow(2)=-0.3
 
+    Poly = 0
     Poly(0)=3.5
     Poly(1)=6.5
     Poly(2)=-1.3
 
-    f_low = 1.6
     df = 0.5
 
   call distmat(nx,1,k)
@@ -2045,25 +1993,26 @@ SUBROUTINE ALL_PMODE_FILTER(nt, pmode)
   k = abs(k) * 2.*pi/(xlength*10.**(-8.)*nx/(nx-1.))
   w = abs(w) * 2.*pi/(nt*dt)
 
-  f0=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
-  f1=Poly(0) + Poly(1)*k +Poly(2)*k**2.
+  f_low=Polylow(0) + Polylow(1)*k +Polylow(2)*k**2.
+  f_high=Poly(0) + Poly(1)*k +Poly(2)*k**2.
   f = w/(2.*pi)*1e3
 
   pmode = 1.0
   do i=1,nx
-   delta = (f1(i) - f0(i))
+   delta = (f_high(i) - f_low(i))
     do j=1,nt
-     d = f(j) - f0(i)
+     d = f(j) - f_low(i)
      if ((d .lt. delta) .and. (d .gt. 0)) then
         pmode(i,1,j) = 1
      end if
     enddo
    enddo
 
+   f_low_cutoff = 1.1
    do j=1,nt
-    if (f(j) .lt. f_low) pmode(:,1,j) = 0.
-    if (f(j) .lt. f_low+df) &
-      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low+df))/df) )
+    if (f(j) .lt. f_low_cutoff) pmode(:,1,j) = 0.
+    if (f(j) .lt. f_low_cutoff+0.5) &
+      pmode(:,1,j) = pmode(:,1,j)*0.5*(1.+cos(pi*(f(j)-(f_low_cutoff+0.5))/df) )
    enddo
 
    close(32)
@@ -2071,17 +2020,17 @@ SUBROUTINE ALL_PMODE_FILTER(nt, pmode)
 END SUBROUTINE ALL_PMODE_FILTER
 !================================================================================
 
-SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
+SUBROUTINE FREQ_FILTER(f_high, f2, nt, filt)
   use initialize
   implicit none
   integer nt, i
-  real*8 f1,f2,filt(nt),w(nt),wid,dt
-  ! f1, f2 are in mHz
+  real*8 f_high,f2,filt(nt),w(nt),wid,dt
+  ! f_high, f2 are in mHz
   call distmat(nt,1,w)
   dt =outputcad
   w = abs(w)*1e3/(nt*dt)
   wid = 0.4*(w(2)-w(1))
-  filt = 1./(1.+exp((f1-w)/wid)) - 1./(1. + exp((f2-w)/wid))
+  filt = 1./(1.+exp((f_high-w)/wid)) - 1./(1. + exp((f2-w)/wid))
 
 END SUBROUTINE FREQ_FILTER
 
@@ -2092,7 +2041,7 @@ SUBROUTINE PHASE_FILTER(speed, var, nt, filt)
   implicit none
   integer nt, k
   real*8 speed, var,filt(nx,dim2(rank),nt),w(nt),kay(nx),dt,dw
-  ! f1, f2 are in mHz
+  ! f_high, f2 are in mHz
   call distmat(nt,1,w)
   dt =outputcad
   w = abs(w)*2.*pi/(nt*dt)
@@ -2467,7 +2416,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                  call compute_tt_gb02(real(dat(i,1,:)),real(acc(i,1,:)),&
                                             tau,dt,nt, lef, rig)
 
-                 138 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
+                 138 format (I3,X,f14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
                  write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
 
                  if (iwls .and. prev_iter_exist) then
@@ -2918,7 +2867,7 @@ SUBROUTINE MISFIT_ALL(nt)
         call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
         ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
 
-        138 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
+        138 format (I3,X,f14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
         write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
 
         ! misfit(pord) = misfit(pord) + tau**2.
