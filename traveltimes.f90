@@ -149,7 +149,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH3(u0,u,tau,dt,nt, lef, rig)
     integer, parameter :: degree=3
     integer, intent(in) :: nt, lef, rig
     real*8, intent(in) :: u0(nt), u(nt)
-    real*8 dt
+    real*8 dt,du(nt)
     real*8, intent(out) :: tau
     real*8 window(nt),functemp(nt)
     integer k,i,num_real_roots
@@ -186,20 +186,20 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH3(u0,u,tau,dt,nt, lef, rig)
     u0dot=u0dot/nt
 
     ! coefficients of dchi/dt
+    du = u0-u
 
     do i=0,degree
         functemp = 0
         if (i .eq. 0) then
-            functemp = 2*u0dot(:,1)*(u-u0)
+            functemp = -2*u0dot(:,1)*du
         elseif (i .eq. 1) then
-            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+            functemp = 2*(u0dot(:,1)**2+du*u0dot(:,2))
         elseif (i .eq. 2) then
-            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
-                (u-u0)*u0dot(:,3)
+            functemp = -3*u0dot(:,1)*u0dot(:,2)-&
+                du*u0dot(:,3)
         elseif (i .eq. 3) then
             functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
-                +(-u+u0)*u0dot(:,4))/3.0
-
+                +du*u0dot(:,4))/3.0
         endif
 
         call integrate_time(window*functemp,&
@@ -224,7 +224,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH2(u0,u,tau,dt,nt, lef, rig)
     integer, parameter :: degree=2
     integer, intent(in) :: nt, lef, rig
     real*8, intent(in) :: u0(nt), u(nt)
-    real*8 dt
+    real*8 dt,du(nt)
     real*8, intent(out) :: tau
     real*8 window(nt),functemp(nt)
     integer k,i,num_real_roots
@@ -261,20 +261,20 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH2(u0,u,tau,dt,nt, lef, rig)
     u0dot=u0dot/nt
 
     ! coefficients of dchi/dt
+    du = u0-u
 
     do i=0,degree
         functemp = 0
         if (i .eq. 0) then
-            functemp = 2*u0dot(:,1)*(u-u0)
+            functemp = -2*u0dot(:,1)*du
         elseif (i .eq. 1) then
-            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+            functemp = 2*(u0dot(:,1)**2+du*u0dot(:,2))
         elseif (i .eq. 2) then
-            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
-                (u-u0)*u0dot(:,3)
+            functemp = -3*u0dot(:,1)*u0dot(:,2)-&
+                du*u0dot(:,3)
         elseif (i .eq. 3) then
             functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
-                +(-u+u0)*u0dot(:,4))/3.0
-
+                +du*u0dot(:,4))/3.0
         endif
 
         call integrate_time(window*functemp,&
@@ -299,7 +299,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH1(u0,u,tau,dt,nt, lef, rig)
     integer, parameter :: degree=1
     integer, intent(in) :: nt, lef, rig
     real*8, intent(in) :: u0(nt), u(nt)
-    real*8 dt
+    real*8 dt,du(nt)
     real*8, intent(out) :: tau
     real*8 window(nt),functemp(nt)
     integer k,i,num_real_roots
@@ -336,19 +336,20 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH1(u0,u,tau,dt,nt, lef, rig)
     u0dot=u0dot/nt
 
     ! coefficients of dchi/dt
+    du = u0-u
 
     do i=0,degree
         functemp = 0
         if (i .eq. 0) then
-            functemp = 2*u0dot(:,1)*(u-u0)
+            functemp = -2*u0dot(:,1)*du
         elseif (i .eq. 1) then
-            functemp = 2*(u0dot(:,1)**2+(-u+u0)*u0dot(:,2))
+            functemp = 2*(u0dot(:,1)**2+du*u0dot(:,2))
         elseif (i .eq. 2) then
-            functemp = -3*u0dot(:,1)*u0dot(:,2)+&
-                (u-u0)*u0dot(:,3)
+            functemp = -3*u0dot(:,1)*u0dot(:,2)-&
+                du*u0dot(:,3)
         elseif (i .eq. 3) then
             functemp = (3*u0dot(:,2)**2+4*u0dot(:,1)*u0dot(:,3)&
-                +(-u+u0)*u0dot(:,4))/3.0
+                +du*u0dot(:,4))/3.0
         endif
 
         call integrate_time(window*functemp,&
