@@ -1,7 +1,7 @@
 from __future__ import division
 import read_params
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt,ticker,colors
 import plotc
 import modefilters
 import os,sys
@@ -15,14 +15,11 @@ def fitswrite(filename,array):
 codedir=os.path.dirname(os.path.abspath(__file__))
 datadir=read_params.get_directory()
 
-try:
-    src=next(f for f in sys.argv if (f.startswith("src=") or f.startswith("source=")))
-    src=int(src.split("=")[-1])
-except StopIteration: src=1
+src=read_params.parse_cmd_line_params(key="src",mapto=int,default=1)
 
 srcloc=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)[src-1]
 
-data=pyfits.getdata(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits'))
+data=pyfits.getdata(os.path.join(datadir,'data','{:02d}.fits'.format(src)))
 
 nt,_,nx=data.shape
 Lx=read_params.get_xlength()
@@ -44,7 +41,7 @@ p6mode=False,
 p7mode=False,
 high_pmodes=False)
 
-if len(sys.argv)>1: 
+if len(sys.argv)>1:
     for m in sys.argv[1:]:
         for mode in modes:
             if mode.startswith(m): modes[mode]=True
@@ -73,66 +70,78 @@ for mode,to_plot in modes.items():
             for line in mf.readlines():
                 if 'subroutine '+mode+'_filter' in line.lower(): mode_match=True
                 if not mode_match: continue
-                if 'end subroutine '+mode+'_filter' in line.lower(): 
+                if 'end subroutine '+mode+'_filter' in line.lower():
                     mode_match=False
                     break
                 if line.strip().startswith('Polylow(') and mode_match:
                     Polylow.append(float(line.strip().split("=")[1]))
                 if line.strip().startswith('Poly(') and mode_match:
                     Poly.append(float(line.strip().split("=")[1]))
-                if line.lower().strip().startswith('f_low') and mode_match:
+                if line.lower().strip().startswith('f_low_cutoff') and mode_match:
                     f_low=float(line.strip().split("=")[1])
-           
+
         Poly=np.array(Poly)
         Polylow=np.array(Polylow)
-        
+
+        print "Poly",Poly
+        print "Polylow",Polylow
+
         plt.figure()
-                    
+
         full_powerspectrum=abs(np.fft.fft2(np.squeeze(data)))**2
-        powmax = full_powerspectrum.max()
-        
-        plot_freq_range=[2,6]
-                    
-        cp=plotc.spectrumplot(full_powerspectrum,x=k*Rsun,y=nu,vmax=powmax*0.1,
-        xr=[0,None],yr=plot_freq_range,axes_properties=dict(xscilimits=(-4,4)),sp=121,
-        title="Power spectrum",colorbar=True,
-        colorbar_properties={'orientation':'horizontal','shrink':0.8})
-        
-        ax=cp.axis
-        
+
+        ax=plt.subplot(121)
+        cp=plt.pcolormesh(np.fft.fftshift(k)*Rsun,np.fft.fftshift(nu),
+        np.fft.fftshift(full_powerspectrum),
+        norm=colors.LogNorm(vmin=full_powerspectrum.max()*1e-2,
+        vmax=full_powerspectrum.max()),cmap="Oranges")
+
+        plt.colorbar(orientation="horizontal",shrink=0.8)
+        plt.xlim(0,k.max()*Rsun)
+        plt.ylim(1,7)
+
+        plt.title("Power spectrum")
+
         plt.xlabel("$k R_\odot$",fontsize=14)
         plt.ylabel("Frequency ($mHz$)",fontsize=14)
 
         f0=sum(p_i*k**i for i,p_i in enumerate(Polylow))
         f1=sum(p_i*k**i for i,p_i in enumerate(Poly))
 
-        plt.plot(k[:len(k)/2]*Rsun,f0[:len(k)/2],color='orangered')
-        plt.plot(k[:len(k)/2]*Rsun,f1[:len(k)/2],color='orangered')
-        plt.plot(k[:len(k)/2]*Rsun,[f_low]*(len(k)//2),color='orangered',linestyle='dashed')
-                
+        plt.plot(k[:len(k)//2]*Rsun,f0[:len(k)//2],color='orangered')
+        plt.plot(k[:len(k)//2]*Rsun,f1[:len(k)//2],color='orangered')
+        plt.plot(k[:len(k)//2]*Rsun,[f_low]*(len(k)//2),color='orangered',linestyle='dashed')
+
         filtered_powerspectrum=abs(np.fft.fft2(np.squeeze(data))*np.squeeze(mode_filter))**2
-        
-        plotc.spectrumplot(filtered_powerspectrum,x=k*Rsun,y=nu,
-        xr=[0,None],yr=plot_freq_range,sp=122,
-        axes_properties=dict(xscilimits=(-4,4),hide_yticklabels=True),
-        title=mode,colorbar=True,
-        colorbar_properties={'orientation':'horizontal','shrink':0.8},
-        subplot_properties={'sharey':ax,'sharex':ax})
-        
+
+        ax2=plt.subplot(122)
+        p=ax2.pcolormesh(np.fft.fftshift(k)*Rsun,np.fft.fftshift(nu),
+        np.fft.fftshift(filtered_powerspectrum),
+        norm=colors.LogNorm(vmin=full_powerspectrum.max()*1e-2,
+        vmax=full_powerspectrum.max()),cmap="Oranges")
+
+        plt.colorbar(orientation="horizontal",shrink=0.8)
+        ax2.set_xlim(ax.get_xlim())
+        ax2.set_ylim(ax.get_ylim())
+        ax2.yaxis.set_major_formatter(ticker.NullFormatter())
+
+        plt.title(mode)
+
         plt.xlabel("$k R_\odot$",fontsize=14)
 
         plt.subplots_adjust(wspace=0)
-        
+
         if plot_time_distance:
             plt.figure()
             td=np.fft.ifft2(np.fft.fft2(np.squeeze(data))*np.squeeze(mode_filter)).real
-            plotc.colorplot(td/td.max(),x=x-srcloc,y=t/60,title=mode+" time distance diagram",
+            plotc.colorplot(td/td.max(),x=x-srcloc,y=t/60,
                 vmax=0.5,centerzero=True,axes_properties=dict(scilimits=(-5,5)),
                 xr=[-Lx/2-srcloc,Lx/2-srcloc],yr=[5,t.max()/60*0.85])
             plt.xlabel("Horizontal Distance ($\mathrm{Mm}$)",fontsize=14)
             plt.ylabel("Time (min)",fontsize=14)
+            plt.title(mode+" time distance diagram")
 
 
 #########################################################################################
 
-plotc.show()
+plt.show()
