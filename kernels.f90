@@ -510,7 +510,7 @@ SUBROUTINE PRODUCE_KERNELS
   if (enf_cont .and. psi_cont) then
   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
   kernelpsi = -2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
-                   (rho0*c2**0.5*psivar)*stepskern*timestep * dimen
+                   (rho0*c2**0.5)*stepskern*timestep * dimen !*psivar
 
   end if
 
