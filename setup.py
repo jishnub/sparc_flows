@@ -9,7 +9,7 @@ try:
     with open(os.path.join(datadir,"master.pixels"),'r') as masterpixels:
         nmasterpixels=sum(1 for _ in masterpixels)
 except IOError:
-    print "No master.pixels file found"
+    print("No master.pixels file found")
     quit()
 
 nlinesearch=int(sys.argv[1])
@@ -18,10 +18,10 @@ def create_if_not_there(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-for src in xrange(1,nmasterpixels+1):
+for src in range(1,nmasterpixels+1):
 
     srccode=str(src).zfill(2)
-    for job in xrange(nlinesearch+1):
+    for job in range(nlinesearch+1):
         jobcode=str(job).zfill(2) 
         forwarddir=os.path.join(datadir,"forward_src"+srccode+"_ls"+jobcode)
         create_if_not_there(forwarddir)

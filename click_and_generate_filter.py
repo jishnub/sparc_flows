@@ -1,4 +1,4 @@
-from __future__ import division
+
 import read_params
 import numpy as np
 import matplotlib
@@ -101,7 +101,7 @@ class Track_interactions():
         if event.key == 'c':
             polystr,fitstr = self.poly.fit()
             if polystr is None: return
-            print polystr,"\n",fitstr,"\n"
+            print(polystr,"\n",fitstr,"\n")
             self.poly.fitted_curve.set_color("black")
             plt.draw()
             self.poly=Poly()

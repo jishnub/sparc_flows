@@ -21,7 +21,7 @@ procno=int(os.environ["PBS_VNODENUM"])
 nodeno=int(os.environ["PBS_NODENUM"])
 
 if procno>=nmasterpixels: 
-    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
+    print("Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S"))
     quit()
 
 src=str(procno+1).zfill(2)
@@ -37,7 +37,7 @@ def safemkdir(a):
         try: os.makedirs(a)
         except OSError:
             if e.errno == 17: pass
-            else: print e
+            else: print(e)
 
 def compute_forward_adjoint_kernel(src):
 
@@ -50,7 +50,7 @@ def compute_forward_adjoint_kernel(src):
     Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
     
     modes={'0':'fmode'}
-    for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+    for pmodeno in range(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
     modes['8']='first_bounce_pmode'
     
     ridge_filters = read_params.get_modes_used()
@@ -107,9 +107,9 @@ def compute_forward_adjoint_kernel(src):
     assert kern==0,"Error in computing kernel"
 
 timestart=datetime.datetime.now()
-print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')
+print("Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S'))
 compute_forward_adjoint_kernel(src)
 timefin= datetime.datetime.now()
 #~ elapsedTime = timefin - timestart
 #~ runtime=divmod(elapsedTime.total_seconds(), 60)
-print "Finished on proc no",procno,"for source",src,"at",datetime.datetime.strftime(timefin, '%Y-%m-%d %H:%M:%S')
+print("Finished on proc no",procno,"for source",src,"at",datetime.datetime.strftime(timefin, '%Y-%m-%d %H:%M:%S'))

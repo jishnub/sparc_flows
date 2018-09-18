@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
@@ -71,7 +71,7 @@ def filterz(arr,algo='spline',sp=1.0):
         
         kst=1
         
-        for k in xrange(5,nz-5):
+        for k in range(5,nz-5):
             temp[:,:,k] =( coeffs[0]*arr[:,:,k] + 0.5*coeffs[1]*(arr[:,:,k-1] + arr[:,:,k+1]) 
                         +  0.5*coeffs[2]*(arr[:,:,k-2] + arr[:,:,k+2])  
                         +  0.5*coeffs[3]*(arr[:,:,k-3] + arr[:,:,k+3])  
@@ -86,8 +86,8 @@ def filterz(arr,algo='spline',sp=1.0):
         arr[:,:,kst:nz-kst+1]=temp[:,:,kst:nz-kst+1]
                 
     elif algo=='spline':
-        for x in xrange(nx):
-            for y in xrange(ny):
+        for x in range(nx):
+            for y in range(ny):
                 arrz=arr[x,y]
                 arrzmax=arrz.max()
                 arrz=arrz/arrzmax
@@ -126,7 +126,7 @@ def main():
     iterno=get_iter_no()
 
     args=sys.argv[1:]
-    optimization_algo=filter(lambda x: x.startswith('algo='),args)
+    optimization_algo=[x for x in args if x.startswith('algo=')]
     if len(optimization_algo)>0: optimization_algo = optimization_algo[0].split("=")[-1]
     else: optimization_algo="conjugate gradient"
         
@@ -141,8 +141,8 @@ def main():
         except ValueError:
             return False
     
-    eps = map(float,filter(isfloat,args))
-    if eps==[]: eps=[0.1*i for i in xrange(1,7)]
+    eps = list(map(float,list(filter(isfloat,args))))
+    if eps==[]: eps=[0.1*i for i in range(1,7)]
 
     Rsun=695.9895 # Mm
 
@@ -176,7 +176,7 @@ def main():
         elif cont_var == 'vx': vx_cont = True 
         elif cont_var == 'vz': vz_cont = True 
         else: 
-            print "Continuity variable unknown, check params.i"
+            print("Continuity variable unknown, check params.i")
             quit()
 
     def read_model(var='psi',iterno=iterno):
@@ -191,7 +191,7 @@ def main():
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
 
-    for src in xrange(1,num_src+1):
+    for src in range(1,num_src+1):
         
         if sound_speed_perturbed:
             totkern_c += read_kern(var='c',src=src)
@@ -248,7 +248,7 @@ def main():
             grad = read_grad(var=var,iterno=iterno)
             update = -grad
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
-            print "Steepest descent"
+            print("Steepest descent")
         
         if sound_speed_perturbed: sd_update(var='c')
         
@@ -263,7 +263,7 @@ def main():
                 sd_update(var='vz')
                 sd_update(var='vx')
             
-        if iterno > 0: print 'Forcing steepest descent'
+        if iterno > 0: print('Forcing steepest descent')
 
     elif conjugate_gradient:
         
@@ -273,19 +273,19 @@ def main():
             hestenes_stiefel = True and (not polak_ribiere)
             
             if polak_ribiere:
-                print "Conjugate gradient, Polak Ribiere method"
+                print("Conjugate gradient, Polak Ribiere method")
                 beta = np.sum(grad*(grad - lastgrad))
                 beta/= np.sum(lastgrad**2.)
 
             elif hestenes_stiefel:
-                print "Conjugate gradient, Hestenes Stiefel method"
+                print("Conjugate gradient, Hestenes Stiefel method")
                 beta = np.sum(grad*(grad - lastgrad))
                 beta/= np.sum((grad - lastgrad)*lastupdate)
             
-            print "beta",beta
-            if beta==0: print "Conjugate gradient reduces to steepest descent"
+            print("beta",beta)
+            if beta==0: print("Conjugate gradient reduces to steepest descent")
             elif beta<0:
-                print "Stepping away from previous update direction"
+                print("Stepping away from previous update direction")
                 
             return beta
         
@@ -325,9 +325,9 @@ def main():
             grad_iplus1 = grad_k
             q = grad_k
             
-            for i in xrange(k-1,k-m-1,-1):
+            for i in range(k-1,k-m-1,-1):
                 
-                if var+'_y_'+str(i) in LBFGS_data.keys():
+                if var+'_y_'+str(i) in list(LBFGS_data.keys()):
                     y_i=LBFGS_data[var+'_y_'+str(i)]
                 else:
                     grad_i= read_grad(var=var,iterno=i)
@@ -335,7 +335,7 @@ def main():
                     LBFGS_data[var+'_y_'+str(i)] = y_i
                     grad_iplus1 = grad_i
                     
-                if var+'_s_'+str(i) in LBFGS_data.keys():
+                if var+'_s_'+str(i) in list(LBFGS_data.keys()):
                     s_i=LBFGS_data[var+'_s_'+str(i)]
                 else:
                     model_i= read_grad(var=var,iterno=i)
@@ -343,13 +343,13 @@ def main():
                     LBFGS_data[var+'_s_'+str(i)] = s_i
                     model_iplus1 = model_i
                 
-                if var+'_rho_'+str(i) in LBFGS_data.keys():
+                if var+'_rho_'+str(i) in list(LBFGS_data.keys()):
                     rho_i = LBFGS_data[var+'_rho_'+str(i)]
                 else: 
                     rho_i = 1/np.sum(y_i*s_i)
                     LBFGS_data[var+'_rho_'+str(i)] = rho_i
                 
-                if var+'_alpha_'+str(i) in LBFGS_data.keys():
+                if var+'_alpha_'+str(i) in list(LBFGS_data.keys()):
                     alpha_i = LBFGS_data[var+'_alpha_'+str(i)]
                 else:
                     alpha_i = rho_i*np.sum(s_i*q)
@@ -365,7 +365,7 @@ def main():
             H0_k = np.dot(s_kminus1*y_kminus1)/np.sum(y_kminus1**2)
             r = np.dot(H0_k,q)
                 
-            for i in xrange(k-m,k):
+            for i in range(k-m,k):
 
                 rho_i = LBFGS_data[var+'_rho_'+str(i)]
                 y_i = LBFGS_data[var+'_y_'+str(i)]
@@ -375,7 +375,7 @@ def main():
                 beta = rho_i* np.sum(y_i*r)
                 r = r + s_i*(alpha_i - beta)
             
-            for i in xrange(0,k-m):
+            for i in range(0,k-m):
                 if var+'_s_'+str(i) in LBFGS_data: del LBFGS_data[var+'_s_'+str(i)]
                 if var+'_y_'+str(i) in LBFGS_data: del LBFGS_data[var+'_y_'+str(i)]
                 if var+'_rho_'+str(i) in LBFGS_data: del LBFGS_data[var+'_rho_'+str(i)]
@@ -388,7 +388,7 @@ def main():
         try:
             LBFGS_data={} 
             data=np.load(LBFGS_data_file)
-            for key,val in data.items(): LBFGS_data[key]=val
+            for key,val in list(data.items()): LBFGS_data[key]=val
             data=None
         except IOError: LBFGS_data={}
 

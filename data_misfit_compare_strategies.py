@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import plotc
 import pyfits
@@ -21,7 +21,7 @@ strategydir=[os.path.join(parentdir,modeldir) for modeldir in ("f_p1","f_to_p3",
 #~ Get ridges used
 ridges=read_params.get_modes_used()
 modes={'0':'fmode'}
-for i in xrange(1,8): modes[str(i)]='p'+str(i)+'mode'
+for i in range(1,8): modes[str(i)]='p'+str(i)+'mode'
 modes['8']='first_bounce_pmode'
 
 mp=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
@@ -29,7 +29,7 @@ number_of_sources = len(mp)
 
 #~ First panel, compare different strategies
 linestyles = itertools.cycle(('solid','dashed','dotted','dashdot'))
-strategylabel = iter(["$\#$"+str(i) for i in xrange(1,5)])
+strategylabel = iter(["$\#$"+str(i) for i in range(1,5)])
 itercutoff=35
 ax=plt.subplot(131)
 for directory in strategydir:
@@ -60,9 +60,9 @@ for ridgeno,ridge in enumerate(ridges[:4]):
     
     nsources_found = 0
     
-    for src in xrange(1,number_of_sources+1):
+    for src in range(1,number_of_sources+1):
         
-        for iterno in xrange(itercutoff+1):
+        for iterno in range(itercutoff+1):
         
             ttfile = os.path.join(strategydir[2],'tt','iter'+str(iterno).zfill(2),
                         'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge])
@@ -123,8 +123,8 @@ def dist_to_pix(dist): return int((dist+Lx/2+srcloc)/Lx*nx)
 def pix_to_dist(pix): return (pix-nx/2)/nx*Lx-srcloc
 pix = dist_to_pix(20.)
 
-lef_ttdiff_cutoff = t[map(int,lef_ttdiff[pixel_ttdiff==pix])]
-rig_ttdiff_cutoff = t[map(int,rig_ttdiff[pixel_ttdiff==pix])]
+lef_ttdiff_cutoff = t[list(map(int,lef_ttdiff[pixel_ttdiff==pix]))]
+rig_ttdiff_cutoff = t[list(map(int,rig_ttdiff[pixel_ttdiff==pix]))]
 
 plt.plot(t,data_filtered[:,pix],label="True",color='black')
 plt.plot(t,vzcc_start_filtered[:,pix],label="Iter 0",linestyle='dashed',linewidth=2,color='#555555')
@@ -153,10 +153,10 @@ plt.tight_layout()
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
-    print "saving to",savepath
+    print("saving to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 #~ plt.show()

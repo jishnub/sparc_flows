@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import pyfits
 import matplotlib.pyplot as plt
@@ -69,11 +69,11 @@ plt.tight_layout()
 
 if tdfig is not None:
     savepath = os.path.join("plots",save[0])
-    print "saving time distance plot to",savepath
+    print("saving time distance plot to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving time distance plot to file"
+    print("Not saving time distance plot to file")
 
 
 #############################################################################################
@@ -107,11 +107,11 @@ plt.tight_layout()
 
 if specfig is not None:
     savepath = os.path.join("plots",specfig)
-    print "saving spectrum plot to",savepath
+    print("saving spectrum plot to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving spectrum plot to file"
+    print("Not saving spectrum plot to file")
 
 plt.show()
 

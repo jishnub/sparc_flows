@@ -4,8 +4,8 @@ try:
     num=sys.argv[1]
     int(num)
 except:
-    print "Usage: python copy_updated_model.py <model number>"
-    print "Example: python copy_updated_model.py 3"
+    print("Usage: python copy_updated_model.py <model number>")
+    print("Example: python copy_updated_model.py 3")
     quit()
 
 datadir=read_params.get_directory()

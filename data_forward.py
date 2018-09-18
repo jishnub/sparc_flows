@@ -21,7 +21,7 @@ except IOError:
     quit()
 
 if procno>=nmasterpixels: 
-    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
+    print("Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S"))
     quit()
 
 src=str(procno+1).zfill(2)
@@ -56,7 +56,7 @@ def compute_data(src):
         try: os.makedirs(os.path.join(datadir,"tt","data"))
         except OSError as e:
             if e.errno == 17: pass
-            else: print e
+            else: print(e)
     
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
         shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
@@ -65,11 +65,11 @@ def compute_data(src):
         
     if os.path.exists(Instruction): os.remove(Instruction)
 
-print "Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
+print("Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S"))
 compute_data(src)
 
 file_to_remove=os.path.join(datadir,"status","forward_src"+src+"_ls00")
 if os.path.exists(file_to_remove): os.remove(file_to_remove)
 
-print "Finished computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S")
+print("Finished computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S"))
 

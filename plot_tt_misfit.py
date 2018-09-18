@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import plotc
 import pyfits as pf
@@ -63,7 +63,7 @@ time=np.arange(nt)*dt
 
 
 modes={'0':'fmode'}
-for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+for pmodeno in range(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
 modes['8']="first_bounce_pmode"
 ridge_filters=sorted(read_params.get_modes_used())
 
@@ -85,7 +85,7 @@ srcloc=round(x[srcloc_ind],1)
 
 ttdiff_ridges={}
 for mode in modes: ttdiff_ridges.update({mode:{"iter_no":[],"misfits":[]}})
-for iteration_no in xrange(0,100):
+for iteration_no in range(0,100):
     ttpath=os.path.join(datadir,'tt','iter'+str(iteration_no).zfill(2))
     if os.path.exists(ttpath):
         for modeno,mode in enumerate(ridge_filters):
@@ -115,7 +115,7 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
     if num_iterations > 4: plot_every = int(np.ceil(np.sqrt(num_iterations)))
     if num_iterations > 10: plot_every = int(num_iterations//2)
     
-    iters_to_plot_ridge = [ttdiff_ridges[mode]["iter_no"][i] for i in xrange(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
+    iters_to_plot_ridge = [ttdiff_ridges[mode]["iter_no"][i] for i in range(0,len(ttdiff_ridges[mode]["iter_no"]),plot_every)]
     iters_to_plot_temp = iters_to_plot
     if max(iters_to_plot)>iters_to_plot_ridge[-1]:
         for entry in iters_to_plot:
@@ -154,10 +154,10 @@ for modeno,mode in enumerate(ridge_filters[:modes_to_plot]):
         ax.set_title(spaced(modes[mode]),fontsize=18,loc='right')
         
         
-for ax_no in xrange(0,len(tdiffaxes),subplot_layout[1]):
+for ax_no in range(0,len(tdiffaxes),subplot_layout[1]):
     tdiffaxes[ax_no].set_ylabel(r"$\Delta \tau$ (sec)",fontsize=20)
 
-for ax_no in xrange(subplot_layout[1]*(subplot_layout[0]-1),len(tdiffaxes)):    
+for ax_no in range(subplot_layout[1]*(subplot_layout[0]-1),len(tdiffaxes)):    
     tdiffaxes[ax_no].set_xlabel("x (Mm)",fontsize=20)
     
    
@@ -199,8 +199,8 @@ if save is not None:
     savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
-    print "Saved to",savepath
+    print("Saved to",savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()

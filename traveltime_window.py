@@ -1,4 +1,4 @@
-from __future__ import division,print_function
+
 import modefilters
 import numpy as np
 import pyfits
@@ -115,7 +115,7 @@ class MainWindow(Gtk.Window):
         align_list[-1].set_padding(0,0,10,0)
 
         ridge_filters = ["f"]
-        ridge_filters.extend(["p"+str(i) for i in xrange(1,8)])
+        ridge_filters.extend(["p"+str(i) for i in range(1,8)])
         self.ridge_filters_list = Gtk.ComboBoxText()
         self.ridge_filters_list.set_entry_text_column(0)
         for ridge in ridge_filters: self.ridge_filters_list.append_text(ridge)
@@ -486,7 +486,7 @@ class MainWindow(Gtk.Window):
         tt_hanasoge_interp_5s = []
         pixel_x_list = []
 
-        for pixel in xrange(nx):
+        for pixel in range(nx):
 
             pixel_x = (pixel/nx-0.5)*Lx
             distance_Mm = abs(pixel_x - self.source_x)
@@ -609,7 +609,7 @@ class MainWindow(Gtk.Window):
             tt_gb_30s = []
             pixel_x_list = []
 
-            for pixel in xrange(nx):
+            for pixel in range(nx):
 
                 pixel_x = (pixel/nx-0.5)*Lx
                 distance_Mm = abs(pixel_x - self.source_x)

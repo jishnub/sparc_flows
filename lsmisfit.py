@@ -6,7 +6,7 @@ codedir=os.path.dirname(os.path.abspath(__file__))
 
 datadir=read_params.get_directory()
 
-number_args=filter(lambda x: x.isdigit(),sys.argv)
+number_args=[x for x in sys.argv if x.isdigit()]
 if number_args:
     iterno=number_args[0].zfill(2)
 else:
@@ -14,7 +14,7 @@ else:
     fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'linesearch_[0-9][0-9]')]
     nfiles=len(lsfiles)
     if nfiles==0:
-        print "No linesearch files found"
+        print("No linesearch files found")
         quit()
     else:
         iterno=str(nfiles-1).zfill(2)
@@ -24,7 +24,7 @@ no_of_linesearches=5
 lsfile=os.path.join(datadir,"update","linesearch_"+iterno)
 
 if not os.path.exists(lsfile):
-    print lsfile,"doesn't exist"
+    print(lsfile,"doesn't exist")
     quit()
 
 with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
@@ -32,9 +32,9 @@ with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
 
 lsdata=np.loadtxt(lsfile,usecols=[2])
 
-misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in xrange(no_of_linesearches)]
+misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_linesearches)]
 
-print "iteration",int(iterno)
+print("iteration",int(iterno))
 
 np.set_printoptions(precision=3)
     
@@ -42,10 +42,10 @@ np.set_printoptions(precision=3)
 if "--detail" in sys.argv:
     ridges = read_params.get_modes_used()
     modes={'0':'fmode'}
-    for pmodeno in xrange(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+    for pmodeno in range(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
     
-    for src in xrange(1,nmasterpixels+1):
-        for lsno in xrange(1,no_of_linesearches+1):
+    for src in range(1,nmasterpixels+1):
+        for lsno in range(1,no_of_linesearches+1):
             modemisfit=[]
             maxpix=[]
             for mode in ridges:
@@ -56,11 +56,11 @@ if "--detail" in sys.argv:
                 modemisfit.append(td)
             misfitfmtstr="{:6.3f} "*len(modemisfit)
             maxpixfmtstr="{:4d}"*len(maxpix)
-            print "Src",src,"ls",lsno,"misfit",misfitfmtstr.format(*modemisfit),\
-                    "sum","{:6.3f}".format(sum(modemisfit)),"maxpix",maxpixfmtstr.format(*maxpix)
+            print("Src",src,"ls",lsno,"misfit",misfitfmtstr.format(*modemisfit),\
+                    "sum","{:6.3f}".format(sum(modemisfit)),"maxpix",maxpixfmtstr.format(*maxpix))
             
     for src,srcmisfit in enumerate(lsdata.reshape(no_of_linesearches,lsdata.shape[0]//no_of_linesearches).T):
-        print "Source",str(src+1).zfill(2),"lsmisfit",srcmisfit
-    print "Total misfit      ",np.array(misfit)
+        print("Source",str(src+1).zfill(2),"lsmisfit",srcmisfit)
+    print("Total misfit      ",np.array(misfit))
 else:
-    for m in misfit: print m
+    for m in misfit: print(m)

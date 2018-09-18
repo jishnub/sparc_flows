@@ -62,9 +62,9 @@ def get_ridge_filter():
             if adjoint_src_filt and "do pord=" in line.lower() and ridge_filter:
                 ridges=line.split()[1].split("=")[1].split(",")
                 if len(ridges)==2:
-                    ridges=[str(i) for i in xrange(int(ridges[0]),int(ridges[1])+1)]
+                    ridges=[str(i) for i in range(int(ridges[0]),int(ridges[1])+1)]
                 elif len(ridges)==3:
-                    ridges=[str(i) for i in xrange(int(ridges[0]),int(ridges[1])+1,int(ridges[2]))]
+                    ridges=[str(i) for i in range(int(ridges[0]),int(ridges[1])+1,int(ridges[2]))]
                 return ridges
             if "PHASE-SPEED FILTERS" in line.upper(): ridge_filter=False
             if "END SUBROUTINE ADJOINT_SOURCE_FILT" in line.upper(): adjoint_src_filt=False
@@ -212,13 +212,13 @@ def get_cutoff_dist():
 
 
 def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=None):
-    cmd_line_param = filter(lambda x: x.startswith(key+"="),sys.argv)
+    cmd_line_param = [x for x in sys.argv if x.startswith(key+"=")]
 
     if len(cmd_line_param)!=0:
         retval=cmd_line_param[0].split("=")[-1]
         retval = retval.strip().lstrip('[').rstrip(']').split(',')
-        if zfill is not None: retval=map(lambda x: x.zfill(zfill), retval)
-        if mapto is not None: retval=map(mapto,retval)
+        if zfill is not None: retval=[x.zfill(zfill) for x in retval]
+        if mapto is not None: retval=list(map(mapto,retval))
         retval = [None if element=='None' else element for element in retval]
         if not return_list and len(retval)==1:
             retval=retval[0]

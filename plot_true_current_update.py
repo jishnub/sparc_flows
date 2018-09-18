@@ -1,4 +1,4 @@
-from __future__ import division
+
 import plotc
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator,ScalarFormatter
@@ -46,7 +46,7 @@ if flows:
                 update=fitsread(os.path.join(datadir,'update','update_psi_'+iter_to_plot+'.fits'))
             except IOError:
                 update=None
-                print "Could not load update psi"
+                print("Could not load update psi")
             gl=plotc.layout_subplots(3)[2]
         else:
             gl=plotc.layout_subplots(2)[2]
@@ -132,7 +132,7 @@ if flows:
             update=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
         except IOError:
             update=np.zeros_like(current_model)
-            print "Could not load update vx"
+            print("Could not load update vx")
         
         _,_,gl=plotc.layout_subplots(3)
         
@@ -163,7 +163,7 @@ if flows:
             update=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
         except IOError:
             update=np.zeros_like(current_model)
-            print "Could not load update vz"
+            print("Could not load update vz")
         
         _,_,gl=plotc.layout_subplots(3)
         
@@ -198,12 +198,12 @@ if flows:
             update_vx=fitsread(os.path.join(datadir,'update','update_vx_'+iterm1+'.fits'))
         except IOError:
             update_vx=np.zeros_like(current_model)
-            print "Could not load update vx"
+            print("Could not load update vx")
         try:
             update_vz=fitsread(os.path.join(datadir,'update','update_vz_'+iterm1+'.fits'))
         except IOError:
             update_vz=np.zeros_like(current_model)
-            print "Could not load update vz"
+            print("Could not load update vz")
             
         _,_,gl=plotc.layout_subplots(6)
         
@@ -252,7 +252,7 @@ if sound_speed_perturbed:
             update=fitsread(os.path.join(datadir,'update','update_c_'+iter_to_plot+'.fits'))
         except IOError:
             update=None
-            print "Could not load update c"
+            print("Could not load update c")
         gl=plotc.gridlist(1,4)
     else:
         gl=plotc.gridlist(1,3)

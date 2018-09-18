@@ -18,12 +18,12 @@ try:
     if iterstatus_good:
         shutil.move(ls_file,ls_file_new)
 except IOError:
-    print "Can't move",ls_file
+    print("Can't move",ls_file)
     
 try:
     if iterstatus_good:
         shutil.move(ls_all_file,ls_all_file_new)
 except IOError:
-    print "Can't move",ls_all_file
+    print("Can't move",ls_all_file)
 
 

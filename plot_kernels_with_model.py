@@ -1,4 +1,4 @@
-from __future__ import division
+
 import matplotlib
 from matplotlib import rcParams
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ arrays_to_plot = []
 arrays_to_plot_max_x = []
 
 modes_list = ['f']
-for i in xrange(1,8): modes_list.append("p"+str(i))
+for i in range(1,8): modes_list.append("p"+str(i))
 modes_list.append('first_bounce_p')
 
 modes_found = []
@@ -51,7 +51,7 @@ for mode in modes_list:
         pass
 
 if not modes_found: 
-    print "No modes found"
+    print("No modes found")
     exit()
 
 true_psi=fitsread('true_psi.fits')
@@ -131,10 +131,10 @@ plt.subplots_adjust(wspace=0.2)
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
-    print "saving to",savepath
+    print("saving to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()

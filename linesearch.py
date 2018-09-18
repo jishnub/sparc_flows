@@ -19,13 +19,13 @@ no_of_ls_per_src=int(sys.argv[1])
 total_no_of_jobs=nsrc*no_of_ls_per_src
 
 if procno>=total_no_of_jobs:
-    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
+    print("Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S"))
     quit()
 
 linesearch_no=procno/nsrc+1
 src_no=procno%nsrc+1
 
-print "Running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno+1,"node no",nodeno+1
+print("Running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno+1,"node no",nodeno+1)
 
 ls_no=str(linesearch_no).zfill(2)
 src=str(src_no).zfill(2)
@@ -70,4 +70,4 @@ def compute_forward(linesearch_no,src):
 
 evaltime=compute_forward(ls_no,src)
 evaltime=divmod(evaltime,60)
-print "Finished running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno,"in",evaltime[0],"mins",evaltime[1],"secs"
+print("Finished running linesearch no",linesearch_no,"for src no",src_no,"on proc",procno,"in",evaltime[0],"mins",evaltime[1],"secs")

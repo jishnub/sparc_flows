@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -45,11 +45,11 @@ src_x = src_locs[src-1]
 plt.plot([src_x],[excite_depth],marker='o',markerfacecolor='#666666',markersize=12)
 
 wavefronts=3
-wavefront_r=[1.5+1.*i for i in xrange(wavefronts)]
+wavefront_r=[1.5+1.*i for i in range(wavefronts)]
 pts=50
 wfcoords=np.zeros((wavefronts,2,pts))
 thetas=np.linspace(np.pi,2*np.pi,pts)
-for wfno in xrange(wavefronts):
+for wfno in range(wavefronts):
     wfcoords[wfno,0]=wavefront_r[wfno]*np.cos(thetas)+src_x
     wfcoords[wfno,1]=wavefront_r[wfno]*np.sin(thetas)+excite_depth
     plt.plot(wfcoords[wfno,0],wfcoords[wfno,1],color='black',linewidth=1.5)
@@ -74,11 +74,11 @@ plt.tight_layout()
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
-    print "saving to",savepath
+    print("saving to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()
 

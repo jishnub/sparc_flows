@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import plotc
 import pyfits
@@ -25,29 +25,29 @@ Lx=read_params.get_xlength()
 nx = read_params.get_nx()
 x= np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 
-if filter(lambda x: x.startswith("dist"),sys.argv): coord='distance'
-elif filter(lambda x: x.startswith("pix"),sys.argv): coord='pixel'
-elif filter(lambda x: x.startswith("coord"),sys.argv): coord='coord'
+if [x for x in sys.argv if x.startswith("dist")]: coord='distance'
+elif [x for x in sys.argv if x.startswith("pix")]: coord='pixel'
+elif [x for x in sys.argv if x.startswith("coord")]: coord='coord'
 else: coord = 'unspecified'
 pix=130
 
 if coord=='distance':
-    dist=float(filter(lambda x: x.startswith("dist"),sys.argv)[0].split("=")[-1])
+    dist=float([x for x in sys.argv if x.startswith("dist")][0].split("=")[-1])
     xcoord = (srcloc + dist) % Lx 
     if xcoord > Lx/2: xcoord = xcoord - Lx
     pix = abs(x-xcoord).argmin()
         
 elif coord == 'coord':
-    xcoord=float(filter(lambda x: x.startswith("coord"),sys.argv)[0].split("=")[-1])
+    xcoord=float([x for x in sys.argv if x.startswith("coord")][0].split("=")[-1])
     pix = abs(x-xcoord).argmin()
 
 elif coord=='pixel':
-    if len(filter(lambda x: x.startswith("pix"),sys.argv)):
-        pix=int(filter(lambda x: x.startswith("pix"),sys.argv)[0].split("=")[-1])
+    if len([x for x in sys.argv if x.startswith("pix")]):
+        pix=int([x for x in sys.argv if x.startswith("pix")][0].split("=")[-1])
         
 else:
-    print "Using default pixel",pix
-    print "Pass pixel as pix=<pix no>, eg pix=123; or distance as dist=<dist>; or coordinate as coord=<coord>"
+    print("Using default pixel",pix)
+    print("Pass pixel as pix=<pix no>, eg pix=123; or distance as dist=<dist>; or coordinate as coord=<coord>")
 
 data=fitsread(os.path.join(datadir,'tt','data','data'+str(src).zfill(2)+'.fits'))
 nt,nx = data.shape
@@ -67,13 +67,13 @@ iter_dir = os.path.join(datadir,'tt','iter'+str(iter_to_plot).zfill(2))
 vzcc_iter = fitsread(os.path.join(iter_dir,'vz_cc_src'+str(src).zfill(2)+'.fits'))
 
 modes={'0':'f'}
-for i in xrange(1,8): modes[str(i)]='p'+str(i)
+for i in range(1,8): modes[str(i)]='p'+str(i)
 modes['8']='first_bounce_p'
 
 modes_used=read_params.get_modes_used()
 
 modes_passed_cmdline = read_params.parse_cmd_line_params("mode",default=["f"],return_list=True)
-plotridge=filter(lambda x: x in modes.values(),modes_passed_cmdline)
+plotridge=[x for x in modes_passed_cmdline if x in list(modes.values())]
 
 if plotridge:
     ridges=[r+'mode' for r in modes_passed_cmdline if r in plotridge]
@@ -82,7 +82,7 @@ else:
 
 
 for ridge in ridges:
-    print ridge
+    print(ridge)
     plt.figure()
     filt = fitsread(ridge+'_filter.fits')
 
@@ -104,8 +104,8 @@ for ridge in ridges:
     lef_ttdiff = ttdiff_array[:,2]
     rig_ttdiff = ttdiff_array[:,3]
     
-    lef_ttdiff_cutoff = t[map(int,lef_ttdiff[pixel_ttdiff==pix])]
-    rig_ttdiff_cutoff = t[map(int,rig_ttdiff[pixel_ttdiff==pix])]
+    lef_ttdiff_cutoff = t[list(map(int,lef_ttdiff[pixel_ttdiff==pix]))]
+    rig_ttdiff_cutoff = t[list(map(int,rig_ttdiff[pixel_ttdiff==pix]))]
     
     plt.plot(t,data_filtered[:,pix],label="True",color='black')
     plt.plot(t,vzcc_start_filtered[:,pix],label="Iter 0",linestyle='dashed',linewidth=2,color='#555555')
@@ -140,11 +140,11 @@ plt.tight_layout()
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
-    print "saving to",savepath
+    print("saving to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
     
 plt.show()
 
