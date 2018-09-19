@@ -1,5 +1,7 @@
-import os,sys,shutil,glob,subprocess,time,read_params
-
+import os,sys,shutil,glob,subprocess,read_params,multiprocessing
+from datetime import datetime
+from pathlib import Path
+import setup
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
@@ -8,43 +10,36 @@ HOME=os.environ["HOME"]
 
 datadir=read_params.get_directory()
 
-procno=int(os.environ["PBS_VNODENUM"])
-nodeno=int(os.environ["PBS_NODENUM"])
-
 try:
     with open(os.path.join(datadir,'master.pixels'),'r') as mp:
-        nmasterpixels=sum(1 for _ in mp)
-except IOError:
-    sys.stderr.write("Proc"+str(procno).zfill(2)+
-                ": Could not read master.pixels, check if it exists\n") 
-    sys.stderr.flush()
+        num_src=sum(1 for _ in mp)
+except FileNotFoundError:
+    print("No master.pixels file found, create it before running this code")
     quit()
 
-if procno>=nmasterpixels: 
-    print("Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S"))
+setup.create_directories(datadir,num_src,3)
+
+mpipath=os.path.join(HOME,"anaconda3/bin/mpiexec")
+if not Path(mpipath).exists() : 
+    print("Could not find mpi, check mpipath specified as {}".format(mpipath))
     quit()
-
-src=str(procno+1).zfill(2)
-
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
 
 def compute_data(src):
 
-    forward="forward_src"+src+"_ls00"
+    forward="forward_src{:02d}_ls00".format(src)
     Spectral=os.path.join(codedir,"Spectral")
-    Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
+    Instruction=os.path.join(codedir,"Instruction_src{:02d}_ls00".format(src))
     
     shutil.copyfile(Spectral,Instruction)
 
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec") 
-    sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
+    sparccmd=mpipath+" -np 1 ./sparc {:02d} 00".format(src)
    
+    print("Starting computation for src {:02d}".format(src))
+
     with open(os.path.join(datadir,forward,"out_data_forward"),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
+    print("Finished computation for src {:02d}, cleaning up".format(src))
 
     partialfiles=glob.glob(os.path.join(datadir,forward,"*partial*"))
     for f in partialfiles: os.remove(f)
@@ -52,24 +47,44 @@ def compute_data(src):
     fullfiles=glob.glob(os.path.join(datadir,forward,"*full*"))
     for f in fullfiles: os.remove(f)
     
-    if not os.path.exists(os.path.join(datadir,"tt","data")):
-        try: os.makedirs(os.path.join(datadir,"tt","data"))
-        except OSError as e:
-            if e.errno == 17: pass
-            else: print(e)
-    
     if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
-        shutil.move(os.path.join(datadir,forward,"vz_cc.fits"),os.path.join(datadir,forward,"data.fits"))
-        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"tt","data","data"+src+".fits"))
-        safecopy(os.path.join(datadir,forward,"data.fits"),os.path.join(datadir,"data",src+".fits"))
-        
+        shutil.copyfile(os.path.join(datadir,forward,"vz_cc.fits"),
+                        os.path.join(datadir,"data","{:02d}.fits".format(src)))
+
     if os.path.exists(Instruction): os.remove(Instruction)
+    
+    file_to_remove=os.path.join(datadir,"status","forward_src{:02d}_ls00".format(src))
+    if os.path.exists(file_to_remove): os.remove(file_to_remove)
 
-print("Starting computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S"))
-compute_data(src)
+# Some status checks
+if Path("linesearch").exists(): os.remove("linesearch")
+if not Path("compute_data").exists(): Path("compute_data").touch()
 
-file_to_remove=os.path.join(datadir,"status","forward_src"+src+"_ls00")
-if os.path.exists(file_to_remove): os.remove(file_to_remove)
+#########################################################################################################
+# Start the parallel job
+total_number_of_processors = multiprocessing.cpu_count()
+number_of_processors_to_use = total_number_of_processors - 1 or 1
 
-print("Finished computation on node",nodeno,"proc",procno,"at time",time.strftime("%H:%M:%S"))
+print("Using {:d} processors out of {:d}".format(number_of_processors_to_use,total_number_of_processors))
+
+t_start = datetime.now()
+
+pool = multiprocessing.Pool(processes=number_of_processors_to_use)
+for src in range(1,num_src+1):
+    pool.apply_async(compute_data,args=(src,))
+
+pool.close()
+pool.join()
+
+t_end = datetime.now()
+
+delta_t = t_end - t_start
+
+print("Computation took {}".format(str(delta_t)))
+
+#########################################################################################################
+
+if Path("compute_data").exists(): os.remove("compute_data")
+
+
 

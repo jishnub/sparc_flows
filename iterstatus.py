@@ -7,9 +7,9 @@ if not os.path.exists(datadir):
     print(datadir,"doesn't exist. Modify params.i")
     quit()
 
-if not os.path.exists(os.path.join(datadir,"update")):
+if not os.path.exists(os.path.join(datadir,"data","01.fits")):
     print("No iterations done")
-    print("qsub data_forward.sh")
+    print("python data_forward.py")
     quit()
 
 updatedir = os.path.join(datadir,"update")
@@ -18,13 +18,13 @@ misfitfiles=sorted([int(f[-2:]) for f in fnmatch.filter(os.listdir(updatedir),'m
 
 if len(misfitfiles)==0:
     print("Zero iterations done.")
-    print("qsub full.sh")
+    print("python full.py")
     quit()
 
 if len(misfitfiles)>len(lsfiles):
     print("Forward computation for iteration",misfitfiles[-1],"done")
     print("python grad.py algo=cg 0.1 0.2 0.3 0.4 0.5 0.6")
-    print("qsub linesearch.sh")
+    print("python linesearch.py")
     quit()
 
 if len(misfitfiles)==len(lsfiles):

@@ -69,91 +69,25 @@ Program driver
         end if
 
         if (FLOWS) then
-!~             Rchar = 15D8/diml
-!~             con= (xlength/diml)/Rchar
-!~             kay = 2*pi/(2*Rchar)
-!~             z0 = 1.-2.3D8/diml
-!~             sigmaz = 0.912D8/diml
-!~             rand2 = 240.*100./dimc * 1./kay
-!~             call ddz(rho0,gradrho0_z,1)
-
-!~             print "(F25.1,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15)",&
-!~                     diml,dimc,dimrho,Rchar,con,kay,z0,sigmaz,rand2
-
-!            do k=1,nz
-
-!                do i=1,nx
-!                    signt = sign(1.D0,x(i)-0.5D0)
-!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-
-!                    bes(0) = BesJN(0,rand1)
-!                    bes(1) = BesJN(1,rand1)
-!                    bes(2) = BesJN(2,rand1)
-
-
-!!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
-!                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -2*bes(1)/Rchar) * &
-!                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!!~                     vx = d/dz(\rho c \psi)/\rho
-!                    v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
-!                             gradrho0_z(i,1,k)/rho0(i,1,k)) * &
-!                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!                enddo
-!            enddo
 
             allocate(psivar(nx,dim2(rank),nz))
 
-            do k=1,nz
-                do i=1,nx
-                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                    bes(1) = BesJN(1,rand1)
-                    signt = sign(1.D0,x(i)-0.5D0)
-                    psivar(i,1,k) = bes(1) * rand2 * &
-                    exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2*sigmaz**2.)) &
-                    * signt/c2(i,1,k)**0.5
-!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
-                enddo
-            enddo
+            ! run generate_true_starting_models.ipynb to generate these models
+            call readfits(true_psi_filename,psivar,nz)
+            psivar = psivar * 1D8/diml
 
-!            call fourier_smooth_x(psivar,90,psivar)
+            call readfits(true_vx_filename,v0_x,nz)
+            v0_x = v0_x *1D2 / dimc
 
-            psivar = rho0*(c2**0.5)*psivar
-
-            call ddz(psivar, v0_x, 1)
-            v0_x = -v0_x/rho0
-
-            call ddx(psivar, v0_z, 1)
-            v0_z = v0_z/rho0
-
-            psivar = psivar/(rho0*(c2**0.5))
-
-!~          Save psi in Mm
-            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
-
-!            call readfits('true_psi_smoothed.fits',psivar,nz)
-!            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
-!            deallocate(psivar)
-!
-!            call readfits('true_vx_smoothed.fits',v0_x,nz)
-!            v0_x = v0_x*1D2/dimc
-!
-!            call readfits('true_vz_smoothed.fits',v0_z,nz)
-!            v0_z = v0_z*1D2/dimc
-
-
+            call readfits(true_vz_filename,v0_z,nz)
+            v0_z = v0_z *1D2 / dimc
 
             if (contrib=="01") then
                 print *,"max vx",maxval(v0_x)*dimc*1D-2,"max vz",maxval(v0_z)*dimc*1D-2," m/s"
-                call writefits_3d('true_vz.fits',v0_z*dimc*1D-2,nz)
-                call writefits_3d('true_vx.fits',v0_x*dimc*1D-2,nz)
             endif
-
 
             !~             CONTINUITY
             call continuity_check(v0_x,v0_z)
-
 
         endif
 
@@ -193,10 +127,8 @@ Program driver
                     allocate(psivar(nx,dim2(rank),nz))
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
 
-                    psivar = rho0*(psivar-psivar(1,1,1))*c2**0.5
+                    psivar = rho0*psivar*c2**0.5
                     psivar = psivar/(diml/1.0D8) ! Mm to cm, and non-dimensionalize
-                    !psivar(:,:,1:10) = 0.0
-                    !psivar(:,:,nz-9:nz) = 0.0
 
                     if (cutoff_switch) then
                         xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
@@ -205,8 +137,6 @@ Program driver
                             psivar(i,:,:) = psivar(i,:,:)*xcutoff
                         end do
                     end if
-
-!~                     call writefits_3d("psivar_used.fits",psivar,nz)
 
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -221,6 +151,7 @@ Program driver
                         call ddxkern(psivar, v0_z, 1)
                         v0_z = v0_z/rho0
                     endif
+
                 elseif (enf_cont .and. (vx_cont)) then
                     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
                     v0_x = v0_x/dimc * 10.**2
@@ -247,16 +178,15 @@ Program driver
                     print *, "vxmax",maxval(abs(v0_x)*dimc*10.**(-2.)),"m/s " &
                     ,"vzmax", maxval(abs(v0_z)*dimc*10.**(-2.)),"m/s"
 
-                    if (jobno=="00") then
-                        call writefits_3d('vx_00.fits',v0_x*dimc*10.**(-2.),nz)
-                        call writefits_3d('vz_00.fits',v0_z*dimc*10.**(-2.),nz)
-                        if (enf_cont .and. psi_cont) then
-                        call writefits_3d('psivar_00.fits',psivar,nz)
-                        endif
-                    endif
+                    ! if (jobno=="00") then
+                        ! call writefits_3d('vx_00.fits',v0_x*dimc*10.**(-2.),nz)
+                        ! call writefits_3d('vz_00.fits',v0_z*dimc*10.**(-2.),nz)
+                        ! if (enf_cont .and. psi_cont) then
+                        ! call writefits_3d('psivar_00.fits',psivar,nz)
+                        ! endif
+                    ! endif
 
                 end if
-!~                 stop
 
                 if (enf_cont .and. psi_cont) deallocate(psivar)
 
@@ -304,6 +234,8 @@ Program driver
     if ((time0 .ne.0) .and. (.not. kernel_mode)) &
         call read_in_initial_condition(directory, time0)
 
+
+
     !c2 = (gradp0_x - boz*curlboy) !*diml*10.**(-8.) /( dimc**2. * dimrho) !
     !c2 = (box**2. + boz**2.)**0.5/rho0**0.5 * dimc * 10.**(-5.)
     !do k=1,nz
@@ -333,6 +265,7 @@ Program driver
     ! call writefits_3d('orad_2d.fits',a(:,:,1,1),1)
     !stop
     ! Length of simulation
+
 
     total_time = wall_time * 3600.
 
@@ -446,6 +379,7 @@ Program driver
     if (rank == 0) then
         close(19)
     endif
+
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     call MPI_FINALIZE(ierr)
