@@ -510,7 +510,7 @@ SUBROUTINE PRODUCE_KERNELS
   if (enf_cont .and. psi_cont) then
   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
   kernelpsi = 2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
-                   (rho0*c2**0.5*psivar)*stepskern*timestep * dimen
+                   (rho0*c2**0.5)*stepskern*timestep * dimen
 !~  without a leading minus sign, the kernel is gradient in param space.
 !~  with a leading minus sign, it is the negative of the gradient.
   
@@ -577,7 +577,7 @@ SUBROUTINE PRODUCE_KERNELS
  if (SOUND_SPEED_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED SOUND-SPEED KERNELS ARE s^2 Mm^-3'
   kernelc2 = - kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
-  if (flows .and. psi_cont) kernelc2 = kernelc2 + kernelpsi*(1.-psivar(1,1,1)/psivar)*2.0
+
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_c_'//contrib//'.fits', kernelc2, nz_kern)
 
 !~   if (rank==0) then
@@ -608,10 +608,6 @@ SUBROUTINE PRODUCE_KERNELS
 
 
 !  call writefits_3d(KERNEL_DIRECTORY//'kernel_p0.fits', kernelp, nz_kern)
-
-
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call MPI_FINALIZE(ierr)
 
 END SUBROUTINE PRODUCE_KERNELS 
 

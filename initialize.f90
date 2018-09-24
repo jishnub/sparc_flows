@@ -730,7 +730,7 @@ Subroutine solar_data
 
   implicit none
   integer k,q,i
-  real*8 data(nz,12),temp,sigmax,sigmaz
+  real*8 data(nz,6),temp,sigmax,sigmaz
 
   ! Data in the file is arranged as
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1

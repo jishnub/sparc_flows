@@ -37,30 +37,5 @@ misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_li
 print("iteration",int(iterno))
 
 np.set_printoptions(precision=3)
-    
 
-if "--detail" in sys.argv:
-    ridges = read_params.get_modes_used()
-    modes={'0':'fmode'}
-    for pmodeno in range(1,6): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
-    
-    for src in range(1,nmasterpixels+1):
-        for lsno in range(1,no_of_linesearches+1):
-            modemisfit=[]
-            maxpix=[]
-            for mode in ridges:
-                pix,td=np.loadtxt(os.path.join(datadir,"forward_src"+str(src).zfill(2)+"_ls"+str(lsno).zfill(2),"ttdiff."+mode),
-                            usecols=[0,1],unpack=True)
-                maxpix.append(int(pix[abs(td).argmax()]))
-                td=0.5*np.sum((td/60)**2)
-                modemisfit.append(td)
-            misfitfmtstr="{:6.3f} "*len(modemisfit)
-            maxpixfmtstr="{:4d}"*len(maxpix)
-            print("Src",src,"ls",lsno,"misfit",misfitfmtstr.format(*modemisfit),\
-                    "sum","{:6.3f}".format(sum(modemisfit)),"maxpix",maxpixfmtstr.format(*maxpix))
-            
-    for src,srcmisfit in enumerate(lsdata.reshape(no_of_linesearches,lsdata.shape[0]//no_of_linesearches).T):
-        print("Source",str(src+1).zfill(2),"lsmisfit",srcmisfit)
-    print("Total misfit      ",np.array(misfit))
-else:
-    for m in misfit: print(m)
+for m in misfit: print(m)

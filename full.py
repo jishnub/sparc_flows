@@ -1,98 +1,47 @@
-import os,shutil,glob,subprocess,datetime,time,read_params,sys,fnmatch
+import os,shutil,glob,subprocess,time,read_params,sys,fnmatch
+from pathlib import Path
+from datetime import datetime
 
-env=dict(os.environ, MPI_TYPE_MAX="1280280")
-
-codedir=os.path.dirname(os.path.abspath(__file__))
-HOME=os.environ["HOME"]
-
-datadir=read_params.get_directory()
-
-def get_iter_no():
-    updatedir=os.path.join(datadir,"update")
-    # Count the number of misfit_xx files
-    return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
-iterno=get_iter_no()
-iterno2dig=str(iterno).zfill(2)
-
-with open(os.path.join(datadir,'master.pixels'),'r') as mp:
-    nmasterpixels=sum(1 for _ in mp)
-
-procno=int(os.environ["PBS_VNODENUM"])
-nodeno=int(os.environ["PBS_NODENUM"])
-
-if procno>=nmasterpixels: 
-    print("Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S"))
-    quit()
-
-src=str(procno+1).zfill(2)
-
-def safecopy(a,b):
-    try: shutil.copyfile(a,b)
-    except IOError as e:
-        sys.stderr.write("Could not copy "+a+" to "+b+"; "+e.args(1)+"\n")
-        sys.stderr.flush()
-        
-def safemkdir(a):
-    if not os.path.exists(a):
-        try: os.makedirs(a)
-        except OSError:
-            if e.errno == 17: pass
-            else: print(e)
+  
 
 def compute_forward_adjoint_kernel(src):
 
-    forward="forward_src"+src+"_ls00"
-    adjoint="adjoint_src"+src
+    forward="forward_src{:02d}_ls00".format(src)
+    adjoint="adjoint_src{:02d}".format(src)
     kernel="kernel"
 
-    Spectral=os.path.join(codedir,"Spectral")
-    Adjoint=os.path.join(codedir,"Adjoint")
-    Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
-    
-    modes={'0':'fmode'}
-    for pmodeno in range(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
-    modes['8']='first_bounce_pmode'
-    
+    Instruction=codedir/"Instruction_src{:02d}_ls00".format(src)
+
     ridge_filters = read_params.get_modes_used()
     
-    for ridge_filter in ridge_filters:
-        if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
-            safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                    os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
-    
-    mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
-    sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
+    mpipath=HOME/"anaconda3/bin/mpiexec"
+    sparccmd="{} -np 1 ./sparc {:02d} 00".format(mpipath,src)
     
     ####################################################################
     #~ Forward
     ####################################################################
     
-    safecopy(Spectral,Instruction)
+    shutil.copyfile(codedir/"Spectral",Instruction)
 
-    with open(os.path.join(datadir,forward,"out"+forward),'w') as outfile:
+    with open(datadir/forward/"out_forward",'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
     
     assert fwd==0,"Error in running forward"
     
-    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
-    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
-
-    safecopy(os.path.join(datadir,forward,"vz_cc.fits"),
-                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))                    
+    (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
 
     for ridge_filter in ridge_filters:
-        safecopy(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                        os.path.join(datadir,"tt","iter"+iterno2dig,
-                        "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
-                        
+        shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),
+                        datadir/"tt"/"iter{:02d}".format(iterno)/
+                        "ttdiff_src{:02d}.{}"format(src,ridge_filter))
     
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    safecopy(Adjoint,Instruction)
+    shutil.copyfile(codedir/"Adjoint",Instruction)
 
-    with open(os.path.join(datadir,adjoint,"out"+adjoint),'w') as outfile:
+    with open(datadir/adjoint/"out_adjoint",'w') as outfile:
         adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert adj==0,"Error in running adjoint"
@@ -101,15 +50,34 @@ def compute_forward_adjoint_kernel(src):
     #~ Kernel
     ####################################################################
 
-    with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
+    with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
         kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert kern==0,"Error in computing kernel"
 
-timestart=datetime.datetime.now()
-print("Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S'))
-compute_forward_adjoint_kernel(src)
-timefin= datetime.datetime.now()
-#~ elapsedTime = timefin - timestart
-#~ runtime=divmod(elapsedTime.total_seconds(), 60)
-print("Finished on proc no",procno,"for source",src,"at",datetime.datetime.strftime(timefin, '%Y-%m-%d %H:%M:%S'))
+if __name__ == "__main__":
+
+    env=dict(os.environ, MPI_TYPE_MAX="1280280")
+
+    codedir=Path(os.path.dirname(os.path.abspath(__file__)))
+    HOME=Path(os.environ["HOME"])
+
+    datadir= Path(read_params.get_directory())
+
+    iterno=len(fnmatch.filter(os.listdir(datadir/"update"),'misfit_[0-9][0-9]'))
+
+    with open(datadir/'master.pixels','r') as mp:
+        nmasterpixels=sum(1 for _ in mp)
+
+    procno=int(os.environ["PBS_VNODENUM"])
+
+    if procno>=nmasterpixels: quit()
+
+    src = procno + 1
+
+    t_start = datetime.now()
+
+    compute_forward_adjoint_kernel(src)
+    delta_t = datetime.now() - t_start
+
+    print("Finished computing full for source {} in {}".format(src,delta_t))

@@ -64,96 +64,21 @@ Program driver
 
     if (COMPUTE_DATA) then
 
-        if (sound_speed_perturbation) then
-            if (contrib=="01") call writefits_3d('true_c.fits',c_speed*dimc,nz)
-        end if
-
         if (FLOWS) then
-!~             Rchar = 15D8/diml
-!~             con= (xlength/diml)/Rchar
-!~             kay = 2*pi/(2*Rchar)
-!~             z0 = 1.-2.3D8/diml
-!~             sigmaz = 0.912D8/diml
-!~             rand2 = 240.*100./dimc * 1./kay
-!~             call ddz(rho0,gradrho0_z,1)
 
-!~             print "(F25.1,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15,F25.15)",&
-!~                     diml,dimc,dimrho,Rchar,con,kay,z0,sigmaz,rand2
+           call readfits('true_vx.fits',v0_x,nz)
+           v0_x = v0_x*1D2/dimc
 
-!            do k=1,nz
-
-!                do i=1,nx
-!                    signt = sign(1.D0,x(i)-0.5D0)
-!                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-
-!                    bes(0) = BesJN(0,rand1)
-!                    bes(1) = BesJN(1,rand1)
-!                    bes(2) = BesJN(2,rand1)
-
-
-!!~                      vz = d/dx(\rho c \psi)/\rho = c d/dx(\psi)
-!                    v0_z(i,1,k)  = rand2*(0.5*(bes(0)-bes(2))*kay -2*bes(1)/Rchar) * &
-!                     exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!!~                     vx = d/dz(\rho c \psi)/\rho
-!                    v0_x(i,1,k)  = -rand2*signt*bes(1)*(-2.*(z(k)-z0)/(2.*sigmaz**2.) + &
-!                             gradrho0_z(i,1,k)/rho0(i,1,k)) * &
-!                             exp(-abs((x(i)-0.5)*con) - (z(k) -z0)**2./(2.*sigmaz**2.))
-
-!                enddo
-!            enddo
-
-            allocate(psivar(nx,dim2(rank),nz))
-
-            do k=1,nz
-                do i=1,nx
-                    rand1=abs((x(i)-0.5)*xlength/diml)*kay
-                    bes(1) = BesJN(1,rand1)
-                    signt = sign(1.D0,x(i)-0.5D0)
-                    psivar(i,1,k) = bes(1) * rand2 * &
-                    exp(-abs(x(i)-0.5)*con - (z(k) -z0)**2./(2*sigmaz**2.)) &
-                    * signt/c2(i,1,k)**0.5
-!~                     At this stage \psi is dimensionless. Multiply it by an appropriate length scale.
-                enddo
-            enddo
-
-!            call fourier_smooth_x(psivar,90,psivar)
-
-            psivar = rho0*(c2**0.5)*psivar
-
-            call ddz(psivar, v0_x, 1)
-            v0_x = -v0_x/rho0
-
-            call ddx(psivar, v0_z, 1)
-            v0_z = v0_z/rho0
-
-            psivar = psivar/(rho0*(c2**0.5))
-
-!~          Save psi in Mm
-            if (contrib=="01") call writefits_3d('true_psi.fits',psivar*diml/1.0D8,nz)
-
-!            call readfits('true_psi_smoothed.fits',psivar,nz)
-!            psivar = psivar/(diml/1D8) ! Mm to cm, and non-dimensionalize
-!            deallocate(psivar)
-!
-!            call readfits('true_vx_smoothed.fits',v0_x,nz)
-!            v0_x = v0_x*1D2/dimc
-!
-!            call readfits('true_vz_smoothed.fits',v0_z,nz)
-!            v0_z = v0_z*1D2/dimc
-
+           call readfits('true_vz.fits',v0_z,nz)
+           v0_z = v0_z*1D2/dimc
 
 
             if (contrib=="01") then
                 print *,"max vx",maxval(v0_x)*dimc*1D-2,"max vz",maxval(v0_z)*dimc*1D-2," m/s"
-                call writefits_3d('true_vz.fits',v0_z*dimc*1D-2,nz)
-                call writefits_3d('true_vx.fits',v0_x*dimc*1D-2,nz)
             endif
-
 
             !~             CONTINUITY
             call continuity_check(v0_x,v0_z)
-
 
         endif
 
@@ -165,24 +90,11 @@ Program driver
             v0_z = 0.0
         endif
 
-        inquire(file=directory//'model_c_ls'//jobno//'.fits', exist = iteration)
-        if (iteration) then
-            call readfits(directory//'model_c_ls'//jobno//'.fits',c2,nz)
-            call writefits_3d('model_c_ls00.fits',c2,nz)
-            c2 = (c2/dimc)**2
-        endif
 
         if (FLOWS) then
             if (psi_cont .and. enf_cont) then
                 inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = iteration)
-            elseif (enf_cont .and. vx_cont) then
-                inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
-            elseif (enf_cont .and. vz_cont) then
-                inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = iteration)
-            elseif (.not. enf_cont) then
-                inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
-                inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = tempbool)
-                iteration = iteration .and. tempbool
+            
             endif
 
             if (iteration) then
@@ -193,20 +105,7 @@ Program driver
                     allocate(psivar(nx,dim2(rank),nz))
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
 
-                    psivar = rho0*(psivar-psivar(1,1,1))*c2**0.5
-                    psivar = psivar/(diml/1.0D8) ! Mm to cm, and non-dimensionalize
-                    !psivar(:,:,1:10) = 0.0
-                    !psivar(:,:,nz-9:nz) = 0.0
-
-                    if (cutoff_switch) then
-                        xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
-                        do i=1,nx
-                            xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
-                            psivar(i,:,:) = psivar(i,:,:)*xcutoff
-                        end do
-                    end if
-
-!~                     call writefits_3d("psivar_used.fits",psivar,nz)
+                    psivar = rho0*c2**0.5*(psivar/(diml/1.0D8))
 
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -221,23 +120,8 @@ Program driver
                         call ddxkern(psivar, v0_z, 1)
                         v0_z = v0_z/rho0
                     endif
-                elseif (enf_cont .and. (vx_cont)) then
-                    call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
-                    v0_x = v0_x/dimc * 10.**2
-                    call vz_from_vx_continuity(v0_x,v0_z)
 
-                elseif (enf_cont .and. (vz_cont)) then
-                    call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
-                    v0_z = v0_z/dimc * 10.**2
-                    call vx_from_vz_continuity(v0_z,v0_x)
-
-                elseif (.not. enf_cont) then
-
-                    call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
-                    v0_x = v0_x/dimc * 10**2
-
-                    call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
-                    v0_z = v0_z/dimc * 10**2
+                    deallocate(psivar)
 
                 endif
 
@@ -247,18 +131,7 @@ Program driver
                     print *, "vxmax",maxval(abs(v0_x)*dimc*10.**(-2.)),"m/s " &
                     ,"vzmax", maxval(abs(v0_z)*dimc*10.**(-2.)),"m/s"
 
-                    if (jobno=="00") then
-                        call writefits_3d('vx_00.fits',v0_x*dimc*10.**(-2.),nz)
-                        call writefits_3d('vz_00.fits',v0_z*dimc*10.**(-2.),nz)
-                        if (enf_cont .and. psi_cont) then
-                        call writefits_3d('psivar_00.fits',psivar,nz)
-                        endif
-                    endif
-
                 end if
-!~                 stop
-
-                if (enf_cont .and. psi_cont) deallocate(psivar)
 
                 !~             CONTINUITY
                 call continuity_check(v0_x,v0_z)
@@ -275,7 +148,9 @@ Program driver
         endif
     endif
 !~      stop
-    if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS
+    if (CONSTRUCT_KERNELS) then 
+        call PRODUCE_KERNELS
+    else
 
 
     start_mp_time = MPI_WTIME()
@@ -446,6 +321,8 @@ Program driver
     if (rank == 0) then
         close(19)
     endif
+
+    endif ! if kernel
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     call MPI_FINALIZE(ierr)
@@ -1903,8 +1780,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     parameter(kxord=3)
     real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
     real*8 ign1,ign2, dist
-    real*8 prevtau,iwls_pow,iwls_misfit_factor,iwls_eps
-    logical iwls,prev_iter_exist,sgd,ws_exist
 
 
     UNKNOWN = 1.0/0.55
@@ -1912,12 +1787,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     pcoef = 0.0
     misfit = 0.0
     call distmat(nx,1,distances)
-
-    iwls=.FALSE.
-    prev_iter_exist = .FALSE.
-    prevtau = 1
-    iwls_pow = 2
-    iwls_eps = 0.25/60.
 
     dx = x(2)-x(1)
     eyekh= cmplx(0,1)*distances*2.*pi
@@ -2085,15 +1954,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
 
             open(238, file = directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff.'//ord, action = 'write')
-            if (iwls) inquire(file=directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff_prev.'//ord,&
-                        exist=prev_iter_exist)
-
-            if (iwls .and. prev_iter_exist) then
-            open(237, file = directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff_prev.'//ord &
-                            , action = 'read')
-
-            endif
-
 
             halftime = nint(window/(2.*dt))
             leng = 2*halftime+1
@@ -2188,8 +2048,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                         end if
 
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
-                        lef = loc - halftime
-                        rig = loc + halftime
+                        lef = max(loc - halftime,1)
+                        rig = min(loc + halftime,nt)
 
                         inquire(unit=596,opened=file_open)
                         if (file_open) write(596,*) lef, rig
@@ -2200,17 +2060,12 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                         if (file_open) read(596,*) lef, rig
                     endif
 
-                    call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-!~                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
+                    ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
 
 138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
 
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
-
-                    if (iwls .and. prev_iter_exist) then
-                        read(237,138) dumm(0),prevtau,dumm(1:5)
-                        prevtau=dble(prevtau)/60.
-                    endif
 
                     windows(:) = 0.0
                     windows(lef:rig) = 1.0
@@ -2222,12 +2077,10 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     enddo
                     call dfftw_execute(invplantemp3) ! filtemp -> filtex
 
-                    iwls_misfit_factor=(prevtau**2 +iwls_eps)**(iwls_pow/2.0-1)
-
-                    misfit = misfit + tau**2. * iwls_misfit_factor
+                    misfit = misfit + tau**2. !* iwls_misfit_factor
 
                     nmeasurements = nmeasurements + 1
-                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) * iwls_misfit_factor !* sign(1.0,signed(i))
+                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) !* iwls_misfit_factor !* sign(1.0,signed(i))
                     do j=1,nt
                         adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
                     enddo

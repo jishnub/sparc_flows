@@ -21,7 +21,7 @@ FC= mpif90
 FC77= mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio
+LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio -lcurl
 
 COMMAND1=	sparc
 
