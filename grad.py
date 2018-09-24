@@ -1,19 +1,19 @@
-
 import numpy as np
 from scipy.interpolate import UnivariateSpline
 from scipy.ndimage.filters import gaussian_filter1d
 import os,fnmatch,sys
-import pyfits
-import warnings
+from astropy.io import fits
 import read_params
+from matplotlib import pyplot as plt
+from pathlib import Path
 
 #######################################################################
 
 def fitsread(f): 
-    try:
-        arr=pyfits.getdata(f)
-    except IOError:
-        raise IOError
+
+    with fits.open(f) as hdu:
+        arr=hdu[0].data
+
     # If it is 2D, make it 3D.
     # Dimension will be (nz,1,nx) after this
     if len(arr.shape)==2: arr=arr[:,np.newaxis,:]
@@ -21,12 +21,11 @@ def fitsread(f):
     return arr.transpose(2,1,0)
 
 def fitswrite(f,arr): 
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        # Change dimensions from (nx,ny,nz) to (nz,ny,nx)
-        arr=arr.transpose(2,1,0)
-        # clobber=True rewrites a pre-existing file
-        pyfits.writeto(f,arr,clobber=True)
+    
+    # Change dimensions from (nx,ny,nz) to (nz,ny,nx)
+    arr=arr.transpose(2,1,0)
+    # clobber=True rewrites a pre-existing file
+    fits.writeto(f,arr,overwrite=True)
 
 def get_iter_no():
     datadir = read_params.get_directory()
@@ -142,9 +141,13 @@ def main():
             return False
     
     eps = list(map(float,list(filter(isfloat,args))))
-    if eps==[]: eps=[0.1*i for i in range(1,7)]
+    num_ls_per_src = len(eps)
+    if eps==[]: 
+        num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
+        eps=[0.01*i for i in range(1,num_ls_per_src+1)]
 
-    Rsun=695.9895 # Mm
+    Rsun=6.95989467700E2 # Mm
+    z = np.loadtxt(read_params.get_solarmodel(),usecols=[0]); z=(z-1)*Rsun
 
     #~ Get shape
     nx = read_params.get_nx()
@@ -152,6 +155,7 @@ def main():
     nz = read_params.get_nz()
     
     Lx = read_params.get_xlength()
+    x = np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 
     back=np.loadtxt(read_params.get_solarmodel())
 
@@ -164,20 +168,10 @@ def main():
     totkern_vz=np.zeros(array_shape)
     hess=np.zeros(array_shape)
     
-    sound_speed_perturbed = read_params.if_soundspeed_perturbed()
     flows = read_params.if_flows()
-    continuity_enforced=read_params.if_continuity_enforced()
-    cont_var=read_params.get_continuity_variable()
-    psi_cont = False
-    vx_cont = False
-    vz_cont = False
-    if continuity_enforced:
-        if cont_var == 'psi': psi_cont = True 
-        elif cont_var == 'vx': vx_cont = True 
-        elif cont_var == 'vz': vz_cont = True 
-        else: 
-            print("Continuity variable unknown, check params.i")
-            quit()
+    
+    psi_cont = True 
+
 
     def read_model(var='psi',iterno=iterno):
         return fitsread(updatedir('model_'+var+'_'+str(iterno).zfill(2)+'.fits'))
@@ -192,24 +186,9 @@ def main():
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
 
     for src in range(1,num_src+1):
-        
-        if sound_speed_perturbed:
-            totkern_c += read_kern(var='c',src=src)
-        
-        if flows:
-            if continuity_enforced and psi_cont:
-                totkern_psi += read_kern(var='psi',src=src)
-            
-            elif continuity_enforced and vx_cont:
-                totkern_vx += read_kern(var='vx',src=src)
-                
-            elif continuity_enforced and vz_cont:
-                totkern_vz += read_kern(var='vz',src=src)
-                
-            elif not continuity_enforced:
-                totkern_vx += read_kern(var='vx',src=src)
-                totkern_vz += read_kern(var='vz',src=src)
-            
+
+        totkern_psi += read_kern(var='psi',src=src)
+    
         hess+=abs(fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits')))
 
     hess=hess*np.atleast_3d(back[:,2]).transpose(0,2,1)
@@ -217,29 +196,11 @@ def main():
     hess[hess<5e-3]=5e-3
 
     #~ Smoothing and symmetrization 
-    if sound_speed_perturbed: 
-        totkern_c = filter_and_symmetrize(totkern_c,hess,z_filt_algo='gaussian',z_filt_pix=5,sym='sym')
-    if flows:
-        if continuity_enforced and psi_cont:
-            totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
-        elif (continuity_enforced and vx_cont) or (not continuity_enforced):
-            totkern_vx = filter_and_symmetrize(totkern_vx,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
-        elif (continuity_enforced and vz_cont) or (not continuity_enforced):
-            totkern_vz = filter_and_symmetrize(totkern_vz,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='sym')
-    
-    #~ Write out gradients for this iteration
-    if sound_speed_perturbed:
-        fitswrite(updatedir('gradient_c_'+str(iterno).zfill(2)+'.fits'),-totkern_c)
-    if flows:
-        if continuity_enforced and psi_cont:
-            fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
-        elif continuity_enforced and vx_cont:
-            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-        elif continuity_enforced and vz_cont:
-            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
-        elif not continuity_enforced:
-            fitswrite(updatedir('gradient_vz_'+str(iterno).zfill(2)+'.fits'),totkern_vz)
-            fitswrite(updatedir('gradient_vx_'+str(iterno).zfill(2)+'.fits'),totkern_vx)
+
+    totkern_psi = filter_and_symmetrize(totkern_psi,hess,z_filt_algo='gaussian',z_filt_pix=2.,sym='asym')
+
+    fitswrite(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.fits'),totkern_psi)
+
 
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
@@ -250,18 +211,7 @@ def main():
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
             print("Steepest descent")
         
-        if sound_speed_perturbed: sd_update(var='c')
-        
-        if flows:
-            if continuity_enforced and psi_cont: sd_update(var='psi')
-                    
-            elif continuity_enforced and vx_cont: sd_update(var='vx')
-                    
-            elif continuity_enforced and vz_cont: sd_update(var='vz')
-
-            elif not continuity_enforced:
-                sd_update(var='vz')
-                sd_update(var='vx')
+        sd_update(var='psi')
             
         if iterno > 0: print('Forcing steepest descent')
 
@@ -298,20 +248,10 @@ def main():
             update=-grad_k +  beta_k*p_km1
             
             fitswrite(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'),update)
+
         
-        if sound_speed_perturbed: cg_update(var='c')    
-        
-        if flows:
-            if continuity_enforced and psi_cont: cg_update(var='psi')
-                
-            elif continuity_enforced and vx_cont: cg_update(var='vx')
-                
-            elif continuity_enforced and vz_cont: cg_update(var='vz')
-                
-            elif not continuity_enforced:
-                cg_update(var='vz')
-                cg_update(var='vx')
-        
+        cg_update(var='psi')
+
             
     elif LBFGS:
 
@@ -415,51 +355,48 @@ def main():
         updatemax=update.max()
         if updatemax!=0: update/=updatemax
         
-        cutoff_switch,cutoff_dist=read_params.get_cutoff_dist()
-        cutoff = 1.0
-        
-        if cutoff_switch:
-            pix = np.arange(nx)
-            xcutoffpix = cutoff_dist/Lx*nx
-            cutoff =  1./(1+np.exp((pix-(nx/2+xcutoffpix))/2.))+1./(1+np.exp(-(pix-(nx/2-xcutoffpix))/2.))-1.
-            cutoff = cutoff.reshape(nx,1,1)
-        
         if kind=='linear':
             model_scale = rms(model)
-            if model_scale == 0: model_scale = 100
-            test= model+eps*update*model_scale*cutoff
+            if model_scale == 0: model_scale = 1
+            test= model+eps*update*model_scale #*cutoff
         elif kind=='exp':
             test= model*(1+eps*update*cutoff)
         
         return test
     
+    psi_true = fitsread('true_psi.fits')
+    psi_true_max = abs(psi_true).max()
+    # shape is (nx,1,nz)
+    peak_value_x = np.unravel_index(psi_true.argmax(),psi_true.shape)[0]
+
     #~ Create models for linesearch
     for i,eps_i in enumerate(eps):
         
-        if sound_speed_perturbed:
-            lsmodel = create_ls_model(var='c',eps=eps_i,kind='exp')
-            fitswrite(updatedir('test_c_'+str(i+1)+'.fits'), lsmodel)
+        lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
+        lsmax = abs(lsmodel).max()
+
+        fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
         
-        if flows:    
-            if continuity_enforced and psi_cont:
-                lsmodel = create_ls_model(var='psi',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
-                
-            elif continuity_enforced and vx_cont:
-                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
+        plt.figure()
 
-            elif continuity_enforced and vz_cont:
-                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
-                
-            elif not continuity_enforced:
-                lsmodel = create_ls_model(var='vx',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vx_'+str(i+1)+'.fits'), lsmodel)
-                
-                lsmodel = create_ls_model(var='vz',eps=eps_i,kind='linear')
-                fitswrite(updatedir('test_vz_'+str(i+1)+'.fits'), lsmodel)
+        ax1 = plt.subplot(121)
+        plt.pcolormesh(x,z,psi_true.squeeze().T,cmap="RdBu_r",vmax=psi_true_max,vmin=-psi_true_max)
+        plt.colorbar(format="%.2f")
+        ax1.set_xlabel("x [Mm]")
+        ax1.set_ylabel("z [Mm]")
+    
 
+        ax2 = plt.subplot(122,sharex=ax1,sharey=ax1)
+        plt.pcolormesh(x,z,lsmodel.squeeze().T,cmap="RdBu_r",vmax=lsmax,vmin=-lsmax)
+        plt.colorbar(format="%.2f")
+        ax2.set_xlabel("x [Mm]")
+        ax2.set_xlim(-80,80)
+        ax2.set_ylabel("z [Mm]")
+        ax2.set_ylim(-10,z[-1])
+
+        plt.tight_layout()
+        plt.savefig(updatedir('test_psi_{:d}.png'.format(i+1)))
+        plt.clf()
 
     #~ Update epslist
     epslist_path = os.path.join(datadir,"epslist.npz")
@@ -474,13 +411,13 @@ def main():
             epslist = {i:epslist[i] for i in iter_done_list}
             epslist.update({str(iterno):ls_iter})
         else:
-            arr = np.zeros((4,6))
+            arr = np.zeros((4,num_ls_per_src))
             arr[0] = eps
             epslist = {i:epslist[i] for i in iter_done_list}
             epslist[str(iterno)] = arr
             
     except IOError:
-        arr = np.zeros((4,6))
+        arr = np.zeros((4,num_ls_per_src))
         arr[0] = eps
         epslist = {str(iterno):arr}
         

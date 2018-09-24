@@ -1,7 +1,9 @@
-import os,sys,shutil,glob,re,subprocess,read_params,fnmatch
+import os,shutil,subprocess,read_params
+import glob,fnmatch
 from datetime import datetime
 import multiprocessing
 from pathlib import Path
+import itertools
 
 env=dict(os.environ, MPI_TYPE_MAX="1280280")
 
@@ -10,9 +12,8 @@ codedir=os.path.dirname(os.path.abspath(__file__))
 HOME=env["HOME"]
 
 datadir=read_params.get_directory()
+updatedir = os.path.join(datadir,"update")
 
-procno=int(env["PBS_VNODENUM"])
-nodeno=int(env["PBS_NODENUM"])
 
 #~ Get the total number of source pixels to determine number of linesearches necessary
 with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
@@ -24,11 +25,6 @@ updatedir=os.path.join(datadir,"update")
 
 iterno = len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))-1
 
-mpipath = os.path.join(HOME,"anaconda3/bin/mpiexec")
-if not Path(mpipath).exists() : 
-    print("Could not find mpi, check mpipath specified as {}".format(mpipath))
-    quit()
-
 # This function carries out one forward calculation for one source.
 def compute_forward(src,linesearch_no):
 
@@ -38,14 +34,15 @@ def compute_forward(src,linesearch_no):
 
     shutil.copyfile(Spectral,Instruction)
 
-    sparccmd=mpipath+" -np 1 ./sparc {:02d} {:02d}".format(src,linesearch_no)
+    # If you're using anaconda's mpi, make sure to use the mpich version and not openmpi
+    # the mpich version distributes correctly across processors, whereas the openmpi version 
+    # launches binds rank 0 to processor 0, and launches multiple processes on the same core
+    sparccmd="mpiexec -np 1 ./sparc {:02d} {:02d}".format(src,linesearch_no)
 
-    t0=time.time()
-    with open(os.path.join(datadir,forward,"out_linesearch_{:02d}".format(linesearch_no)),'w') as outfile:
+    with open(os.path.join(datadir,forward,"out_forward".format(linesearch_no)),'w') as outfile:
         fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
     assert fwd==0,"Error in running linesearch for lsno {:02d}".format(linesearch_no)
-    t1=time.time()
 
     ########################################################################################
     # If you've reached this point then the code has finished running correctly. CLean up now
@@ -59,9 +56,6 @@ def compute_forward(src,linesearch_no):
 
     file_to_remove=os.path.join(datadir,"status","forward_src{:02d}_ls{:02d}".format(src,linesearch_no))
     if os.path.exists(file_to_remove): os.remove(file_to_remove)
-
-    return t1-t0
-
 
 # Some status checks
 
@@ -86,8 +80,7 @@ for linesearch_no in range(num_ls_per_src):
 
 #############################################################################################
 # Start the parallel computation
-with open(os.path.join(datadir,'master.pixels'),'r') as mp:
-    num_src=sum(1 for _ in mp)
+Path("linesearch").touch()
 
 total_number_of_processors = multiprocessing.cpu_count()
 number_of_processors_to_use = total_number_of_processors - 1 or 1
@@ -95,9 +88,8 @@ number_of_processors_to_use = total_number_of_processors - 1 or 1
 t_start = datetime.now()
 
 pool = multiprocessing.Pool(processes=number_of_processors_to_use)
-for src in range(num_src):
-    for linesearch_no in range(num_ls_per_src):
-        pool.apply_async(compute_linesearch,args=(src+1,linesearch_no+1))
+
+pool.starmap_async(compute_forward,itertools.product(range(1,num_src+1),range(1,num_ls_per_src+1)))
 
 pool.close()
 pool.join()
@@ -111,7 +103,7 @@ print("Computation took {}".format(str(delta_t)))
 ##############################################################################################
 
 # Concatenate misfit files from individual sources
-with open(os.path.join(datadir,"kernel","misfit_{:02d}".format(iterno)),"w") as misfitfile:
+with open(os.path.join(updatedir,"linesearch_{:02d}".format(iterno)),"w") as misfitfile:
     for src in range(num_src):
         for linesearch_no in range(num_ls_per_src):
             
@@ -123,18 +115,17 @@ with open(os.path.join(datadir,"kernel","misfit_{:02d}".format(iterno)),"w") as 
                 
                 os.remove(misfit_src_file_name)
 
-
-with open(os.path.join(datadir,"kernel","misfit_all_{:02d}".format(iterno)),"w") as misfitfile:
-    for src in range(num_src):
-        for linesearch_no in range(num_ls_per_src):
+# with open(os.path.join(updatedir,"linesearch_all_{:02d}".format(iterno)),"w") as misfitfile:
+#     for src in range(num_src):
+#         for linesearch_no in range(num_ls_per_src):
             
-            misfit_src_file_name = os.path.join(datadir,"kernel","misfit_all_{:02d}_{:02d}".format(src+1,linesearch_no+1))
+#             misfit_src_file_name = os.path.join(datadir,"kernel","misfit_all_{:02d}_{:02d}".format(src+1,linesearch_no+1))
             
-            if Path(misfit_src_file_name).exists():
-                with open(misfit_src_file_name,"r") as misfit_src_file:
-                    misfitfile.write(misfit_src_file.read())
+#             if Path(misfit_src_file_name).exists():
+#                 with open(misfit_src_file_name,"r") as misfit_src_file:
+#                     misfitfile.write(misfit_src_file.read())
                 
-                os.remove(misfit_src_file_name)
+#                 os.remove(misfit_src_file_name)
 
 # More clean-ups
 for linesearch_no in range(num_ls_per_src):

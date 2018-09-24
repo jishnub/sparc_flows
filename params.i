@@ -22,9 +22,9 @@
 ! A timestep of 2 seconds is generally pretty solid. Too large and the sim
 ! will explode. Too small and the expense is large.
 integer nx, ny, nz
-parameter (nx = 256, ny = 1, nz = 300)
+parameter (nx = 512, ny = 1, nz = 300)
 real*8 xlength, ylength, timestep
-parameter (xlength = 400.0 * 10**(8), ylength = xlength, timestep = 2.0)
+parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
 ! DIRECTORY INFORMATION
@@ -38,6 +38,7 @@ logical :: STABILIZE_MODEL = .false.
 
 ! DIRECTORY FOR OUTPUT/ SAVED RESTART STATE (ASSUMING THEY ARE THE SAME)
 character (LEN = *), PARAMETER :: directory = '/media/user/784C644E4C6408E8/sparc_test/'
+! character (LEN = *), PARAMETER :: directory = '/home/user/sparc_test/' 
 
 ! Name of true flow model file
 character (LEN = *), PARAMETER :: true_psi_filename = 'true_psi.fits'
@@ -133,7 +134,7 @@ parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
 real*8 solartime
-parameter (solartime = 2.0)
+parameter (solartime = 4.0)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well

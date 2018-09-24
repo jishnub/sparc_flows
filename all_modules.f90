@@ -630,7 +630,7 @@ end function sum2_normal
    
     call convert_to_string(time,tempc,timestamp_size)
 
-    if (rank==0) call system('rm '//director//'*full*')
+    if (rank==0) call system('find '//director//' -name "*full*" -delete')
     call mpi_barrier(mpi_comm_world, ierr)
 
     if (.not. displ) then

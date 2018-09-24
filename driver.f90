@@ -57,8 +57,8 @@ Program driver
 
     call Initialize_all
 
-!~     call adjoint_source_filt(520)
-!~     stop
+     ! call adjoint_source_filt(520)
+
 
     Lregular = 30.0D8/diml
 
@@ -99,44 +99,29 @@ Program driver
             v0_z = 0.0
         endif
 
-        inquire(file=directory//'model_c_ls'//jobno//'.fits', exist = iteration)
-        if (iteration) then
-            call readfits(directory//'model_c_ls'//jobno//'.fits',c2,nz)
-            call writefits_3d('model_c_ls00.fits',c2,nz)
-            c2 = (c2/dimc)**2
-        endif
-
         if (FLOWS) then
             if (psi_cont .and. enf_cont) then
                 inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = iteration)
-            elseif (enf_cont .and. vx_cont) then
-                inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
-            elseif (enf_cont .and. vz_cont) then
-                inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = iteration)
-            elseif (.not. enf_cont) then
-                inquire(file=directory//'model_vx_ls'//jobno//'.fits', exist = iteration)
-                inquire(file=directory//'model_vz_ls'//jobno//'.fits', exist = tempbool)
-                iteration = iteration .and. tempbool
             endif
 
             if (iteration) then
 
-!~                  These logical variables are defined in params.i
                 if (psi_cont .and. enf_cont) then
 
                     allocate(psivar(nx,dim2(rank),nz))
+                    psivar = 0
                     call readfits(directory//'model_psi_ls'//jobno//'.fits',psivar,nz)
 
                     psivar = rho0*psivar*c2**0.5
                     psivar = psivar/(diml/1.0D8) ! Mm to cm, and non-dimensionalize
 
-                    if (cutoff_switch) then
-                        xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
-                        do i=1,nx
-                            xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
-                            psivar(i,:,:) = psivar(i,:,:)*xcutoff
-                        end do
-                    end if
+                    ! if (cutoff_switch) then
+                    !     xcutoffpix = cutoff_dist/(xlength/(10.**8)) * nx
+                    !     do i=1,nx
+                    !         xcutoff = 1./(1+exp((i-(nx/2+xcutoffpix))/2.))+1./(1+exp(-(i-(nx/2-xcutoffpix))/2.))-1.
+                    !         psivar(i,:,:) = psivar(i,:,:)*xcutoff
+                    !     end do
+                    ! end if
 
                     if (.not. CONSTRUCT_KERNELS) then
                         call ddz(psivar, v0_x, 1)
@@ -152,23 +137,23 @@ Program driver
                         v0_z = v0_z/rho0
                     endif
 
-                elseif (enf_cont .and. (vx_cont)) then
-                    call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
-                    v0_x = v0_x/dimc * 10.**2
-                    call vz_from_vx_continuity(v0_x,v0_z)
+                ! elseif (enf_cont .and. (vx_cont)) then
+                !     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
+                !     v0_x = v0_x/dimc * 10.**2
+                !     call vz_from_vx_continuity(v0_x,v0_z)
 
-                elseif (enf_cont .and. (vz_cont)) then
-                    call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
-                    v0_z = v0_z/dimc * 10.**2
-                    call vx_from_vz_continuity(v0_z,v0_x)
+                ! elseif (enf_cont .and. (vz_cont)) then
+                !     call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
+                !     v0_z = v0_z/dimc * 10.**2
+                !     call vx_from_vz_continuity(v0_z,v0_x)
 
-                elseif (.not. enf_cont) then
+                ! elseif (.not. enf_cont) then
 
-                    call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
-                    v0_x = v0_x/dimc * 10**2
+                !     call readfits(directory//'model_vx_ls'//jobno//'.fits',v0_x,nz)
+                !     v0_x = v0_x/dimc * 10**2
 
-                    call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
-                    v0_z = v0_z/dimc * 10**2
+                !     call readfits(directory//'model_vz_ls'//jobno//'.fits',v0_z,nz)
+                !     v0_z = v0_z/dimc * 10**2
 
                 endif
 
@@ -178,14 +163,6 @@ Program driver
                     print *, "vxmax",maxval(abs(v0_x)*dimc*10.**(-2.)),"m/s " &
                     ,"vzmax", maxval(abs(v0_z)*dimc*10.**(-2.)),"m/s"
 
-                    ! if (jobno=="00") then
-                        ! call writefits_3d('vx_00.fits',v0_x*dimc*10.**(-2.),nz)
-                        ! call writefits_3d('vz_00.fits',v0_z*dimc*10.**(-2.),nz)
-                        ! if (enf_cont .and. psi_cont) then
-                        ! call writefits_3d('psivar_00.fits',psivar,nz)
-                        ! endif
-                    ! endif
-
                 end if
 
                 if (enf_cont .and. psi_cont) deallocate(psivar)
@@ -193,10 +170,7 @@ Program driver
                 !~             CONTINUITY
                 call continuity_check(v0_x,v0_z)
 
-
-
             endif
-
 
             if (compute_adjoint .and. FLOWS) then
                 v0_x = -v0_x
@@ -204,8 +178,10 @@ Program driver
             endif
         endif
     endif
-!~      stop
-    if (CONSTRUCT_KERNELS) call PRODUCE_KERNELS
+
+    if (CONSTRUCT_KERNELS) then 
+        call PRODUCE_KERNELS
+    else
 
 
     start_mp_time = MPI_WTIME()
@@ -380,6 +356,7 @@ Program driver
         close(19)
     endif
 
+    endif ! if produce kernels
 
     call MPI_BARRIER(MPI_COMM_WORLD, ierr)
     call MPI_FINALIZE(ierr)
@@ -513,22 +490,9 @@ SUBROUTINE TIMESTEPPING(init)
  end do
 
  if (rank==0) then
-
   call system('rm '//directory//'unfinished_calc_'//contrib//'_'//jobno)
-
-!~   if (compute_forward) then
-!~    open(223, file=directory//'status/'//'forward_src'//contrib//'_ls'//jobno,status='unknown')
-!~    close(223)
-   !call system('rm -rf '//directory//'forward'//contrib//'/*full*')
-!~   endif
-
-!~   if (compute_adjoint) then
-!~    open(223, file=directory//'status/'//'adjoint_src'//contrib,status='unknown')
-!~    close(223)
-   !call system('rm -rf '//directory//'adjoint'//contrib//'/*full*')
-!~   endif
-
  endif
+
 END SUBROUTINE TIMESTEPPING
 
 
@@ -989,7 +953,7 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
     call integrate_time(window*u0dot**2,denominator,dt)
 
     tau=numerator/denominator
-    print *,tau*60.,dt*60.
+    ! print *,tau*60.,dt*60.
 
 
 END SUBROUTINE COMPUTE_TT_GIZONBIRCH
@@ -1837,21 +1801,12 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     parameter(kxord=3)
     real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
     real*8 ign1,ign2, dist
-    real*8 prevtau,iwls_pow,iwls_misfit_factor,iwls_eps
-    logical iwls,prev_iter_exist,sgd,ws_exist
-
 
     UNKNOWN = 1.0/0.55
     filtout = 1.0
     pcoef = 0.0
     misfit = 0.0
     call distmat(nx,1,distances)
-
-    iwls=.FALSE.
-    prev_iter_exist = .FALSE.
-    prevtau = 1
-    iwls_pow = 2
-    iwls_eps = 0.25/60.
 
     dx = x(2)-x(1)
     eyekh= cmplx(0,1)*distances*2.*pi
@@ -1889,7 +1844,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     dnu = freqnu(2) - freqnu(1)
 
     call dfftw_plan_dft_3d(fwdplantemp, nx, dim2(rank), nt, acc, filtout, -1, FFTW_ESTIMATE)
-    call dfftw_plan_dft_3d(fwdplantemp, nx, dim2(rank), nt, acc, filtout, -1, FFTW_ESTIMATE)
+    ! call dfftw_plan_dft_3d(fwdplantemp, nx, dim2(rank), nt, acc, filtout, -1, FFTW_ESTIMATE)
     call dfftw_plan_dft_3d(invplantemp, nx, dim2(rank), nt, filtout, acc, 1, FFTW_ESTIMATE)
     call dfftw_plan_dft_3d(invplantemp2, nx, dim2(rank), nt, filtout, ccdot, 1, FFTW_ESTIMATE)
     call dfftw_plan_dft_3d(invplantemp3, nx, dim2(rank), nt, filtemp, filtex, 1, FFTW_ESTIMATE)
@@ -1906,6 +1861,9 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
     call dfftw_execute(fwdplantemp)
     call dfftw_execute(fwdplandata)
+
+    call dfftw_destroy_plan(fwdplantemp)
+    call dfftw_destroy_plan(fwdplandata)
 
     filt = 1.0
     call fmode_filter(nt, fmode)
@@ -1955,10 +1913,10 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         fmode(:,1,i) = fmode(:,1,i) * filt(i)!* UNKNOWN
     enddo
 
-    call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vz_cc.fits', temparr, nt)
-    acc = cmplx(temparr)
-    call readfits(directory//'data/'//contrib//'.fits', temparr, nt)
-    dat = cmplx(temparr)
+    ! call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vz_cc.fits', temparr, nt)
+    ! acc = cmplx(temparr)
+    ! call readfits(directory//'data/'//contrib//'.fits', temparr, nt)
+    ! dat = cmplx(temparr)
 
     inquire(file=directory//'filter.params.1', exist=lexist)
     if (lexist) then
@@ -1996,13 +1954,13 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
     vel = 0
     vel(0) = 0.44
-    vel(1) = 0.60
-    vel(2) = 0.75
-    vel(3) = 0.9
-    vel(4) = 1.2
+    vel(1) = 0.65
+    vel(2) = 0.76
+    vel(3) = 1.0
+    vel(4) = 1.3
     vel(5) = 1.4
-    vel(6) = 1.7
-    vel(7) = 1.9
+    vel(6) = 1.89
+    vel(7) = 2.14
 
     !RIDGE FILTERS
     do pord=0,8
@@ -2016,18 +1974,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             read(97,*) maxdist
             read(97,*) window
             close(97)
-
-
-            open(238, file = directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff.'//ord, action = 'write')
-            if (iwls) inquire(file=directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff_prev.'//ord,&
-                        exist=prev_iter_exist)
-
-            if (iwls .and. prev_iter_exist) then
-            open(237, file = directory//'forward_src'//contrib//'_ls'//jobno//'/ttdiff_prev.'//ord &
-                            , action = 'read')
-
-            endif
-
 
             halftime = nint(window/(2.*dt))
             leng = 2*halftime+1
@@ -2062,34 +2008,20 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
             end if
             filtout = tempout * cmplx(filter)
             filtdat = tempdat * cmplx(filter)
+
             call dfftw_execute(invplantemp)
             call dfftw_execute(invplandata)
 
-            con = 2.0*pi
-
-
-!~             inquire(file='wavespeed',exist=ws_exist)
-!~             if (ws_exist) then
-!~                 open(3378,file="wavespeed",action="read")
-!~                     do i=1,nmasters
-!~                     call convert_to_string(i, contribmatch, 2)
-!~                     if (contribmatch == contrib) then
-!~                     read(3378,*) vel(0), vel(1), vel(2),vel(3),vel(4),&
-!~                     vel(5),vel(6),vel(7) ,vel(8), vel(9),vel(10)
-!~                     else
-!~                         read(3378,*)
-!~                     end if
-!~                     end do
-!~                 close(3378)
-!~             end if
-
-!~             if (pord==0) print *,"Using mode velocities",vel
+            
 
             do i=1,nt
-                filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * con
+                filtout(:,1,i) = filtout(:,1,i) * eye * freqnu(i) * 2.0*pi
             enddo
 
             call dfftw_execute(invplantemp2)
+
+            open(238, file = directory//'forward_src'//contrib//'_ls'//jobno//&
+                                    '/ttdiff.'//ord, action = 'write')
 
 
             if (rank==0 .and. (.not. (linesearch))) then
@@ -2103,10 +2035,8 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
             timest = 1
             timefin = nt
-!~             RECEIVER PIXEL FLAG
             do i=1,nx
-!~             RECEIVER PIXEL END FLAG
-!~                 print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
+                ! print *,"Using i =",i,"dist =",distances(i),"to compute misfits"
                 if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
                     if (.not. linesearch) then
@@ -2123,28 +2053,25 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
                         loc = maxloc(abs(real(acc(i,1,timest:timefin))),1)+timest-1
                         lef = loc - halftime
+                        if (lef<1) lef=1
                         rig = loc + halftime
+                        if (rig>nt) rig=nt
 
                         inquire(unit=596,opened=file_open)
                         if (file_open) write(596,*) lef, rig
 
                     else
-!~                       Read in windows
+
                         inquire(unit=596,opened=file_open)
                         if (file_open) read(596,*) lef, rig
                     endif
 
-                    call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
-!~                     call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
+                    ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
+                    call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
 
 138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
 
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
-
-                    if (iwls .and. prev_iter_exist) then
-                        read(237,138) dumm(0),prevtau,dumm(1:5)
-                        prevtau=dble(prevtau)/60.
-                    endif
 
                     windows(:) = 0.0
                     windows(lef:rig) = 1.0
@@ -2156,12 +2083,10 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     enddo
                     call dfftw_execute(invplantemp3) ! filtemp -> filtex
 
-                    iwls_misfit_factor=(prevtau**2 +iwls_eps)**(iwls_pow/2.0-1)
-
-                    misfit = misfit + tau**2. * iwls_misfit_factor
+                    misfit = misfit + tau**2. 
 
                     nmeasurements = nmeasurements + 1
-                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt) * iwls_misfit_factor !* sign(1.0,signed(i))
+                    con = -tau/(sum(ccdot(i,1,lef:rig)**2.)*dt)
                     do j=1,nt
                         adj(:,1,nt-j+1) = real(filtex(:,1,j) * con) + adj(:,1,nt-j+1)
                     enddo
@@ -2180,21 +2105,21 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
 
     enddo
 
-    pcoef = 0.0
+    ! pcoef = 0.0
 
-    pcoef(1,1) =  22.5000
-    pcoef(2,1) =   0.235317
-    pcoef(3,1) =   0.00134167
-    pcoef(4,1) = -1.32222e-05
-    pcoef(5,1) = 3.00000e-08
+    ! pcoef(1,1) =  22.5000
+    ! pcoef(2,1) =   0.235317
+    ! pcoef(3,1) =   0.00134167
+    ! pcoef(4,1) = -1.32222e-05
+    ! pcoef(5,1) = 3.00000e-08
 
-    pcoef(1,2) = 22.6889
-    pcoef(2,2) = 0.83
-    pcoef(3,2) = -0.0032222
+    ! pcoef(1,2) = 22.6889
+    ! pcoef(2,2) = 0.83
+    ! pcoef(3,2) = -0.0032222
 
-    pcoef(1,3) = 25.0
-    pcoef(2,3) = 0.9
-    pcoef(3,3) = -0.002222
+    ! pcoef(1,3) = 25.0
+    ! pcoef(2,3) = 0.9
+    ! pcoef(3,3) = -0.002222
 
 
 !~     highpmode = 1.0             ! ???
@@ -2304,9 +2229,6 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
         close(88)
 
     endif
-
-    call dfftw_destroy_plan(fwdplantemp)
-    call dfftw_destroy_plan(fwdplandata)
 
     call dfftw_destroy_plan(invplantemp3)
     call dfftw_destroy_plan(invplantemp2)

@@ -1,11 +1,9 @@
-
 import read_params
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import plotc
 import os,sys
-import pyfits
+from astropy.io import fits
 import warnings
 
 class Point():
@@ -13,7 +11,7 @@ class Point():
         self.x  = Line2D.get_xdata()[0]
         self.y  = Line2D.get_ydata()[0]
         self.artist = Line2D
-        
+
     def remove(self):
         self.artist.remove()
         self.artist=None
@@ -22,37 +20,37 @@ class Poly():
     def __init__(self):
         self.points=[]
         self.fitted_curve=None
-        
+
     def fit(self,order=4):
-    
+
         #~ If the number of points are not sufficient, remove fitted polynomial if it exists
-        if len(self.points)<order+1: 
+        if len(self.points)<order+1:
             if self.fitted_curve is not None: self.fitted_curve.remove()
             self.fitted_curve=None
             return (None,None)
 
-        #~ If there are sifficient points, fit the points with a polynomial function        
+        #~ If there are sifficient points, fit the points with a polynomial function
         xcoords = [pt.x for pt in self.points]
         ycoords = [pt.y for pt in self.points]
         pfit = np.polyfit(xcoords,ycoords,order)
-        
+
         #~ Generate points on a fine grid along the fitted polynomial
         #~ This is to plot a continuous line
         fit_nu = np.polyval(pfit,abs(k))
-        
+
         #~ Update fitted curve
         if self.fitted_curve is not None: self.fitted_curve.remove()
         self.fitted_curve,=plt.plot(k,fit_nu,'g')
-        
+
         #~ String to format fitted polynomial like p_2*k**2 + p_1*k +  p_0
         fmtstr=" + ".join(["{}*k**"+str(i) if i>1 else "{}*k" if i==1 else "{}"  for i in range(len(pfit))[::-1]])
         polystr=fmtstr.format(*pfit).replace("+ -","- ")
-        
+
         fitstr=[]
         for index,p_i in enumerate(pfit[::-1]):
             fitstr.append("index("+str(index)+") = "+str(p_i))
         fitstr="\n".join(fitstr)
-        
+
         return polystr,fitstr
 
     def remove_match(self,artist):
@@ -60,9 +58,9 @@ class Poly():
         for point in self.points:
             if point.artist == artist:
                 point.remove()
-                self.poly.points.remove(point)
+                self.points.remove(point)
                 break
-    
+
     def clear(self):
         ''' Refresh the working slate by deleting plots and lines.
         Points and lines already finalized are untouched. '''
@@ -81,13 +79,13 @@ class Track_interactions():
         self.pick_event=figure.canvas.mpl_connect('pick_event', self.onpick)
         self.shift_pressed=False
         self.poly=Poly()
-        
+
     def onpick(self,event):
         ''' Remove a point when it is clicked on '''
         self.poly.remove_match(event.artist)
         self.poly.fit()
         plt.draw()
-            
+
     def onclick(self,event):
         ''' Add a point at the (x,y) coordinates of click '''
         if event.button == 1 and self.shift_pressed:
@@ -95,9 +93,9 @@ class Track_interactions():
             self.poly.points.append(Point(pt_artist))
             self.poly.fit()
             plt.draw()
-        
+
     def onpress(self,event):
-    
+
         if event.key == 'c':
             polystr,fitstr = self.poly.fit()
             if polystr is None: return
@@ -105,25 +103,25 @@ class Track_interactions():
             self.poly.fitted_curve.set_color("black")
             plt.draw()
             self.poly=Poly()
-        
+
         elif event.key=="d":
             self.poly.clear()
-            
+
         elif event.key=="shift":
             self.shift_pressed = True
-        
+
         plt.draw()
 
     def onrelease(self,event):
         if event.key=='shift':
             self.shift_pressed = False
 
-
 datadir=read_params.get_directory()
 
 src=read_params.parse_cmd_line_params("src",mapto=int,default=1)
 
-data=np.squeeze(pyfits.getdata(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','data.fits')))
+with fits.open(os.path.join(datadir,'data','{:02d}.fits'.format(src))) as hdu:
+    data = hdu[0].data.squeeze()
 
 nt,nx=data.shape
 Lx=read_params.get_xlength()
@@ -160,4 +158,3 @@ plt.ylim(1.2,6)
 _=Track_interactions(figure)
 
 plt.show()
-

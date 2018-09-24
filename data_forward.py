@@ -19,11 +19,6 @@ except FileNotFoundError:
 
 setup.create_directories(datadir,num_src,3)
 
-mpipath=os.path.join(HOME,"anaconda3/bin/mpiexec")
-if not Path(mpipath).exists() : 
-    print("Could not find mpi, check mpipath specified as {}".format(mpipath))
-    quit()
-
 def compute_data(src):
 
     forward="forward_src{:02d}_ls00".format(src)
@@ -32,7 +27,10 @@ def compute_data(src):
     
     shutil.copyfile(Spectral,Instruction)
 
-    sparccmd=mpipath+" -np 1 ./sparc {:02d} 00".format(src)
+    # If you're using anaconda's mpi, make sure to use the mpich version and not openmpi
+    # the mpich version distributes correctly across processors, whereas the openmpi version 
+    # launches binds rank 0 to processor 0, and launches multiple processes on the same core
+    sparccmd="mpiexec -np 1 ./sparc {:02d} 00".format(src)
    
     print("Starting computation for src {:02d}".format(src))
 
@@ -41,8 +39,9 @@ def compute_data(src):
 
     print("Finished computation for src {:02d}, cleaning up".format(src))
 
-    partialfiles=glob.glob(os.path.join(datadir,forward,"*partial*"))
-    for f in partialfiles: os.remove(f)
+    ####################################################################
+    # if you've reached here then everything has finished correctly. Cleaning up
+    ####################################################################
     
     fullfiles=glob.glob(os.path.join(datadir,forward,"*full*"))
     for f in fullfiles: os.remove(f)
@@ -70,8 +69,7 @@ print("Using {:d} processors out of {:d}".format(number_of_processors_to_use,tot
 t_start = datetime.now()
 
 pool = multiprocessing.Pool(processes=number_of_processors_to_use)
-for src in range(1,num_src+1):
-    pool.apply_async(compute_data,args=(src,))
+pool.starmap_async(compute_forward_adjoint_kernel,range(1,num_src+1))
 
 pool.close()
 pool.join()

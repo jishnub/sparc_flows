@@ -23,7 +23,9 @@ if len(misfitfiles)==0:
 
 if len(misfitfiles)>len(lsfiles):
     print("Forward computation for iteration",misfitfiles[-1],"done")
-    print("python grad.py algo=cg 0.1 0.2 0.3 0.4 0.5 0.6")
+    num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
+    eps_str = " ".join(["{:.2f}".format(0.01*i) for i in range(1,num_ls_per_src+1)])
+    print("python grad.py algo=cg {}".format(eps_str))
     print("python linesearch.py")
     quit()
 

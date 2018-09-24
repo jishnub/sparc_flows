@@ -187,12 +187,12 @@ SUBROUTINE PRODUCE_KERNELS
 
 
 
- sound_speed_kernels = .true.
+ sound_speed_kernels = .false.
  magnetic_kernels = .false.
  flow_kernels = .false.
  if (FLOWS) flow_kernels = .true.
  if (magnetic) magnetic_kernels = .true.
- density_kernels = .true.
+ density_kernels = .false.
 
 
 ! grav =0.
@@ -510,7 +510,7 @@ SUBROUTINE PRODUCE_KERNELS
   if (enf_cont .and. psi_cont) then
   call curl_kern(kernelv(:,:,:,1), temp2, kernelv(:,:,:,3), tempx, kernelpsi, temp1)
   kernelpsi = 2.0*kernelpsi * dimen * UNKNOWN_FACTOR * &
-                   (rho0*c2**0.5*psivar)*stepskern*timestep * dimen
+                   (rho0*c2**0.5)*stepskern*timestep * dimen
 !~  without a leading minus sign, the kernel is gradient in param space.
 !~  with a leading minus sign, it is the negative of the gradient.
   
@@ -604,14 +604,6 @@ SUBROUTINE PRODUCE_KERNELS
  if (rank==0) print *,''
  if (rank==0) print *,'FINISHED COMPUTING KERNELS'
  if (rank==0) print *,''
-
-
-
-!  call writefits_3d(KERNEL_DIRECTORY//'kernel_p0.fits', kernelp, nz_kern)
-
-
-  call MPI_BARRIER(MPI_COMM_WORLD, ierr)
-  call MPI_FINALIZE(ierr)
 
 END SUBROUTINE PRODUCE_KERNELS 
 
