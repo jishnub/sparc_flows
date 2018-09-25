@@ -14,20 +14,20 @@ SUBROUTINE PRODUCE_KERNELS
 
  implicit none
  integer i,j,k, ierr, iter
- real*8 time1, time2 , tot_time, dimen,tempnor, ltime, UNKNOWN_FACTOR,Lregular
- real*8, allocatable, dimension(:,:,:) :: temp1, temp2, temp3, tempx, &
-	tempy, tempz, fbx, fby, fbz, abx, aby, abz, for_figures, temp, kernelpsi,c2a
- real*8, allocatable, dimension(:,:,:,:,:) :: deriv_ij
+ real(kind=real64) time1, time2 , tot_time, dimen,tempnor, ltime, UNKNOWN_FACTOR,Lregular
+ real(kind=real64), allocatable, dimension(:,:,:) :: temp1, temp2, temp3, tempx, &
+  tempy, tempz, fbx, fby, fbz, abx, aby, abz, for_figures, temp, kernelpsi,c2a
+ real(kind=real64), allocatable, dimension(:,:,:,:,:) :: deriv_ij
  character* (timestamp_size) charnum
- character*80 directory_rel
+ character(len=80) directory_rel
  logical lexist
 
  directory_rel = directory//'kernel/'
  UNKNOWN_FACTOR = 1.!2./pi
 
  allocate( temp1(nx,dim2(rank),nz_kern), temp2(nx,dim2(rank), nz_kern), &
-	temp3(nx,dim2(rank),nz_kern), tempx(nx,dim2(rank),nz_kern), &
-	deriv_ij(nx, dim2(rank), nz_kern, 3, 3),kernelpsi(nx,dim2(rank),nz))
+  temp3(nx,dim2(rank),nz_kern), tempx(nx,dim2(rank),nz_kern), &
+  deriv_ij(nx, dim2(rank), nz_kern, 3, 3),kernelpsi(nx,dim2(rank),nz))
 
   test_in_2d = .true.
 
@@ -59,7 +59,7 @@ SUBROUTINE PRODUCE_KERNELS
         fbz(nx,dim2(rank),nz_kern), abx(nx,dim2(rank),nz_kern), &
         aby(nx,dim2(rank),nz_kern), abz(nx,dim2(rank),nz_kern), &
         tempy(nx,dim2(rank),nz_kern), tempz(nx,dim2(rank),nz_kern),&
-	temp(nx,dim2(rank),nz))
+  temp(nx,dim2(rank),nz))
 
 
    !call readfits(dirbackmag//'densityclassic.fits', temp, nz)
@@ -203,7 +203,7 @@ SUBROUTINE PRODUCE_KERNELS
 
  call read_parameters_kernel
 
-! nt_kern = floor((final_time - local_time)*timestep/out	putcad) + 1
+! nt_kern = floor((final_time - local_time)*timestep/out  putcad) + 1
  if (rank==0) print *,'Total number of temporal steps:', nt_kern,totkern
 
  do k=1,nt_kern
@@ -222,33 +222,33 @@ SUBROUTINE PRODUCE_KERNELS
   ! FORWARD-TIME FORWARD 
 
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/xiz_'//charnum//'_partial.fits', &
-		f_xi_z, nz_kern)
+    f_xi_z, nz_kern)
   f_xi_y = 0.
   if (.not. test_in_2d) call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/xiy_'//charnum//'_partial.fits', &
-		f_xi_y, nz_kern)
+    f_xi_y, nz_kern)
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/xix_'//charnum//'_partial.fits', &
-		f_xi_x, nz_kern)
+    f_xi_x, nz_kern)
 
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vz_'//charnum//'_partial.fits', &
-		f_vel_z, nz_kern)
+    f_vel_z, nz_kern)
 
   f_vel_y = 0.
   if (.not. test_in_2d)  &
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vy_'//charnum//'_partial.fits', &
-		f_vel_y, nz_kern)
+    f_vel_y, nz_kern)
 
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/vx_'//charnum//'_partial.fits', &
-		f_vel_x, nz_kern)
+    f_vel_x, nz_kern)
 
 
 
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/acc_z_'//charnum//'_partial.fits', &
-		f_acc_z, nz_kern)
+    f_acc_z, nz_kern)
   f_acc_y = 0.
   if (.not. test_in_2d) call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/acc_y_'//charnum//'_partial.fits', &
-		f_acc_y, nz_kern)
+    f_acc_y, nz_kern)
   call readfits(directory//'forward_src'//contrib//'_ls'//jobno//'/acc_x_'//charnum//'_partial.fits', & 
-	f_acc_x, nz_kern)
+  f_acc_x, nz_kern)
 
 
 
@@ -262,22 +262,22 @@ SUBROUTINE PRODUCE_KERNELS
 !  call readfits(adjoint_directory//'xix_'//charnum//'_partial.fits', a_xi_x, nz_kern)
 
   call readfits(directory//'adjoint_src'//contrib//'/vz_'//charnum//'_partial.fits', & !'_'//contrib//
-	a_vel_z, nz_kern) 
+  a_vel_z, nz_kern) 
   a_vel_y = 0.
   if (.not. test_in_2d) call readfits(directory//'adjoint_src'//contrib//'/vy_'//charnum//'_partial.fits', & !'_'//contrib//
-	a_vel_y, nz_kern)
+  a_vel_y, nz_kern)
   call readfits(directory//'adjoint_src'//contrib//'/vx_'//charnum//'_partial.fits', &!//'_'//contrib
-	a_vel_x, nz_kern)
+  a_vel_x, nz_kern)
 
 
 
   call readfits(directory//'adjoint_src'//contrib//'/acc_z_'//charnum//'_partial.fits', &
-		a_acc_z, nz_kern)
+    a_acc_z, nz_kern)
   a_acc_y = 0.
   if (.not. test_in_2d) call readfits(directory//'adjoint_src'//contrib//'/acc_y_'//charnum//'_partial.fits', &
-		a_acc_y, nz_kern)
+    a_acc_y, nz_kern)
   call readfits(directory//'adjoint_src'//contrib//'/acc_x_'//charnum//'_partial.fits', & 
-	a_acc_x, nz_kern)
+  a_acc_x, nz_kern)
 
 
   time2 = MPI_WTIME ()
@@ -288,10 +288,10 @@ SUBROUTINE PRODUCE_KERNELS
 
 
 !  hessian = hessian + f_acc_z * a_acc_z + f_acc_x * a_acc_x + &
-!	f_acc_y * a_acc_y
+! f_acc_y * a_acc_y
 
   hessian = hessian + f_acc_z * f_acc_z + f_acc_x * f_acc_x + &
-	f_acc_y * f_acc_y
+  f_acc_y * f_acc_y
 
  
   !print *,f_acc_x 
@@ -314,8 +314,8 @@ SUBROUTINE PRODUCE_KERNELS
   if(density_kernels) then
 
     kernelrho = kernelrho + temp1 * c2 + f_acc_z * a_vel_z  + &
-		f_acc_x * a_vel_x + &
-		f_acc_y * a_vel_y
+    f_acc_x * a_vel_x + &
+    f_acc_y * a_vel_y
  
 
 
@@ -328,8 +328,8 @@ SUBROUTINE PRODUCE_KERNELS
  ! DONT KNOW ABOUT THE NEGATIVE/POSITIVE SIGN FOR THE PRODUCT AT THE END
    do j=1,nz_kern
     kernelrho(:,:,j) = kernelrho(:,:,j) - grav(j) * f_xi_z(:,:,j) * temp3(:,:,j) &
-		+ (f_xi_x(:,:,j) * deriv_ij(:,:,j,3,1) + f_xi_y(:,:,j) * deriv_ij(:,:,j,3,2) + &
-		f_xi_z(:,:,j) * deriv_ij(:,:,j,3,3)) 
+    + (f_xi_x(:,:,j) * deriv_ij(:,:,j,3,1) + f_xi_y(:,:,j) * deriv_ij(:,:,j,3,2) + &
+    f_xi_z(:,:,j) * deriv_ij(:,:,j,3,3)) 
 
    enddo
 
@@ -340,19 +340,19 @@ SUBROUTINE PRODUCE_KERNELS
    call compute_del(f_vel_x,f_vel_y,f_vel_z,deriv_ij)
 
    kernelv(:,:,:,1) = deriv_ij(:,:,:,1,1) * a_vel_x + &
-		     deriv_ij(:,:,:,1,2) * a_vel_y + &
-		     deriv_ij(:,:,:,1,3) * a_vel_z + &
-		     kernelv(:,:,:,1)
+         deriv_ij(:,:,:,1,2) * a_vel_y + &
+         deriv_ij(:,:,:,1,3) * a_vel_z + &
+         kernelv(:,:,:,1)
 
    kernelv(:,:,:,2) = deriv_ij(:,:,:,2,1) * a_vel_x + &
-		     deriv_ij(:,:,:,2,2) * a_vel_y + &
-		     deriv_ij(:,:,:,2,3) * a_vel_z + &
-		     kernelv(:,:,:,2)
+         deriv_ij(:,:,:,2,2) * a_vel_y + &
+         deriv_ij(:,:,:,2,3) * a_vel_z + &
+         kernelv(:,:,:,2)
 
    kernelv(:,:,:,3) = deriv_ij(:,:,:,3,1) * a_vel_x + &
-		     deriv_ij(:,:,:,3,2) * a_vel_y + &
-		     deriv_ij(:,:,:,3,3) * a_vel_z + &
-		     kernelv(:,:,:,3)
+         deriv_ij(:,:,:,3,2) * a_vel_y + &
+         deriv_ij(:,:,:,3,3) * a_vel_z + &
+         kernelv(:,:,:,3)
 
 
   endif
@@ -361,14 +361,14 @@ SUBROUTINE PRODUCE_KERNELS
   if (MAGNETIC_KERNELS) then
 
    call cross_kern(f_xi_x,f_xi_y,f_xi_z, &
-		box, boy, boz, tempx, tempy, tempz)
+    box, boy, boz, tempx, tempy, tempz)
  
    call curl_kern(tempx, tempy, tempz, fbx, fby, fbz)
  
    call curl_kern(fbx, fby, fbz, tempx, tempy, tempz)
 
    call cross_kern(a_vel_x,a_vel_y,a_vel_z, & 
-	tempx, tempy, tempz, temp1, temp2, temp3)
+  tempx, tempy, tempz, temp1, temp2, temp3)
 
    kernelb(:,:,:,1) = kernelb(:,:,:,1) + temp1
 
@@ -380,7 +380,7 @@ SUBROUTINE PRODUCE_KERNELS
   ! THE FIRST TERM
 
    call cross_kern(fbx, fby, fbz, a_vel_x,a_vel_y,a_vel_z, &
-	tempx, tempy, tempz)
+  tempx, tempy, tempz)
 
    call curl_kern(tempx, tempy, tempz, temp1, temp2, temp3)
 
@@ -395,14 +395,14 @@ SUBROUTINE PRODUCE_KERNELS
 
 
    call cross_kern(a_vel_x,a_vel_y,a_vel_z, &
-		box, boy, boz, tempx, tempy, tempz)
+    box, boy, boz, tempx, tempy, tempz)
 
    call curl_kern(tempx, tempy, tempz, abx, aby, abz)
 
    call curl_kern(abx, aby, abz, tempx, tempy, tempz)
 
    call cross_kern(f_xi_x, f_xi_y, f_xi_z, & 
-	tempx, tempy, tempz, temp1, temp2, temp3)
+  tempx, tempy, tempz, temp1, temp2, temp3)
 
 
    kernelb(:,:,:,1) = kernelb(:,:,:,1) + temp1
@@ -412,14 +412,14 @@ SUBROUTINE PRODUCE_KERNELS
  ! THE SECOND TERM (SYMMETRIC)
 
    call cross_kern(a_vel_x,a_vel_y,a_vel_z, &
-		curlbox, curlboy, curlboz, temp1, temp2, temp3)
+    curlbox, curlboy, curlboz, temp1, temp2, temp3)
 
 
 
    call curl_kern(temp1, temp2, temp3, tempx, tempy, tempz)
 
    call cross_kern(tempx, tempy, tempz, f_xi_x, f_xi_y, &
- 	f_xi_z, temp1, temp2, temp3)
+  f_xi_z, temp1, temp2, temp3)
  
  
    kernelb(:,:,:,1) = kernelb(:,:,:,1) + temp1
@@ -434,7 +434,7 @@ SUBROUTINE PRODUCE_KERNELS
    
 
    call cross_kern(f_xi_x, f_xi_y, f_xi_z, curlbox, curlboy, curlboz,  &
-	tempx, tempy, tempz) 
+  tempx, tempy, tempz) 
 
    kernelb(:,:,:,1) = kernelb(:,:,:,1) + tempx * temp3
    kernelb(:,:,:,2) = kernelb(:,:,:,2) + tempy * temp3
@@ -447,7 +447,7 @@ SUBROUTINE PRODUCE_KERNELS
    tempz = f_xi_z * temp3
 
    call cross_kern(box,boy, boz, tempx, tempy, tempz, &
-	temp1, temp2, temp3) 
+  temp1, temp2, temp3) 
 
    call curl_kern(temp1, temp2, temp3, tempx, tempy, tempz)
 
@@ -470,8 +470,8 @@ SUBROUTINE PRODUCE_KERNELS
  !  allocate(for_figures(nx, dim2(rank), nz))
 
 !   for_figures = deriv_ij(:,:,:,1,1) * a_vel_x + &
-!		     deriv_ij(:,:,:,1,2) * a_vel_y + &
-!		     deriv_ij(:,:,:,1,3) * a_vel_z 
+!        deriv_ij(:,:,:,1,2) * a_vel_y + &
+!        deriv_ij(:,:,:,1,3) * a_vel_z 
 !
 !   call writefits_3d(KERNEL_DIRECTORY//'interaction_x_'//charnum//'.fits', for_figures, nz_kern)
 !   call writefits_3d(KERNEL_DIRECTORY//'adjoint_z_'//charnum//'.fits', a_vel_x, nz_kern)
@@ -616,7 +616,7 @@ END SUBROUTINE PRODUCE_KERNELS
 SUBROUTINE COMPUTE_FREQS(nt, deltatime, nus)
  implicit none
  integer nt,i
- real*8 deltatime, nus(nt)
+ real(kind=real64) deltatime, nus(nt)
 
  if ((nt/2) *2 .eq. nt) then
 
@@ -647,7 +647,7 @@ END SUBROUTINE COMPUTE_FREQS
 
 SUBROUTINE ddzkern(var, dvar, bc)
  implicit none
- real*8 var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
+ real(kind=real64) var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
  integer i,j,k,bc
 
 
@@ -664,9 +664,9 @@ END SUBROUTINE ddzkern
 
 SUBROUTINE ddxkern(var, dvar,bc)
  implicit none
- real*8 var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
+ real(kind=real64) var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
  integer i,j,k,bc
- complex*16, allocatable, dimension(:,:,:) :: temp
+ complex(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  if ((PERIODIC) .AND. (USE_FFT)) then
   allocate(temp(nx/2+1,dim2(rank), nz_kern))
@@ -697,10 +697,10 @@ SUBROUTINE ddykern(var, dvar,bc)
  implicit none
  integer i,j,k,ierr,sendtag,recvtag,stat(MPI_STATUS_SIZE,2)
  integer n, statt(MPI_STATUS_SIZE), req(2), bc, reqq, tag, nelements
- real*8 var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
- real*8, dimension(:,:,:), allocatable :: trans, temp
- real*8, dimension(:,:), allocatable :: rectemp
- complex*16, allocatable, dimension(:,:,:) :: tempcomp
+ real(kind=real64) var(nx,dim2(rank),nz_kern), dvar(nx,dim2(rank),nz_kern)
+ real(kind=real64), dimension(:,:,:), allocatable :: trans, temp
+ real(kind=real64), dimension(:,:), allocatable :: rectemp
+ complex(kind=real64), allocatable, dimension(:,:,:) :: tempcomp
 
  allocate(temp(nx,dim1(rank),nz_kern) , trans(ny, dim1(rank), nz_kern))
  call transpose_3D_y_kern(var, temp)
@@ -741,7 +741,7 @@ SUBROUTINE TRANSPOSE_3D_Y_KERN(input, output)
 
  implicit none
  integer i, j, k, sendtag, recvtag, req(2), ierr, stat(MPI_STATUS_SIZE, 2)
- real*8 input(nx, dim2(rank), nz_kern), output(ny, dim1(rank), nz_kern)
+ real(kind=real64) input(nx, dim2(rank), nz_kern), output(ny, dim1(rank), nz_kern)
 
  ! Non - communicative transpose (local transpose)
  do j=1,dim2(rank)
@@ -771,7 +771,7 @@ SUBROUTINE INV_TRANSPOSE_3D_Y_KERN(input, output)
 
  implicit none
  integer i, j, k, sendtag, recvtag, req(2), ierr, stat(MPI_STATUS_SIZE, 2)
- real*8 input(ny, dim1(rank), nz_kern), output(nx, dim2(rank), nz_kern)
+ real(kind=real64) input(ny, dim1(rank), nz_kern), output(nx, dim2(rank), nz_kern)
 
  ! Non - communicative transpose
 
@@ -801,7 +801,7 @@ END SUBROUTINE INV_TRANSPOSE_3D_Y_KERN
 SUBROUTINE CROSS_KERN(a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z)
                                                                                                                                                             
   implicit none
-  real*8, dimension(nx, dim2(rank), nz_kern) :: a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z
+  real(kind=real64), dimension(nx, dim2(rank), nz_kern) :: a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z
 
 
   c_x = a_y * b_z - a_z * b_y
@@ -815,9 +815,9 @@ END SUBROUTINE CROSS_KERN
 SUBROUTINE CURL_KERN(f_x, f_y, f_z, curl_x, curl_y, curl_z)
                                                                                                                                                             
   implicit none
-  real*8, dimension(nx, dim2(rank), nz_kern) :: curl_x, curl_y, curl_z
-  real*8, dimension(nx, dim2(rank), nz_kern) :: f_x, f_y, f_z
-  real*8, dimension(:,:,:), allocatable :: temp
+  real(kind=real64), dimension(nx, dim2(rank), nz_kern) :: curl_x, curl_y, curl_z
+  real(kind=real64), dimension(nx, dim2(rank), nz_kern) :: f_x, f_y, f_z
+  real(kind=real64), dimension(:,:,:), allocatable :: temp
 
   allocate(temp(nx, dim2(rank), nz_kern))
                                                                                                                             
@@ -842,8 +842,8 @@ END SUBROUTINE CURL_KERN
 
 SUBROUTINE COMPUTE_DIV(fx, fy, fz, dive)
  implicit none
- real*8, dimension(nx,dim2(rank),nz_kern) :: fx, fy, fz, dive
- real*8, allocatable, dimension(:,:,:) :: temp
+ real(kind=real64), dimension(nx,dim2(rank),nz_kern) :: fx, fy, fz, dive
+ real(kind=real64), allocatable, dimension(:,:,:) :: temp
  allocate(temp(nx, dim2(rank),nz_kern))
  
  call ddxkern(fx,dive,1)
@@ -866,8 +866,8 @@ END SUBROUTINE COMPUTE_DIV
 SUBROUTINE COMPUTE_DEL(fx, fy, fz, deriv_ij)
 
  implicit none
- real*8, dimension(nx,dim2(rank),nz_kern) :: fx, fy, fz
- real*8, dimension(nx,dim2(rank),nz_kern,3,3) :: deriv_ij 
+ real(kind=real64), dimension(nx,dim2(rank),nz_kern) :: fx, fy, fz
+ real(kind=real64), dimension(nx,dim2(rank),nz_kern,3,3) :: deriv_ij 
 
 
  call ddxkern(fx,deriv_ij(:,:,:,1,1),1)
@@ -891,8 +891,8 @@ END SUBROUTINE COMPUTE_DEL
 SUBROUTINE FILTER_VAR_Z(var)
   implicit none
   integer i,k,l,kst
-  real*8 coeffs(0:5)
-  real*8, dimension(nx,dim2(rank),nz_kern) :: temp, var 
+  real(kind=real64) coeffs(0:5)
+  real(kind=real64), dimension(nx,dim2(rank),nz_kern) :: temp, var 
   
   coeffs(0) = 0.75390625000000
   coeffs(1) = 0.41015625000000
@@ -933,8 +933,8 @@ function normkern(matrix)
 
    implicit none
    integer i, j, k, ierr
-   real*8 matrix(nx,dim2(rank),nz_kern)
-   real*8 normkern, sum
+   real(kind=real64) matrix(nx,dim2(rank),nz_kern)
+   real(kind=real64) normkern, sum
   
    normkern  = 0.0
    sum = 0.0
@@ -961,7 +961,7 @@ SUBROUTINE READ_PARAMETERS_KERNEL
 
  implicit none
  integer j
- character*80 calculation_type, directory_rel
+ character(len=80) calculation_type, directory_rel
 
  open(44,file=directory//'adjoint_src'//contrib//'/kernel_info',form='formatted',status='unknown')
 

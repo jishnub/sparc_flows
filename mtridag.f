@@ -1,7 +1,7 @@
 c**********************************************************
 c
 c       Copyright 1994, Neal Hurlburt, 
-c	Lockheed Palo Alto Research Laboratory
+c  Lockheed Palo Alto Research Laboratory
 c
 C***************************************************************************
       SUBROUTINE MTRIDAG(A,B,C,R,U,N1,N2,ISPECIAL)
@@ -11,11 +11,12 @@ c     Adapted from Press etal.
 c     Revised 3/17/98 for periodic boundaries -- NEH
 c     fixed to cope with zero pivots like tridag 6/16/99 -- NEH
 C**************************************************************************
-      PARAMETER (NMAX=700)
-      REAL*8 A(N2),B(N2),C(N2),R(N1,N2),U(N1,N2)
-      REAL*8 GAM(NMAX),UD(NMAX),BET
-      REAL*8 betas(nmax),betau(nmax),betad(nmax)
-      REAL*8 alpha(nmax),alphab(nmax)
+      PARAMETER (NMAX=7000)
+      integer, parameter :: real64 = kind(1.d0)
+      real(kind=real64) A(N2),B(N2),C(N2),R(N1,N2),U(N1,N2)
+      real(kind=real64) GAM(NMAX),UD(NMAX),BET
+      real(kind=real64) betas(nmax),betau(nmax),betad(nmax)
+      real(kind=real64) alpha(nmax),alphab(nmax)
       if (ispecial.eq.1) then
 c
 c     prepare decomposed matrix

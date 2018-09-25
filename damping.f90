@@ -12,10 +12,10 @@ SUBROUTINE INIT_DAMPING ()
  implicit none
  integer i,j,k
  integer narr(2), inembed(2), onembed(2)
- real*8 constx, consty, kayref
+ real(kind=real64) constx, consty, kayref
 
  allocate(transfermatrix(nx,ny,dimz(rank)), transfertemp(nx/2+1,ny,dimz(rank)),&
-		damping_rates(nx/2+1,ny),kay2d(nx/2+1,ny))
+    damping_rates(nx/2+1,ny),kay2d(nx/2+1,ny))
 
  
     constx = 2.*pi/xlength * Rsun
@@ -44,7 +44,7 @@ SUBROUTINE INIT_DAMPING ()
       onembed(1) = nx/2+1
       onembed(2) = ny
       call dfftw_plan_many_dft_r2c(fftw_plan_fwd_2D,2,narr,dimz(rank),transfermatrix(1,1,1), &
-	&	inembed,1,nx*ny,transfertemp(1,1,1),onembed,1,(nx/2+1)*ny,FFTW_MEASURE)
+  & inembed,1,nx*ny,transfertemp(1,1,1),onembed,1,(nx/2+1)*ny,FFTW_MEASURE)
 
 
       narr(1) = nx
@@ -55,7 +55,7 @@ SUBROUTINE INIT_DAMPING ()
       onembed(2) = ny
 
       call dfftw_plan_many_dft_c2r(fftw_plan_inv_2D,2,narr,dimz(rank),transfertemp(1,1,1), &
-	&	inembed,1,(nx/2+1)*ny,transfermatrix(1,1,1),onembed,1,nx*ny,FFTW_MEASURE)
+  & inembed,1,(nx/2+1)*ny,transfermatrix(1,1,1),onembed,1,nx*ny,FFTW_MEASURE)
 
       transfermatrix = 0.
       transfertemp = 0.
@@ -73,10 +73,10 @@ SUBROUTINE INIT_DAMPING_2D ()
  implicit none
  integer i,j,k
  integer narr(2), inembed(2), onembed(2)
- real*8 constx, consty, kayref
+ real(kind=real64) constx, consty, kayref
 
  allocate(transfermatrix(nx,ny,nz), transfertemp(nx/2+1,ny,nz),&
-		damping_rates(nx/2+1,ny),kay2d(nx/2+1,ny))
+    damping_rates(nx/2+1,ny),kay2d(nx/2+1,ny))
 
  
     constx = 2.*pi/xlength * Rsun
@@ -99,7 +99,7 @@ SUBROUTINE INIT_DAMPING_2D ()
       onembed(1) = nx/2+1
       onembed(2) = ny
       call dfftw_plan_many_dft_r2c(fftw_plan_fwd_2D,2,narr,nz,transfermatrix(1,1,1), &
-	&	inembed,1,nx*ny,transfertemp(1,1,1),onembed,1,(nx/2+1)*ny,FFTW_MEASURE)
+  & inembed,1,nx*ny,transfertemp(1,1,1),onembed,1,(nx/2+1)*ny,FFTW_MEASURE)
 
 
       narr(1) = nx
@@ -110,7 +110,7 @@ SUBROUTINE INIT_DAMPING_2D ()
       onembed(2) = ny
 
       call dfftw_plan_many_dft_c2r(fftw_plan_inv_2D,2,narr,nz,transfertemp(1,1,1), &
-	&	inembed,1,(nx/2+1)*ny,transfermatrix(1,1,1),onembed,1,nx*ny,FFTW_MEASURE)
+  & inembed,1,(nx/2+1)*ny,transfermatrix(1,1,1),onembed,1,nx*ny,FFTW_MEASURE)
 
       transfermatrix = 0.
       transfertemp = 0.
@@ -126,7 +126,7 @@ SUBROUTINE damp_velocity ()
 
   implicit none
   integer i,j,k
-  real*8, allocatable, dimension(:,:,:) :: term
+  real(kind=real64), allocatable, dimension(:,:,:) :: term
 
 
   allocate(term(nx,dim2(rank),nz))
@@ -191,9 +191,9 @@ SUBROUTINE TRANSFER_3D_Z_N(input, output)
  ! Splits up the z-direction and accumulates all the y-parts together
  implicit none
  integer i, j, k, sendtag, recvtag, req(2*numtasks-2), ierr, stat(MPI_STATUS_SIZE, 2*numtasks-2)
- integer*8 nelem_send,nelem_recv
- real*8 input(nx, dim2(rank), nz), output(nx, ny, dimz(rank))
- real*8, allocatable, dimension(:,:,:) :: temp
+ integer(kind=8) nelem_send,nelem_recv
+ real(kind=real64) input(nx, dim2(rank), nz), output(nx, ny, dimz(rank))
+ real(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  !  Non communicative part:
 ! output(:,fwd_rdispls(rank):(fwd_rdispls(rank)+dim2(rank)-1),:) = &
@@ -239,9 +239,9 @@ SUBROUTINE INV_TRANSFER_3D_Z_N(input, output)
  implicit none 
  integer i, j, k, sendtag, recvtag, req(2*numtasks-2), ierr, stat(MPI_STATUS_SIZE, 2*numtasks-2)
  integer iin, jin, kin
- integer*8 nelem_send,nelem_recv
- real*8 input(nx, ny, dimz(rank)), output(nx, dim2(rank), nz)
- real*8, dimension(nx, ny, dimz(rank)) :: temp
+ integer(kind=8) nelem_send,nelem_recv
+ real(kind=real64) input(nx, ny, dimz(rank)), output(nx, dim2(rank), nz)
+ real(kind=real64), dimension(nx, ny, dimz(rank)) :: temp
  
  ! Non-communicative part:
 
@@ -296,9 +296,9 @@ SUBROUTINE TRANSFER_3D_Z(input, output)
  ! Splits up the z-direction and accumulates all the y-parts together
  implicit none
  integer i, j, k, sendtag, recvtag, req(2), ierr, stat(MPI_STATUS_SIZE, 2)
- integer*8 nelem_send,nelem_recv
- real*8 input(nx, dim2(rank), nz), output(nx, ny, dimz(rank))
- real*8, allocatable, dimension(:,:,:) :: temp
+ integer(kind=8) nelem_send,nelem_recv
+ real(kind=real64) input(nx, dim2(rank), nz), output(nx, ny, dimz(rank))
+ real(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  !  Non communicative part:
  output(:,fwd_rdispls(rank):(fwd_rdispls(rank)+dim2(rank)-1),:) = &
@@ -332,9 +332,9 @@ SUBROUTINE INV_TRANSFER_3D_Z(input, output)
  ! Splits up the z-direction and accumulates all the y-parts together
  implicit none 
  integer i, j, k, sendtag, recvtag, req(2), ierr, stat(MPI_STATUS_SIZE, 2)
- integer*8 nelem_send,nelem_recv
- real*8 input(nx, ny, dimz(rank)), output(nx, dim2(rank), nz)
- real*8, allocatable,dimension(:,:,:) :: temp
+ integer(kind=8) nelem_send,nelem_recv
+ real(kind=real64) input(nx, ny, dimz(rank)), output(nx, dim2(rank), nz)
+ real(kind=real64), allocatable,dimension(:,:,:) :: temp
  
  ! Non-communicative part:
  output(:,:,fwd_z_displs(rank):(fwd_z_displs(rank) + dimz(rank)-1)) = &

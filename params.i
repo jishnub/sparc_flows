@@ -14,6 +14,7 @@
 ! --------------------------------------------------------------------------
 !
 
+integer, parameter :: real64 = kind(1.d0)
 
 ! PARAMETERS OF THE SIMULATION
 ! nx, ny, nz are the numbers of grid points in the x,y,z directions resply.
@@ -23,7 +24,7 @@
 ! will explode. Too small and the expense is large.
 integer nx, ny, nz
 parameter (nx = 512, ny = 1, nz = 300)
-real*8 xlength, ylength, timestep
+real(kind=real64) xlength, ylength, timestep
 parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
@@ -43,7 +44,7 @@ character (LEN = *), PARAMETER :: directory = '/media/user/784C644E4C6408E8/spar
 character (LEN = *), PARAMETER :: forcingfunc = '/nobackup/shanasog/classic4/ccsource.fits'
 
 ! CADENCE OF THE FORCING FUNCTION (i.e. SAMPLING RATE) in SECONDS
-real*8 cadforcing
+real(kind=real64) cadforcing
 parameter( cadforcing = 30.0)
 
 ! NOTE THIS fUNCTION STILL NEEDS TO BE IMPLEMENTED
@@ -60,7 +61,7 @@ logical :: TEST_IN_2D != .false.
 
 
 ! IF KERNELS
-real*8 nupeak, nuwidth
+real(kind=real64) nupeak, nuwidth
 integer st_cc, st_adj, stepskern, nz_kern, nt_kern, st_z, fi_z, totkern, forcing_length
 parameter(st_z = 1, fi_z = nz, nz_kern = (fi_z - st_z+1),nupeak=0.0017, nuwidth = 0.0055)
 logical BACKGROUND_FLOWS_EXIST, COMPUTE_FORWARD !, COMPUTE_CC_SLICE
@@ -122,22 +123,22 @@ parameter(npmlbot = 10, npmltop = 10, nzpml = (npmlbot + npmltop))
 
 
 ! THE TOTAL WALL-TIME-LENGTH OF THE SIMULATION (IN HOURS)
-real *8 wall_time
+real(kind=real64) wall_time
 parameter(wall_time = 96.0)
 
 ! SOLAR TIME BEING SIMULATED (in hours)
-real*8 solartime
+real(kind=real64) solartime
 parameter (solartime = 4.0)
 
 ! OBSERVATION HEIGHT RELATIVE TO PHOTOSPHERE (in cgs units)
 ! Generally 200 km above photosphere works well
 ! The sign indicates whether you wish to extract data above (+)
 ! or below (-) the photosphere
-real*8 obsheight
+real(kind=real64) obsheight
 parameter (obsheight = 20000000.0)
 
 ! CADENCE OF SLICE OUTPUT (in seconds; 30 s recommended)
-real *8 outputcad
+real(kind=real64) outputcad
 parameter (outputcad = 30.0)
 
 ! NUMBER OF ZEROES IN THE OUTPUT FILENAME
@@ -147,7 +148,7 @@ parameter (timestamp_size = 6)
 ! WAVE EXCIATION DEPTH RELATIVE TO PHOTOSPHERE
 ! Generally 150 km below the photosphere is a good place to excite the waves
 ! excitdep is in cgs units
-real*8 excitdep
+real(kind=real64) excitdep
 parameter( excitdep = - 15000000.0)
 
 ! CONTINUITY
@@ -159,6 +160,6 @@ parameter ( vz_cont = .FALSE. )
 
 !CUTOFF
 logical cutoff_switch
-real*8 cutoff_dist
+real(kind=real64) cutoff_dist
 parameter ( cutoff_switch = .True. )
 parameter ( cutoff_dist = 50. )

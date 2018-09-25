@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     env=dict(os.environ, MPI_TYPE_MAX="1280280")
     HOME=Path(os.environ["HOME"])
-    codedir=Path(os.path.abspath(__file__))
+    codedir=Path(os.path.dirname(__file__))
     datadir=Path(read_params.get_directory())
 
     procno=int(os.environ["PBS_VNODENUM"])

@@ -42,12 +42,12 @@ Program driver
     implicit none
 
     integer i,j, init, ierr, t, k, index(1000,2), randinit(2), aind, nsteps_given,reclmax, loc
-    real*8 start_time,end_time,tempf,t1,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
-    real*8 total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz,sigmax
-    real*8 bes(0:2), Lregular,signt, xcutoffpix, xcutoff
+    real(kind=real64) start_time,end_time,tempf,T00,nor1,nor2,nor3,nor4,nor5,e, mp_time,Rchar
+    real(kind=real64) total_time, start_mp_time, avg_time,zz, tempxy, rand1, rand2,con,kay,z0,sigmaz,sigmax
+    real(kind=real64) bes(0:2), Lregular,signt, xcutoffpix, xcutoff
     logical saved, iteration, init_variables, tempbool
-    character*1 ci
-    real*8 tau,dt
+    character(len=1) ci
+    real(kind=real64) dt
 
 20  format(8f12.4)
 
@@ -345,8 +345,8 @@ SUBROUTINE TIMESTEPPING(init)
  implicit none
 
  integer i,j,k, init, nsteps_given
- real*8 start_time, end_time, T00, t1, nor1
- real*8 tempstore(nx, dim2(rank))
+ real(kind=real64) start_time, end_time, T00, t1, nor1
+ real(kind=real64) tempstore(nx, dim2(rank))
 
   do i = init,maxtime
     time = i
@@ -357,7 +357,7 @@ SUBROUTINE TIMESTEPPING(init)
     start_time = MPI_WTIME()
     if (.not. kernel_mode) call lagrange_interp
     if ( kernel_mode .and. compute_adjoint .and. &
-	(i .le. forcing_length*cadforcing_step) ) call lagrange_interp
+    (i .le. forcing_length*cadforcing_step) ) call lagrange_interp
     call step()
     end_time = MPI_WTIME()
     call cpu_time(t1)
@@ -371,10 +371,10 @@ SUBROUTINE TIMESTEPPING(init)
    if (rank ==0) then
 
     print *, '----------------------------------------------------------'
-    print *, '	Iteration #,  Cpu Time and Real Time:'
-    print *,       time,       	(t1 - T00),        (time+1)*timestep
+    print *, '  Iteration #,  Cpu Time and Real Time:'
+    print *,       time,        (t1 - T00),        (time+1)*timestep
     print *
-    print *,'	Wall clock time', (end_time - start_time)
+    print *,'   Wall clock time', (end_time - start_time)
     print *
     print *,nor1
     print *, '----------------------------------------------------------'
@@ -397,8 +397,8 @@ SUBROUTINE TIMESTEPPING(init)
       if (compute_forward .and. magnetic) then
         do k=1,dim2(rank)
          do j=1,nx
- 	  tempstore(j,k) = a(j,k,orad_2d(j,k),6)
-  	 enddo
+      tempstore(j,k) = a(j,k,orad_2d(j,k),6)
+     enddo
         enddo
       endif
 
@@ -412,7 +412,7 @@ SUBROUTINE TIMESTEPPING(init)
        if (compute_forward) then
          if (.not. (COMPUTE_SYNTH .OR. LINESEARCH .OR. COMPUTE_DATA)) &
         call write_out_partial_state(directory//'forward_src'//contrib//'_ls'//jobno//'/')
-	 !call write_out_slice(directory//'forward'//contrib//'/')
+     !call write_out_slice(directory//'forward'//contrib//'/')
        endif
        if (compute_adjoint) call write_out_partial_state(directory//'adjoint_src'//contrib//'/')
 
@@ -488,11 +488,11 @@ SUBROUTINE DETERMINE_STATUS(init, nsteps_given)
  implicit none
 
  integer i,j,k, init, nsteps_given,reclmax, indexnum
- real*8 start_time, end_time, T00, t1, nor1,  xloc, tempoa(nx,dim2(rank))
- real*8 sincx(nx), xdist(nx)
- character*80 calctype
- character*7 keyword
- character*1 ci
+ real(kind=real64) start_time, end_time, T00, t1, nor1,  xloc, tempoa(nx,dim2(rank))
+ real(kind=real64) sincx(nx), xdist(nx)
+ character(len=80) calctype
+ character(len=7) keyword
+ character(len=1) ci
  integer inde
  logical lexist
  inquire(iolength=reclmax) tempoa
@@ -526,14 +526,14 @@ SUBROUTINE DETERMINE_STATUS(init, nsteps_given)
    !if (rank==0) print *,'Need a file of: ', forcing_length, ' temporal slices.'
 
 !   call read_binary_reverse(directory//'forward'//contrib//'/vz_2D_data.bin', &
-!	vr(:,:,1:nsteps_given),nsteps_given)
+!   vr(:,:,1:nsteps_given),nsteps_given)
 
    !forcing_length = nsteps_given
 !    call readfits(directory//'forward'//contrib//'/source.fits',& !'_'//contrib//
-!	vr(:,:,1:forcing_length),forcing_length)
+!   vr(:,:,1:forcing_length),forcing_length)
 
 !   if (contrib=='1') then
-     read(contrib,*) indexnum
+     read(contrib,'(I2)') indexnum
 
      open(356,file=directory//'master.pixels',action='read', position='rewind')
      do i=1,nmasters
@@ -560,12 +560,12 @@ SUBROUTINE DETERMINE_STATUS(init, nsteps_given)
 !    nsteps_given = floor(maxtime/cadforcing_step*1.) + 1
 
     if (rank==0) open(28, file=directory//'forward_src'//contrib//'_ls'//jobno//'/timeline',&
-		status='replace', action='write',position='append')
+        status='replace', action='write',position='append')
 
 
     open(1244,file=directory//'forward_src'//contrib//'_ls'//jobno//'/vz_cc.bin',&
         form='unformatted',status='replace', action ='write',&
-	access='direct',recl=reclmax)!recordtype='fixed',
+    access='direct',recl=reclmax)!recordtype='fixed',
 
 
     delta_width = 2.0d0/(z(e_rad+1) - z(e_rad-1))
@@ -636,7 +636,7 @@ END SUBROUTINE DETERMINE_STATUS
   use all_modules
   implicit none
   integer nxs, nys, dim3, i, j, k, reclmax
-  real*8 array(nxs, nys, dim3), tempoa(nxs,nys)
+  real(kind=real64) array(nxs, nys, dim3), tempoa(nxs,nys)
   character*(*) input_filename, output_filename
   inquire(iolength=reclmax) tempoa
 
@@ -659,15 +659,15 @@ SUBROUTINE ADJOINT_SOURCE_COMP(nt)
  use initialize
  use all_modules
  implicit none
- integer *8 fwdplantemp, invplantemp, invplantemp2, fwdplandata, invplandata
+ integer(kind=8) fwdplantemp, invplantemp, invplantemp2, fwdplandata, invplandata
  logical lexist
  integer i, nt, indexnum, pord, timesmax, halftime!, jj
  integer loc, leng, lef, rig, j, nmeasurements, nmeas, ierr
- character*1 ord
- real*8 mindist, maxdist, window, distances(nx), x00, t(nt), dat(nx, dim2(rank),nt), tau
- real*8 pcoef(5,4), adj(nx,dim2(rank),nt), acc(nx,dim2(rank),nt), windows(nt), filt(nt),dt
- real*8 freqnu(nt), leftcorner, rightcorner, ccdot(nx,dim2(rank),nt), dnu, con, misfit,misfit_tot
- complex*16, dimension(nx/2+1,dim2(rank),nt) :: filtout, temp, filtdat
+ character(len=1) ord
+ real(kind=real64) mindist, maxdist, window, distances(nx), x00, t(nt), dat(nx, dim2(rank),nt), tau
+ real(kind=real64) pcoef(5,4), adj(nx,dim2(rank),nt), acc(nx,dim2(rank),nt), windows(nt), filt(nt),dt
+ real(kind=real64) freqnu(nt), leftcorner, rightcorner, ccdot(nx,dim2(rank),nt), dnu, con, misfit,misfit_tot
+ complex(kind=real64), dimension(nx/2+1,dim2(rank),nt) :: filtout, temp, filtdat
 
  filtout = 1.0
  pcoef = 0.0
@@ -783,7 +783,7 @@ SUBROUTINE ADJOINT_SOURCE_COMP(nt)
      if ((distances(i) > mindist) .and. (distances(i) < maxdist)) then
 
       timesmax = nint((pcoef(1,pord) - t(1) + pcoef(2,pord)*distances(i) + pcoef(3,pord)*distances(i)**2. &
-	 + pcoef(4,pord)*distances(i)**3. + pcoef(5,pord)*distances(i)**4.)/dt) + 1
+     + pcoef(4,pord)*distances(i)**3. + pcoef(5,pord)*distances(i)**4.)/dt) + 1
 
       loc = maxloc(acc(i,1,(timesmax-6):(timesmax+6)),1) + timesmax - 7
       lef = loc - halftime
@@ -799,8 +799,8 @@ SUBROUTINE ADJOINT_SOURCE_COMP(nt)
 !       write(45,*) acc(i,1,jj), dat(i,1,jj)
 !       enddo
 !       close(45)
-!	print *,lef, rig,tau, i
-! 	stop
+!   print *,lef, rig,tau, i
+!   stop
 !      write(993, *) (x(i)-0.5)*xlength*10.**(-8.),tau
       misfit = misfit + tau**2.
       nmeasurements = nmeasurements + 1
@@ -816,21 +816,21 @@ SUBROUTINE ADJOINT_SOURCE_COMP(nt)
  adj = adj * nx
  inquire(file=directory//'adjoint_src'//contrib, exist=lexist)
  if (.not. lexist .and. (rank==0)) &
-	call system('mkdir '//directory//'adjoint_src'//contrib)
+    call system('mkdir '//directory//'adjoint_src'//contrib)
 
  call writefits_3d(directory//'adjoint_src'//contrib//'/source.fits',adj,nt)
 
  call MPI_REDUCE(misfit, misfit_tot, 1, MPI_DOUBLE_PRECISION, &
-				MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+                MPI_SUM, 0, MPI_COMM_WORLD, ierr)
 
  call MPI_REDUCE(nmeasurements, nmeas, 1, MPI_INTEGER, &
-				MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+                MPI_SUM, 0, MPI_COMM_WORLD, ierr)
 
 ! misfit_tot = misfit_tot * 0.5
 ! print *,'Total',misfit_tot, misfit_tot/nmeasurements
  if (rank==0) then
    open(34, file=directory//'adjoint_src'//contrib//'/information', &
-		action='write', position='rewind', status='replace')
+        action='write', position='rewind', status='replace')
    write(34,*) nt
    write(34,*) t(1)*60.
    write(34,*) t(nt)*60.
@@ -855,9 +855,11 @@ END SUBROUTINE ADJOINT_SOURCE_COMP
 SUBROUTINE COMPUTE_TT(u0, u, tau, dt, nt)
 
  implicit none
+ integer, parameter :: real64 = kind(1.d0)
+
  integer nt,l1,l2, loc, i
- real*8 u0(nt), u(nt), cc(-nt+1:nt-1), t(-nt+1:nt-1)
- real*8 times(3), tau, invmat(3,3), p1, p2, dt, mat(3,3)
+ real(kind=real64) u0(nt), u(nt), cc(-nt+1:nt-1), t(-nt+1:nt-1)
+ real(kind=real64) times(3), tau, invmat(3,3), p1, p2, dt, mat(3,3)
  do i=(-nt+1),0
   t(i) = i*dt
   l1 = -i + 1
@@ -894,14 +896,14 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
     use integrals
     implicit none
     integer, intent(in) :: nt, lef, rig
-    real*8, intent(in) :: u0(nt), u(nt)
-    real*8 dt
-    real*8, intent(inout) :: tau
-    real*8 u0dot(nt), window(nt)
+    real(kind=real64), intent(in) :: u0(nt), u(nt)
+    real(kind=real64) dt
+    real(kind=real64), intent(inout) :: tau
+    real(kind=real64) u0dot(nt), window(nt)
     integer k
-    integer*8 plan
-    complex*16 u0w(nt/2+1)
-    real*8 numerator,denominator
+    integer(kind=8) plan
+    complex(kind=real64) u0w(nt/2+1)
+    real(kind=real64) numerator,denominator
 
 
     window = 0.0
@@ -947,9 +949,9 @@ SUBROUTINE VZ_FROM_VX_CONTINUITY(vx,vz)
     use all_modules
     implicit none
 
-    real*8, dimension(nx,1,nz), intent(in) :: vx
-    real*8, dimension(nx,1,nz) :: dxrhovx
-    real*8, dimension(nx,1,nz), intent(out) :: vz
+    real(kind=real64), dimension(nx,1,nz), intent(in) :: vx
+    real(kind=real64), dimension(nx,1,nz) :: dxrhovx
+    real(kind=real64), dimension(nx,1,nz), intent(out) :: vz
 !~     CHARACTER(len=255) :: cwd,homedir,pythoncmd
 !~     integer e
 !~     logical rhoex
@@ -990,9 +992,9 @@ SUBROUTINE VX_FROM_VZ_CONTINUITY(vz,vx)
     use all_modules
     implicit none
 
-    real*8, dimension(nx,1,nz), intent(in) :: vz
-    real*8, dimension(nx,1,nz) :: dzrhovz
-    real*8, dimension(nx,1,nz), intent(out) :: vx
+    real(kind=real64), dimension(nx,1,nz), intent(in) :: vz
+    real(kind=real64), dimension(nx,1,nz) :: dzrhovz
+    real(kind=real64), dimension(nx,1,nz), intent(out) :: vx
 
     call ddz(rho0*vz,dzrhovz,1)
 !~     call writefits_3d("dzrhovz.fits",dzrhovz,nz)
@@ -1008,9 +1010,9 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     use derivatives
     use all_modules
     implicit none
-    real*8, intent(in),dimension(nx,1,nz) :: vx,vz
-    real*8, dimension(nx,1,nz) :: cont
-    real*8, dimension(:,:,:), allocatable :: dxrhovx,dzrhovz,dzrho
+    real(kind=real64), intent(in),dimension(nx,1,nz) :: vx,vz
+    real(kind=real64), dimension(nx,1,nz) :: cont
+    real(kind=real64), dimension(:,:,:), allocatable :: dxrhovx,dzrhovz,dzrho
 
     allocate(dxrhovx(nx,1,nz),dzrhovz(nx,1,nz),dzrho(nx,1,nz))
 
@@ -1120,7 +1122,7 @@ SUBROUTINE FORWARD_SOURCE(nt)
 ! use all_modules
  implicit none
  integer nt, k
- real*8 ttime!,nupea,nuwid
+ real(kind=real64) ttime!,nupea,nuwid
 
 !nupeak = 0.0025
 ! nuwidth=0.002
@@ -1149,8 +1151,8 @@ SUBROUTINE FMODE_FILTER(nt, fmode)
   implicit none
 
   integer i,j,nt
-  real*8 fmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) fmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   dt = outputcad
 
@@ -1203,8 +1205,8 @@ SUBROUTINE HIGHPMODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt
-  real*8 Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt
+  real(kind=real64) Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   dt = outputcad
 
@@ -1252,8 +1254,8 @@ SUBROUTINE P1MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta,Polylow(0:2)
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta,Polylow(0:2)
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1309,8 +1311,8 @@ SUBROUTINE P2MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1365,8 +1367,8 @@ SUBROUTINE P3MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt!f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt!f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1421,8 +1423,8 @@ SUBROUTINE P4MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1477,8 +1479,8 @@ SUBROUTINE P5MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1536,8 +1538,8 @@ SUBROUTINE P6MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1602,8 +1604,8 @@ SUBROUTINE P7MODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1668,8 +1670,8 @@ SUBROUTINE ALL_PMODE_FILTER(nt, pmode)
   use all_modules
   implicit none
   integer i,j,nt,nrow
-  real*8 pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
-  real*8 Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
+  real(kind=real64) pmode(nx, dim2(rank), nt),f_low,df,k(nx),dt,f_mode_const
+  real(kind=real64) Poly(0:2),Polylow(0:2), f0(nx),w(nt),f(nt),f1(nx),d,delta
 
   open (unit=32,file="filter.txt",action="write",status="replace")
   dt = outputcad
@@ -1720,7 +1722,7 @@ SUBROUTINE FREQ_FILTER(f1, f2, nt, filt)
   use initialize
   implicit none
   integer nt, i
-  real*8 f1,f2,filt(nt),w(nt),wid,dt
+  real(kind=real64) f1,f2,filt(nt),w(nt),wid,dt
   ! f1, f2 are in mHz
   call distmat(nt,1,w)
   dt =outputcad
@@ -1736,7 +1738,7 @@ SUBROUTINE PHASE_FILTER(speed, var, nt, filt)
   use initialize
   implicit none
   integer nt, k
-  real*8 speed, var,filt(nx,dim2(rank),nt),w(nt),kay(nx),dt,dw
+  real(kind=real64) speed, var,filt(nx,dim2(rank),nt),w(nt),kay(nx),dt,dw
   ! f1, f2 are in mHz
   call distmat(nt,1,w)
   dt =outputcad
@@ -1758,28 +1760,28 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
     use all_modules
     use bspline
     implicit none
-    integer *8 fwdplantemp, invplantemp, invplantemp2!, fwdquiet, invquiet
-    integer*8  invplantemp3, fwdplandata, invplandata, onedplan
+    integer(kind=8) fwdplantemp, invplantemp, invplantemp2!, fwdquiet, invquiet
+    integer(kind=8)  invplantemp3, fwdplandata, invplandata, onedplan
     logical :: lexist,exist_win,file_open
     integer i, nt, indexnum, pord, timesmax, halftime, bounce,timefin, idiff,dumm(0:5)
     integer loc, leng, lef, rig, j, nmeasurements, nmeas, ierr,timest, filenum
-    character*1 ord
-    character*2 contribmatch
-    real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
-    real*8 ampquiet, ampmag
-    real*8,dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,all_else,filter,phase,temparr,&
+    character(len=1) ord
+    character(len=2) contribmatch
+    real(kind=real64) mindist, maxdist, window, distances(nx), x00, t(nt),  tau, signed(nx),taus(nx)
+    real(kind=real64) ampquiet, ampmag
+    real(kind=real64),dimension(nx,dim2(rank),nt):: p1mode,p2mode,fmode,all_else,filter,phase,temparr,&
                                       all_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
-    real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
-    real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
-    complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat,& !, filtquiet, tempquiet, &
+    real(kind=real64) pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx), vel(0:10)
+    real(kind=real64) freqnu(nt), leftcorner, rightcorner, dnu, con, misfit,misfit_tot
+    complex(kind=real64), dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat,& !, filtquiet, tempquiet, &
                                  filtdat, filtex, filtemp,dat,acc,ccdot!, quiet, quietfilt
-    complex*16, dimension(nx) :: eyekh
-    complex*16, dimension(nt) :: oned, ccdotone
-    complex*16 UNKNOWN
+    complex(kind=real64), dimension(nx) :: eyekh
+    complex(kind=real64), dimension(nt) :: oned, ccdotone
+    complex(kind=real64) UNKNOWN
     integer kxord
     parameter(kxord=3)
-    real*8 speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
-    real*8 ign1,ign2, dist
+    real(kind=real64) speed, var, param(6), offset, bcoef(nx),xknot(kxord+nx)
+    real(kind=real64) ign1,ign2, dist
 
 
     UNKNOWN = 1.0/0.55
@@ -2063,7 +2065,7 @@ SUBROUTINE ADJOINT_SOURCE_FILT(nt)
                     ! call compute_tt(real(acc(i,1,lef:rig)),real(dat(i,1,lef:rig)),tau,dt,leng)
                      call compute_tt_gizonbirch(real(acc(i,1,:)),real(dat(i,1,:)),tau,dt,nt, lef, rig)
 
-138                 format (I3,X,F14.8,X,I4,X,I4,X,I4,X,I4,X,I4)
+138                 format (I3,1X,F14.8,1X,I4,1X,I4,1X,I4,1X,I4,1X,I4)
 
                     write(238,138) i,tau*60.,lef,rig,loc,timest,timefin
 
@@ -2240,8 +2242,8 @@ END SUBROUTINE ADJOINT_SOURCE_FILT
 !! use ifport
 ! implicit none
 ! integer, intent(in) :: order
-! real*8, intent(in) :: arg
-! real*8, intent(out) :: outp
+! real(kind=real64), intent(in) :: arg
+! real(kind=real64), intent(out) :: outp
 
 ! outp = BesJN(order,arg)
 
@@ -2253,12 +2255,12 @@ SUBROUTINE FOURIER_SMOOTH_X(input_arr,nk,output_arr)
     use initialize
     implicit none
     integer, intent(in) :: nk
-    real*8, dimension(nx,1,nz), intent(in) :: input_arr
-    real*8, dimension(nx,1,nz), intent(out) :: output_arr
-    real*8 psi_row(nx),sigmak_smooth,smoothing_function(nx/2+1),k_smooth
-    complex*16 psi_fft(nx/2+1)
+    real(kind=real64), dimension(nx,1,nz), intent(in) :: input_arr
+    real(kind=real64), dimension(nx,1,nz), intent(out) :: output_arr
+    real(kind=real64) psi_row(nx),sigmak_smooth,smoothing_function(nx/2+1),k_smooth
+    complex(kind=real64) psi_fft(nx/2+1)
     integer zind,xind
-    integer*8 plan_fwd,plan_inv
+    integer(kind=8) plan_fwd,plan_inv
 
     call dfftw_plan_dft_r2c_1d(plan_fwd,nx,psi_row,psi_fft,FFTW_ESTIMATE)
     call dfftw_plan_dft_c2r_1d(plan_inv,nx,psi_fft,psi_row,FFTW_ESTIMATE)
@@ -2293,26 +2295,26 @@ SUBROUTINE MISFIT_ALL(nt)
     use initialize
     use all_modules
     implicit none
-    integer*8 fwdplantemp, invplantemp, invplantemp2
-    integer*8  invplantemp3, fwdplandata, invplandata, onedplan
+    integer(kind=8) fwdplantemp, invplantemp, invplantemp2
+    integer(kind=8)  invplantemp3, fwdplandata, invplandata, onedplan
     logical lexist,exist_win,file_open
     integer i, nt, indexnum, pord, timesmax, halftime, bounce, freqfilts,timest
     integer loc, leng, lef, rig, j, nmeasurements(0:10), nmeas(0:10), ierr,timefin
-    character*1 ord,ffstr
-    real*8 mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:10)
-    real*8,dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
+    character(len=1) ord,ffstr
+    real(kind=real64) mindist, maxdist, window, distances(nx), x00, t(nt),  tau, vel(0:10)
+    real(kind=real64),dimension(nx,dim2(rank),nt):: pmode,p2mode,fmode,all_else,filter,phase,temparr,&
                                       all_pmode,p3mode,p4mode,p5mode,p6mode,p7mode
-    real*8 pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx)
-    real*8 freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:10),misfit_tot(0:10)
-    complex*16, dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat, &
+    real(kind=real64) pcoef(5,4), adj(nx,dim2(rank),nt), windows(nt), filt(nt),dt,xdim(nx)
+    real(kind=real64) freqnu(nt), leftcorner, rightcorner, dnu, con, misfit(0:10),misfit_tot(0:10)
+    complex(kind=real64), dimension(nx,dim2(rank),nt) :: filtout, tempout, tempdat, &
                                  filtdat, filtex, filtemp,dat,acc,ccdot
-    complex*16, dimension(nx) :: eyekh
-    complex*16, dimension(nt) :: oned, ccdotone
-    complex*16 UNKNOWN
-    real*8 speed, var, param(6), d_i
-    real*8 ign1,ign2
-    character*2 fnum
-    character*1 frqnum
+    complex(kind=real64), dimension(nx) :: eyekh
+    complex(kind=real64), dimension(nt) :: oned, ccdotone
+    complex(kind=real64) UNKNOWN
+    real(kind=real64) speed, var, param(6), d_i
+    real(kind=real64) ign1,ign2
+    character(len=2) fnum
+    character(len=1) frqnum
 
     UNKNOWN = 1.0/0.55
     filtout = 1.0
