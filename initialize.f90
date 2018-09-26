@@ -21,23 +21,25 @@ MODULE INITIALIZE
 
 ! ----------------------------
 
+  
+
    integer time,step_rk,dimfive,option, indexglob
    integer MAXTIME,e_rad,num_steps, steps, o_rad, freq_filtering
 
-   integer*8 fftw_plan_fwd_x,fftw_plan_inv_x
-   integer*8 fftw_plan_fwd_y,fftw_plan_inv_y
-   integer*8 fftw_plan_fwd_2d,fftw_plan_inv_2d
+   integer(kind=8) fftw_plan_fwd_x,fftw_plan_inv_x
+   integer(kind=8) fftw_plan_fwd_y,fftw_plan_inv_y
+   integer(kind=8) fftw_plan_fwd_2d,fftw_plan_inv_2d
 
 
-   real*8  pi,deltat,rsun,z(nz), x(nx), y(ny), timeline
-   real*8  dimc, diml, spongex(nx), dx, dy, rhoq(nz), &
-	   dimrho, normx, normy,nu, spongey(ny), spongez(nz), &
-	   height(nz), visc(nz), cq(nz)
+   real(kind=real64)  pi,deltat,rsun,z(nz), x(nx), y(ny), timeline
+   real(kind=real64)  dimc, diml, spongex(nx), dx, dy, rhoq(nz), &
+     dimrho, normx, normy,nu, spongey(ny), spongez(nz), &
+     height(nz), visc(nz), cq(nz)
 
    parameter(normx=1.0/DBLE(nx), normy = 1.0/DBLE(ny))
    parameter(rsun = 6.95989467700D10, pi = 3.141592653589793D0) ! rsun in cm
-   real*8  stretch(nz), unstretch(nz), stretchx, stretchy, decay_coeff_x(nx/2+1)
-   real*8 decay_coeff_y(ny/2+1), delta_width
+   real(kind=real64)  stretch(nz), unstretch(nz), stretchx, stretchy, decay_coeff_x(nx/2+1)
+   real(kind=real64) decay_coeff_y(ny/2+1), delta_width
    logical initcond, generate_wavefield, linesearch
 
    ! MPI Related definitions
@@ -71,90 +73,90 @@ MODULE INITIALIZE
    ! velocity, latitudinal velocity, longitudinal velocity and pressure in that order
    ! temp_step, scr - scratch space arrays used in the time evolution algorithm
 
-   real*8, allocatable, dimension(:,:,:) :: div, vr, c2, omega_r,spongexyz
-   real*8, allocatable, dimension(:,:) :: forcing
-   real*8, allocatable, dimension(:,:,:) :: p0, gradp0_z, c_speed, rho0, gradrho0_z, rhoinv, c2rho0, c2div_v0 ,reduction
-   real*8, allocatable, dimension(:,:,:) :: c_bump
-   real*8, allocatable, dimension(:) :: source_dep, g, gamma
-   real*8, allocatable, target, dimension(:,:,:,:) ::  a,temp_step,scr, gradp
+   real(kind=real64), allocatable, dimension(:,:,:) :: div, vr, c2, omega_r,spongexyz
+   real(kind=real64), allocatable, dimension(:,:) :: forcing
+   real(kind=real64), allocatable, dimension(:,:,:) :: p0, gradp0_z, c_speed, rho0, gradrho0_z, rhoinv, c2rho0, c2div_v0 ,reduction
+   real(kind=real64), allocatable, dimension(:,:,:) :: c_bump
+   real(kind=real64), allocatable, dimension(:) :: source_dep, g, gamma
+   real(kind=real64), allocatable, target, dimension(:,:,:,:) ::  a,temp_step,scr, gradp
 
-   real*8, pointer, dimension(:,:,:) :: rho,RHSv_z,dvzdz,    &
-	&	RHSv_y,RHScont,p,RHSp,gradp_z,gradp_y,gradp_x,RHSv_x
+   real(kind=real64), pointer, dimension(:,:,:) :: rho,RHSv_z,dvzdz,    &
+  & RHSv_y,RHScont,p,RHSp,gradp_z,gradp_y,gradp_x,RHSv_x
 
-   real*8, allocatable, target, dimension(:,:,:) :: dvxdx, dvydy, gradvz
+   real(kind=real64), allocatable, target, dimension(:,:,:) :: dvxdx, dvydy, gradvz
 
    ! For periodic horizontal boundaries
-   complex*16, allocatable, dimension(:) :: eyekx, eyeky
-   complex*16, parameter :: eye = (0.0d0,1.0d0)
+   complex(kind=real64), allocatable, dimension(:) :: eyekx, eyeky
+   complex(kind=real64), parameter :: eye = (0.0d0,1.0d0)
 
    !-----Quadratic and Lagrange interpolation stuff------!
    integer time1, time_old
-   real*8 x0, x1, x2, x3, x4, x5, x6
-   real*8, dimension(:,:), allocatable :: z_i, z_iplus1, LC0, LC1, LC2, LC3, LC4, LC5, LC6
+   real(kind=real64) x0, x1, x2, x3, x4, x5, x6
+   real(kind=real64), dimension(:,:), allocatable :: z_i, z_iplus1, LC0, LC1, LC2, LC3, LC4, LC5, LC6
 
    !-----Flow stuf------!
-   real*8, allocatable, target, dimension(:,:,:,:) :: omega,v0,gradrho,omega0,advect0
-   real*8, allocatable, dimension(:,:,:) :: flow_x, flow_y, flow_z, div_v0, psivar
+   real(kind=real64), allocatable, target, dimension(:,:,:,:) :: omega,v0,gradrho,omega0,advect0
+   real(kind=real64), allocatable, dimension(:,:,:) :: flow_x, flow_y, flow_z, div_v0, psivar
 
-   real*8, pointer, dimension(:,:,:) ::	v0_x, v0_y, v0_z, omega0_x, omega0_y, omega0_z, gradrho_x, &
-		gradrho_y, gradrho_z, advect0_x, advect0_y, advect0_z, &
-		omega_x, omega_y, omega_z
+   real(kind=real64), pointer, dimension(:,:,:) ::  v0_x, v0_y, v0_z, omega0_x, omega0_y, omega0_z, gradrho_x, &
+    gradrho_y, gradrho_z, advect0_x, advect0_y, advect0_z, &
+    omega_x, omega_y, omega_z
 
 
    !-----Magnetic field stuff-----!
 
-   real*8 dimb!, reduction(nz)
-   real*8, allocatable, dimension(:,:,:) :: box, boy, boz, gradp0_x, gradp0_y, dzbx, dzflux2, &
-		curlbox, curlboy, curlboz, curlbx, curlby, curlbz, gradrho0_x, gradrho0_y,&
-		dzby, dzflux1, flux1, flux2, flux3
-   real*8, pointer, dimension(:,:,:) :: bx, by, bz, RHSb_x, RHSb_y, RHSb_z, v_x, v_y, v_z
+   real(kind=real64) dimb!, reduction(nz)
+   real(kind=real64), allocatable, dimension(:,:,:) :: box, boy, boz, gradp0_x, gradp0_y, dzbx, dzflux2, &
+    curlbox, curlboy, curlboz, curlbx, curlby, curlbz, gradrho0_x, gradrho0_y,&
+    dzby, dzflux1, flux1, flux2, flux3
+   real(kind=real64), pointer, dimension(:,:,:) :: bx, by, bz, RHSb_x, RHSb_y, RHSb_z, v_x, v_y, v_z
 
    integer, dimension(:,:), allocatable :: erad_2d, orad_2d
-   real*8, dimension(:,:), allocatable :: delta_width_2d
+   real(kind=real64), dimension(:,:), allocatable :: delta_width_2d
 
 
    !-----DISPLACEMENT--------!
-   real*8, allocatable, target, dimension(:,:,:,:) :: scratch
-   real*8, pointer, dimension(:,:,:) :: dxixdx, dxiydy, dxizdz, RHSxi_x, RHSxi_y, RHSxi_z, &
-					xi_x, xi_y, xi_z
+   real(kind=real64), allocatable, target, dimension(:,:,:,:) :: scratch
+   real(kind=real64), pointer, dimension(:,:,:) :: dxixdx, dxiydy, dxizdz, RHSxi_x, RHSxi_y, RHSxi_z, &
+          xi_x, xi_y, xi_z
 
    !------PML STUFF------!
-   real*8, allocatable, dimension(:,:,:) :: az, bzpml
-   real*8, target, allocatable, dimension(:,:,:,:) :: scrpml, psipml, pmlvars
-   real*8, pointer, dimension(:,:,:) :: psivz, psip, psidzbx, psidzby, RHSpsiinductionbx,&
-					psiinductionbx, psiinductionby, RHSpsivz, RHSpsip, &
-					RHSpsidzbx, RHSpsidzby, RHSpsiinductionby
+   real(kind=real64), allocatable, dimension(:,:,:) :: az, bzpml
+   real(kind=real64), target, allocatable, dimension(:,:,:,:) :: scrpml, psipml, pmlvars
+   real(kind=real64), pointer, dimension(:,:,:) :: psivz, psip, psidzbx, psidzby, RHSpsiinductionbx,&
+          psiinductionbx, psiinductionby, RHSpsivz, RHSpsip, &
+          RHSpsidzbx, RHSpsidzby, RHSpsiinductionby
 
 
    !------HORIZONTAL PML STUFF-----!
-   real*8, allocatable, dimension(:,:,:) :: axpml, bxpml, aypml, bypml
-   real*8, target, allocatable, dimension(:,:,:,:) :: scrpmlx, psipmlx, pmlvarsx,&
-					scrpmly, psipmly, pmlvarsy
-   real*8, pointer, dimension(:,:,:) :: psivx, psivy, RHSpsivx, RHSpsivy, psi_gradp_x,&
-				RHS_psi_gradp_x, psi_gradp_y, RHS_psi_gradp_y
+   real(kind=real64), allocatable, dimension(:,:,:) :: axpml, bxpml, aypml, bypml
+   real(kind=real64), target, allocatable, dimension(:,:,:,:) :: scrpmlx, psipmlx, pmlvarsx,&
+          scrpmly, psipmly, pmlvarsy
+   real(kind=real64), pointer, dimension(:,:,:) :: psivx, psivy, RHSpsivx, RHSpsivy, psi_gradp_x,&
+        RHS_psi_gradp_x, psi_gradp_y, RHS_psi_gradp_y
    logical :: PROC_HAS_PML
 
 
    !-----DAMPING STUFF---!
-   real*8, allocatable, dimension(:,:,:) :: transfermatrix
-   complex*16, allocatable, dimension(:,:,:) :: transfertemp
-   real*8, allocatable, dimension(:,:) :: damping_rates,kay2d
+   real(kind=real64), allocatable, dimension(:,:,:) :: transfermatrix
+   complex(kind=real64), allocatable, dimension(:,:,:) :: transfertemp
+   real(kind=real64), allocatable, dimension(:,:) :: damping_rates,kay2d
 
    !------KERNEL STUFF-----!
 
    integer bcx, bcy, bcz, source_x, source_y, nmasters
-   integer*8 :: fftw_time_fwd, fftw_time_inv
+   integer(kind=8) :: fftw_time_fwd, fftw_time_inv
    logical :: PROC_HAS_ADJOINT, COMPUTE_DATA, COMPUTE_SYNTH
-   real*8 powerspec_fac, loc_x, loc_y
-   real*8, allocatable, dimension(:,:,:) :: f_xi_x, f_xi_y, f_xi_z, hessian, &
-			 kernelc2, kernelrho, kernelp, f_vel_x, f_vel_y, f_vel_z, a_vel_x, &
-			 a_vel_y, a_vel_z, f_acc_x, f_acc_y, f_acc_z, a_acc_x, a_acc_y, a_acc_z
-   real*8, allocatable, dimension(:,:,:,:) :: kernelv, kernelb
-   real*8, allocatable, dimension(:) :: sourcefunction, zkern, stretchkern, nus, grav, adjoint_source, fwdsource
+   real(kind=real64) powerspec_fac, loc_x, loc_y
+   real(kind=real64), allocatable, dimension(:,:,:) :: f_xi_x, f_xi_y, f_xi_z, hessian, &
+       kernelc2, kernelrho, kernelp, f_vel_x, f_vel_y, f_vel_z, a_vel_x, &
+       a_vel_y, a_vel_z, f_acc_x, f_acc_y, f_acc_z, a_acc_x, a_acc_y, a_acc_z
+   real(kind=real64), allocatable, dimension(:,:,:,:) :: kernelv, kernelb
+   real(kind=real64), allocatable, dimension(:) :: sourcefunction, zkern, stretchkern, nus, grav, adjoint_source, fwdsource
 
    integer  st_adjoint, st_forward, end_forward, cadforcing_step
-   real*8 local_time, final_time, fwd_start_time
-   character*2 contrib,jobno
+   real(kind=real64) local_time, final_time, fwd_start_time
+   character(len=2) contrib,jobno
 
 
 Contains
@@ -169,9 +171,9 @@ Contains
    integer i, j, k,fwd_sprev, inv_sprev, rem1, fwd_prev_z
    integer fwd_rprev, inv_rprev, ierr, rem2, rem3
    integer (KIND=MPI_ADDRESS_KIND) dum,sizeofdouble
-   real*8, allocatable, dimension(:,:,:) :: in
-   complex*16, allocatable, dimension(:,:,:) :: co1
-   real*8 param1, param2, value1, value2, tempxyz, const, themax
+   real(kind=real64), allocatable, dimension(:,:,:) :: in
+   complex(kind=real64), allocatable, dimension(:,:,:) :: co1
+   real(kind=real64) param1, param2, value1, value2, tempxyz, const, themax
 
    call MPI_INIT(ierr)
    call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
@@ -224,10 +226,10 @@ Contains
    stretchy = rsun/ylength
 
    allocate(dim1(0:numtasks-1), dim2(0:numtasks-1), dimz(0:numtasks-1),&
-	fwd_sendtypes(0:numtasks-1), inv_sendtypes(0:numtasks-1), &
-	fwd_recvtypes(0:numtasks-1), inv_recvtypes(0:numtasks-1), &
-	ystart(0:numtasks-1), fwd_sdispls(0:numtasks-1), fwd_rdispls(0:numtasks-1),&
-	inv_sdispls(0:numtasks-1), inv_rdispls(0:numtasks-1), fwd_z_send(0:numtasks-1),&
+  fwd_sendtypes(0:numtasks-1), inv_sendtypes(0:numtasks-1), &
+  fwd_recvtypes(0:numtasks-1), inv_recvtypes(0:numtasks-1), &
+  ystart(0:numtasks-1), fwd_sdispls(0:numtasks-1), fwd_rdispls(0:numtasks-1),&
+  inv_sdispls(0:numtasks-1), inv_rdispls(0:numtasks-1), fwd_z_send(0:numtasks-1),&
         inv_z_send(0:numtasks-1), fwd_z_recv(0:numtasks-1), inv_z_recv(0:numtasks-1),&
         fwd_z_displs(0:numtasks-1))
 
@@ -589,11 +591,11 @@ SUBROUTINE INIT_KERNEL
 
   implicit none
   integer i,j, rem1, rem2, rem3, fwd_sprev, fwd_rprev, inv_sprev, inv_rprev
-  real*8, allocatable, dimension(:,:,:) :: in
-  complex*16, allocatable, dimension(:,:,:) :: co1
-  real*8, allocatable, dimension(:,:,:,:) ::inn4
-  complex*16, allocatable, dimension(:,:,:,:) :: fft_data
-  real*8 unstretchkern(nz_kern)
+  real(kind=real64), allocatable, dimension(:,:,:) :: in
+  complex(kind=real64), allocatable, dimension(:,:,:) :: co1
+  real(kind=real64), allocatable, dimension(:,:,:,:) ::inn4
+  complex(kind=real64), allocatable, dimension(:,:,:,:) :: fft_data
+  real(kind=real64) unstretchkern(nz_kern)
 
    ! Fwd transpose
    ! Sent packets are of dimensions dim1(receiver_rank), dim2(rank), nz
@@ -651,19 +653,19 @@ SUBROUTINE INIT_KERNEL
 
 
   allocate(f_xi_x(nx,dim2(rank),nz_kern), f_xi_y(nx,dim2(rank),nz_kern), &
-	   f_xi_z(nx,dim2(rank),nz_kern),  &
-	   kernelc2(nx,dim2(rank),nz_kern), kernelrho(nx,dim2(rank),nz_kern), kernelp(nx,dim2(rank),nz_kern), &
-	   kernelv(nx,dim2(rank),nz_kern,3), nus(nt_kern), &
-	   sourcefunction(nt_kern/2+1), zkern(nz_kern), f_vel_x(nx,dim2(rank),nz_kern),&
-	   f_vel_y(nx,dim2(rank),nz_kern), f_vel_z(nx,dim2(rank),nz_kern), &
-	   a_vel_x(nx,dim2(rank),nz_kern),&
-	   a_vel_y(nx,dim2(rank),nz_kern), a_vel_z(nx,dim2(rank),nz_kern), &
-	   stretchkern(nz_kern), grav(nz_kern), gamma(nz_kern),&
-	   gradrho0_x(nx,dim2(rank),nz_kern), gradrho0_y(nx,dim2(rank),nz_kern), &
-	   gradrho0_z(nx,dim2(rank),nz_kern), f_acc_x(nx,dim2(rank),nz_kern), &
-	   f_acc_y(nx,dim2(rank),nz_kern),  f_acc_z(nx,dim2(rank),nz_kern),&
-	   a_acc_x(nx,dim2(rank),nz_kern), a_acc_y(nx,dim2(rank),nz_kern), &
-	   a_acc_z(nx,dim2(rank),nz_kern), hessian(nx,dim2(rank),nz_kern))
+     f_xi_z(nx,dim2(rank),nz_kern),  &
+     kernelc2(nx,dim2(rank),nz_kern), kernelrho(nx,dim2(rank),nz_kern), kernelp(nx,dim2(rank),nz_kern), &
+     kernelv(nx,dim2(rank),nz_kern,3), nus(nt_kern), &
+     sourcefunction(nt_kern/2+1), zkern(nz_kern), f_vel_x(nx,dim2(rank),nz_kern),&
+     f_vel_y(nx,dim2(rank),nz_kern), f_vel_z(nx,dim2(rank),nz_kern), &
+     a_vel_x(nx,dim2(rank),nz_kern),&
+     a_vel_y(nx,dim2(rank),nz_kern), a_vel_z(nx,dim2(rank),nz_kern), &
+     stretchkern(nz_kern), grav(nz_kern), gamma(nz_kern),&
+     gradrho0_x(nx,dim2(rank),nz_kern), gradrho0_y(nx,dim2(rank),nz_kern), &
+     gradrho0_z(nx,dim2(rank),nz_kern), f_acc_x(nx,dim2(rank),nz_kern), &
+     f_acc_y(nx,dim2(rank),nz_kern),  f_acc_z(nx,dim2(rank),nz_kern),&
+     a_acc_x(nx,dim2(rank),nz_kern), a_acc_y(nx,dim2(rank),nz_kern), &
+     a_acc_z(nx,dim2(rank),nz_kern), hessian(nx,dim2(rank),nz_kern))
 
 
   allocate(p0(nx, dim2(rank), nz_kern), rho0(nx, dim2(rank), nz_kern), c2(nx, dim2(rank), nz_kern),&
@@ -671,10 +673,10 @@ SUBROUTINE INIT_KERNEL
 
   if (magnetic) allocate(curlbox(nx, dim2(rank), nz_kern), curlboy(nx, dim2(rank), nz_kern), &
         curlboz(nx,dim2(rank),nz_kern), box(nx, dim2(rank), nz_kern), boy(nx, dim2(rank), nz_kern), &
-	boz(nx, dim2(rank), nz_kern), kernelb(nx,dim2(rank),nz_kern,3))
+  boz(nx, dim2(rank), nz_kern), kernelb(nx,dim2(rank),nz_kern,3))
 
   if (background_flows_exist) allocate(v0_x(nx, dim2(rank), nz_kern), v0_y(nx, dim2(rank), nz_kern), &
-	v0_z(nx, dim2(rank), nz_kern))
+  v0_z(nx, dim2(rank), nz_kern))
 
 
    !----COMPUTING FFT PLANS
@@ -705,10 +707,10 @@ SUBROUTINE INIT_KERNEL
 
 !   allocate(inn4(nx, dim2(rank), nz_kern, nt_kern))
 !  call dfftw_plan_guru_dft_r2c(fftw_time_fwd, 1, nt_kern, nx*dim2(rank)*nz_kern,  nx*dim2(rank)*nz_kern, 1, &
-!			nx*dim2(rank)*nz_kern,1,1,inn4, fft_data, FFTW_ESTIMATE)
+!     nx*dim2(rank)*nz_kern,1,1,inn4, fft_data, FFTW_ESTIMATE)
 
 !  call dfftw_plan_guru_dft_c2r(fftw_time_inv, 1, nt_kern, nx*dim2(rank)*nz_kern,  nx*dim2(rank)*nz_kern, 1, &
-!			nx*dim2(rank)*nz_kern,1,1, fft_data, inn4,  FFTW_ESTIMATE)
+!     nx*dim2(rank)*nz_kern,1,1, fft_data, inn4,  FFTW_ESTIMATE)
 
 !  deallocate(fft_data, inn4)
 
@@ -730,7 +732,7 @@ Subroutine solar_data
 
   implicit none
   integer k,q,i
-  real*8 data(nz,6),temp,sigmax,sigmaz
+  real(kind=real64) data(nz,6),temp,sigmax,sigmaz
 
   ! Data in the file is arranged as
   ! Non-dimensional Solar radius, sound speed, density, pressure, gravity, gamma_1
@@ -758,15 +760,19 @@ Subroutine solar_data
 
   do k =1,nz
     z(k) = data(k,1)
-    c_speed(:,:,k) = data(k,2)/dimc
+    c_speed(:,:,k) = data(k,2)/dimc  ! smoothed c
+!~     c_speed(:,:,k) = data(k,11)/dimc  !*0.01
+!~     c2(:,:,k) = (data(k,2)/dimc)**2.0 !c_speed(4,5,k)**2.0
+
      rho0(:,:,k) = data(k,3)/dimrho
+   !  rho0(:,:,k) = data(k,7)/dimrho
     p0(:,:,k) = data(k,4)/(dimrho*dimc**2.0)
     g(k) = data(k,5)*diml/dimc**2.0
     gamma(k) = data(k,6)
     cq(k) =data(k,2)/dimc
-
+!~     cq(k) =data(k,11)/dimc
      rhoq(k) = data(k,3)/dimrho
-
+   !  rhoq(k) = data(k,7)/dimrho
   enddo
   c2 = c_speed**2.0 !smoothed c2
 
@@ -932,7 +938,7 @@ Subroutine kernel_back ()
 
   implicit none
   integer k,q,kk
-  real*8 data(nz,6),temp
+  real(kind=real64) data(nz,6),temp
 
 
   ! Data in the file is arranged as
@@ -979,8 +985,8 @@ SUBROUTINE READ_PARAMETERS
 
  implicit none
  integer i
- character*80 calculation_type, directory_rel
- character*2 whether_2D, contribs
+ character(len=80) calculation_type, directory_rel
+ character(len=2) whether_2D, contribs
  integer ierr
  logical lexist1, lexist2, lexist
  logical, allocatable, dimension(:) :: forward, adjoint, kernels
@@ -1038,7 +1044,7 @@ if (lexist1) then
     !if (lexist) LINESEARCH = .TRUE.
 !    i = 1
 !    do while (forward(i) .and. (i .le. nmasters))
-! 	i = i+1
+!   i = i+1
 !    enddo
 !    if (i .le. nmasters) then
 !      call convert_to_string(i,contrib,2)
@@ -1065,7 +1071,7 @@ if (lexist1) then
 
 !      call getarg(1, contrib)
 !      do while (adjoint(i) .and. (i .le. nmasters))
-! 	i = i+1
+!   i = i+1
 !     enddo
 !     if (i .le. nmasters) then
 !      call convert_to_string(i,contrib,2)
@@ -1097,7 +1103,7 @@ elseif (.not. lexist1) then
 
 !     i = 1
 !      do while (kernels(i) .and. (i .le. nmasters))
-! 	i = i+1
+!   i = i+1
 !     enddo
 !     if (i .le. nmasters) then
 !      call convert_to_string(i,contrib,2)
@@ -1145,7 +1151,7 @@ END SUBROUTINE READ_PARAMETERS
   implicit none
   integer i,length_string,numbe,n(1:length_string),number_temp
   character*(length_string) sting
-  character*1 charc(10)
+  character(len=1) charc(10)
 
   charc(1)  = '0'
   charc(2)  = '1'
@@ -1176,7 +1182,7 @@ SUBROUTINE distmat(n,m,f)
 
  implicit none
  integer m, n, i, j, i2, j2
- real*8 f(n,m), sig
+ real(kind=real64) f(n,m), sig
 
 
  do j=1,m

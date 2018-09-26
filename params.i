@@ -14,6 +14,7 @@
 ! --------------------------------------------------------------------------
 !
 
+integer, parameter :: real64 = kind(1.0d0)
 
 ! PARAMETERS OF THE SIMULATION
 ! nx, ny, nz are the numbers of grid points in the x,y,z directions resply.

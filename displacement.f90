@@ -43,9 +43,9 @@ SUBROUTINE MP_QUIET_SPONGE_3D_DISPL
  do j=1,dim2(rank)
   do i=1,nx
    gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
-		  	    & - rho(i,j,1)*g(1))*unstretch(1)
+            & - rho(i,j,1)*g(1))*unstretch(1)
    gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-      			    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+                & - rho(i,j,nz)*g(nz))*unstretch(nz)
   enddo
  enddo
 
@@ -114,7 +114,7 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
  integer i,j,k, bc
- real*8, dimension(nx, dim2(rank), nz) :: temp1, temp2, temp3, flux1, flux2, flux3
+ real(kind=real64), dimension(nx, dim2(rank), nz) :: temp1, temp2, temp3, flux1, flux2, flux3
 
   bc = 1
  call ddxyz(xi_x, dxixdx, xi_y, dxiydy, xi_z, dxizdz, bc)
@@ -145,9 +145,9 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
  do j=1,dim2(rank)
   do i=1,nx
    gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
-		  	    & - rho(i,j,1)*g(1))*unstretch(1)
+            & - rho(i,j,1)*g(1))*unstretch(1)
    gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-      			    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+                & - rho(i,j,nz)*g(nz))*unstretch(nz)
   enddo
  enddo
 
@@ -268,7 +268,7 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
 
   implicit none
   integer i,j,k, bc
-  real*8, allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z
 
   allocate(temp_x(nx,dim2(rank),nz),temp_y(nx,dim2(rank),nz),&
    temp_z(nx,dim2(rank),nz))
@@ -288,9 +288,9 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
  do j=1,dim2(rank)
   do i=1,nx
    gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
-		  	    & - rho(i,j,1)*g(1))*unstretch(1)
+            & - rho(i,j,1)*g(1))*unstretch(1)
    gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-      			    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+                & - rho(i,j,nz)*g(nz))*unstretch(nz)
   enddo
  enddo
 
@@ -306,19 +306,19 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
  call ddxyz(v_x, temp_x, v_x, temp_y, v_x, temp_z, bc)
 
  RHSv_x = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_x - spongexyz * v_x
+    rhoinv * gradp_x - spongexyz * v_x
 
 
  call ddxyz(v_y, temp_x, v_y, temp_y, v_y, temp_z,bc)
 
  RHSv_y = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_y - spongexyz * v_y
+    rhoinv * gradp_y - spongexyz * v_y
 
 
  call ddxyz(v_z, temp_x, v_z, temp_y, v_z, temp_z,bc)
 
  RHSv_z = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_z - spongexyz * v_z
+    rhoinv * gradp_z - spongexyz * v_z
 
 
  deallocate(temp_x, temp_y, temp_z)
@@ -380,7 +380,7 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
 
   implicit none
   integer i,j,k,pmlindex, bc
-  real*8, allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z
 
   allocate(temp_x(nx,dim2(rank),nz),temp_y(nx,dim2(rank),nz),&
    temp_z(nx,dim2(rank),nz))
@@ -436,19 +436,19 @@ SUBROUTINE MP_MHD_SPONGE_3D_DISPL
  call ddxyz(v_x, temp_x, v_x, temp_y, v_x, temp_z, bc)
 
  RHSv_x = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_x 
+    rhoinv * gradp_x 
 
  bc =1
  call ddxyz(v_y, temp_x, v_y, temp_y, v_y, temp_z, bc)
 
  RHSv_y = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_y 
+    rhoinv * gradp_y 
 
  bc =1
  call ddxyz(v_z, temp_x, v_z, temp_y, v_z, temp_z, bc)
 
  RHSv_z = - 2.0 * (v0_x * temp_x + v0_y * temp_y + v0_z * temp_z) - &
-		rhoinv * gradp_z 
+    rhoinv * gradp_z 
 
  deallocate(temp_x, temp_y, temp_z)
 
@@ -618,10 +618,10 @@ SUBROUTINE MP_QUIET_PML_3D_DISPL
 
    !  do j=1,dim2(rank)
    !   RHSv_z(:,j,o_rad) = RHSv_z(:,j,o_rad) + cos(4.*pi*(time*timestep-450.)/700.)  * &
-!		 	  exp(-powerspec_fac*(time*timestep-450.)**2./(2.*200.**2.))  * &
+!       exp(-powerspec_fac*(time*timestep-450.)**2./(2.*200.**2.))  * &
 !                          exp(-(x - loc_x)**2./(2. * (x(2)-x(1)))**2.) * &
-!			  exp(-(y(j+ystart(rank)-1) - loc_y)**2./(2. * (x(2)-x(1)))**2.) * &
-!			  delta_width/rho0(:,j,e_rad)
+!       exp(-(y(j+ystart(rank)-1) - loc_y)**2./(2. * (x(2)-x(1)))**2.) * &
+!       delta_width/rho0(:,j,e_rad)
 !     enddo
 
      RHSv_z(:,:,o_rad) = RHSv_z(:,:,o_rad) +  forcing/rho0(:,:,o_rad) * delta_width
@@ -668,7 +668,7 @@ SUBROUTINE MP_MHD_PML_3D_DISPL
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
  integer i,j,k, pmlindex,bc
- real*8, dimension(nx, dim2(rank), nz) :: flux1, flux2, flux3
+ real(kind=real64), dimension(nx, dim2(rank), nz) :: flux1, flux2, flux3
 
  flux1 = - (xi_z * boy - xi_y * boz)
  flux2 = - (xi_x * boz - xi_z * box)
@@ -728,13 +728,13 @@ SUBROUTINE MP_MHD_PML_3D_DISPL
    pmlindex = pmlindex + 1
 
    RHSpsiinductionbx(:,:,pmlindex) = az(:,:,k)*dzflux2(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
 
    dzflux2(:,:,k) = dzflux2(:,:,k) + psiinductionbx(:,:,pmlindex)
 
 
    RHSpsiinductionby(:,:,pmlindex) = az(:,:,k)*dzflux1(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
 
    dzflux1(:,:,k) = dzflux1(:,:,k) + psiinductionby(:,:,pmlindex)
 
@@ -761,12 +761,12 @@ SUBROUTINE MP_MHD_PML_3D_DISPL
     pmlindex = pmlindex + 1
 
     RHSpsidzbx(:,:,pmlindex) = az(:,:,k)*dzbx(:,:,k) &
-			+ bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
 
     dzbx(:,:,k) = dzbx(:,:,k) + psidzbx(:,:,pmlindex)
 
     RHSpsidzby(:,:,pmlindex) = az(:,:,k)*dzby(:,:,k) &
-			+ bzpml(:,:,k)*psidzby(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzby(:,:,pmlindex)    
 
     dzby(:,:,k) = dzby(:,:,k) + psidzby(:,:,pmlindex)
    endif
@@ -822,7 +822,7 @@ SUBROUTINE MP_MHD_PML_3D_DISPL
     do j=1,dim2(rank)
      do i=1,nx
       RHSv_z(i,j,orad_2d(i,j)) = RHSv_z(i,j,orad_2d(i,j)) +  &
-	forcing(i,j)/rho0(i,j,orad_2d(i,j)) * delta_width_2d(i,j) 
+  forcing(i,j)/rho0(i,j,orad_2d(i,j)) * delta_width_2d(i,j) 
      enddo
     enddo
 
@@ -831,7 +831,7 @@ SUBROUTINE MP_MHD_PML_3D_DISPL
      do j=1,dim2(rank)
       do i=1,nx
        RHSv_z(i,j,erad_2d(i,j)) = RHSv_z(i,j,erad_2d(i,j)) +  &
-	  forcing(i,j)/rho0(i,j,erad_2d(i,j)) * delta_width_2d(i,j)
+    forcing(i,j)/rho0(i,j,erad_2d(i,j)) * delta_width_2d(i,j)
       enddo
      enddo
 

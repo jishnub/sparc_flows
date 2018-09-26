@@ -17,7 +17,7 @@ Module Time_Step
   use displacement
   Implicit None
 
-  real*8, dimension(5) :: betas, optimals
+  real(kind=real64), dimension(5) :: betas, optimals
 
 Contains
 !=====================================================================================
@@ -52,16 +52,16 @@ Contains
        if (USE_PML) psipml = pmlvars
 
        if (HORIZONTAL_PMLS) then 
-	psipmlx = pmlvarsx
-	if (PROC_HAS_PML) psipmly = pmlvarsy
+  psipmlx = pmlvarsx
+  if (PROC_HAS_PML) psipmly = pmlvarsy
        endif
     else  
        temp_step = a + betas(step_rk)*scr
        if (USE_PML) psipml = pmlvars + betas(step_rk) * scrpml
 
        if (HORIZONTAL_PMLS) then 
-	psipmlx = pmlvarsx + betas(step_rk) * scrpmlx
-	if (PROC_HAS_PML) psipmly = pmlvarsy + betas(step_rk) * scrpmly
+  psipmlx = pmlvarsx + betas(step_rk) * scrpmlx
+  if (PROC_HAS_PML) psipmly = pmlvarsy + betas(step_rk) * scrpmly
        endif
 
 

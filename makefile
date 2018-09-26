@@ -17,14 +17,12 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 	splevl.o splint.o
 OBJS2= tt_test.o
 
-FC= $(HOME)/anaconda2/bin/mpif90
-#FC= mpif90
-FC77= $(HOME)/anaconda2/bin/mpif77
-#FC77= mpif77
+FC= mpif90
+FC77= mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
 #LIBS1 = -lfftw3 -lcfitsio
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -L$(HOME)/anaconda/lib -lfftw3 -lcfitsio -lgfortran -fopenmp -L/home/jishnu/lib/lapack-3.5.0 -llapack #-lquadmath
+LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio -lgfortran -L/home/apps/lapack-3.5 -llapack -lcurl #-lquadmath
 
 COMMAND1= sparc
 COMMAND2= tt_test
