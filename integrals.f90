@@ -6,11 +6,11 @@ contains
 SUBROUTINE INTEGRATE_Z(f,int_f)
 
     implicit none
-    real*8, intent(in) :: f(nx,1,nz)
-    real*8,intent(out) :: int_f(nx,1,nz)
-    real*8, dimension(nx,1,nz) :: int_f_spl,int_f_tpz
-    real*8 int_spl,int_tpz
-    real*8 splncoeff(3,nz)
+    real(kind=real64), intent(in) :: f(nx,1,nz)
+    real(kind=real64),intent(out) :: int_f(nx,1,nz)
+    real(kind=real64), dimension(nx,1,nz) :: int_f_spl,int_f_tpz
+    real(kind=real64) int_spl,int_tpz
+    real(kind=real64) splncoeff(3,nz)
     integer splerr,xdum,zdum,abcdum,abcdum2
     
     logical use_splines,use_antia
@@ -66,12 +66,12 @@ END SUBROUTINE INTEGRATE_Z
 SUBROUTINE INTEGRATE_X(f,int_f)
 
     implicit none
-    real*8, intent(in) :: f(nx,1,nz)
-    real*8,intent(out) :: int_f(nx,1,nz)
+    real(kind=real64), intent(in) :: f(nx,1,nz)
+    real(kind=real64),intent(out) :: int_f(nx,1,nz)
     integer zdum
-    integer*8 fwdplan,invplan
-    complex*16 fkx(nx/2+1)
-    real*8 mean,fx(nx),intfx(nx)
+    integer(kind=8) fwdplan,invplan
+    complex(kind=real64) fkx(nx/2+1)
+    real(kind=real64) mean,fx(nx),intfx(nx)
     
     
     call dfftw_plan_dft_r2c_1d(fwdplan,nx,fx,fkx,FFTW_ESTIMATE)
@@ -97,8 +97,8 @@ END SUBROUTINE INTEGRATE_X
 SUBROUTINE INTEGRATE_TIME(f,int_f,dt)
 
     implicit none
-    real*8, intent(in) :: dt,f(:)
-    real*8, intent(out) ::  int_f
+    real(kind=real64), intent(in) :: dt,f(:)
+    real(kind=real64), intent(out) ::  int_f
     
     call simpson_regular(f,dt,int_f)
 
@@ -107,8 +107,8 @@ END SUBROUTINE INTEGRATE_TIME
 SUBROUTINE SIMPSON_REGULAR(f,dvar,int_f)
 
     implicit none
-    real*8, intent(in) :: dvar,f(:)
-    real*8, intent(out) :: int_f
+    real(kind=real64), intent(in) :: dvar,f(:)
+    real(kind=real64), intent(out) :: int_f
     integer k
     
     do k=1,size(f)

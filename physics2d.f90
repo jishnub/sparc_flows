@@ -23,10 +23,11 @@ Contains
  SUBROUTINE mp_Initialize_RHS_2d()
 
    implicit none
+   
    integer i,j,k,l,flag(2),trans, counter
-   real*8 temp_r,temp_t,temp_p,in(nz), out(nz),advect0(nx,ny,nz),alphaz(nz), cmax
-   real*8 temp,output,temp2,start_damping,cchar, finish_damping, tempxy
-   real*8, allocatable, dimension(:,:,:) :: tempin, tempout, dampz, functiondecay, c2a, n2
+   real(kind=real64) temp_r,temp_t,temp_p,in(nz), out(nz),advect0(nx,ny,nz),alphaz(nz), cmax
+   real(kind=real64) temp,output,temp2,start_damping,cchar, finish_damping, tempxy
+   real(kind=real64), allocatable, dimension(:,:,:) :: tempin, tempout, dampz, functiondecay, c2a, n2
    logical iteration
 
    ! Determination of excitation location.
@@ -61,7 +62,7 @@ Contains
    do k=1,nz
     ! Sponge in the z-direction
     spongez(k) =  200.0/(1.0 + exp((1.002 - z(k))/0.0001)) & 
-		+ 300.0/(1.0 + exp((z(k) - (z(1) + 0.005))/0.0005))
+    + 300.0/(1.0 + exp((z(k) - (z(1) + 0.005))/0.0005))
 ! Source depth is where the sources are located
     source_dep(k) = exp(-10.0**(7.0)*4.0 *(z(k) - z(e_rad))**2.0)
 
@@ -88,7 +89,7 @@ Contains
      do i=1,nx
       tempxy=(((x(i)-0.5)*xlength*10.0**(-8.0))**2.0)**0.5
       vr(i,j,k) = vr(i,j,k) /(1.0+ exp((5.-k))) * &
-	     1.0/(1.0+exp((10.0-tempxy)*1.5))
+       1.0/(1.0+exp((10.0-tempxy)*1.5))
  
      enddo
    enddo
@@ -200,7 +201,7 @@ Contains
    ! Sponge in the x-direction
     do i=1,nx
      spongex(i) = (1.0 - 1.0/( (1.0 + exp((start_damping-x(i))/0.008))*&
-				(1.0 + exp((x(i)-finish_damping)/0.008)) ))
+        (1.0 + exp((x(i)-finish_damping)/0.008)) ))
     enddo 
 
    ! Sponge in the distributed y-direction
@@ -339,17 +340,17 @@ Contains
 
     do i=1,npmlhor
      axpml(i,:,:) = - 0.25*3. * 3. * &
-	c2(1,:,:)**0.5/(x(npmlhor) - x(1)) * ( (x(i) - x(npmlhor))/(x(npmlhor)-x(1)) )**2.
+  c2(1,:,:)**0.5/(x(npmlhor) - x(1)) * ( (x(i) - x(npmlhor))/(x(npmlhor)-x(1)) )**2.
      bxpml(i,:,:) = axpml(i,:,:) - &
-	0.005 * diml/dimc * pi * (x(i) - x(1))/(x(npmlhor) - x(1)) 
+  0.005 * diml/dimc * pi * (x(i) - x(1))/(x(npmlhor) - x(1)) 
     enddo
   
     counter = npmlhor + 1 
     do i=nx-npmlhor+1,nx
      axpml(counter,:,:) = - 0.25*3. * 3. * c2(1,:,:)**0.5/(x(nx) - x(nx-npmlhor+1)) * &
-		( (x(nx-npmlhor+1) - x(i))/(x(nx-npmlhor+1)-x(nx)) )**2.
+    ( (x(nx-npmlhor+1) - x(i))/(x(nx-npmlhor+1)-x(nx)) )**2.
      bxpml(counter,:,:) = axpml(counter,:,:) - 0.005 * diml/dimc * pi * &
-		(x(nx) - x(i))/(x(nx) - x(nx-npmlhor+1)) 
+    (x(nx) - x(i))/(x(nx) - x(nx-npmlhor+1)) 
      counter = counter + 1
     enddo
   
@@ -368,16 +369,16 @@ Contains
       temp = 1.0
       do k=e_rad-5,e_rad + 5
        if ( abs(rhoq(e_rad) - rho0(i,j,k)) .le. temp) then
- 	temp = abs(rhoq(e_rad) - rho0(i,j,k))
- 	erad_2d(i,j) = k
+  temp = abs(rhoq(e_rad) - rho0(i,j,k))
+  erad_2d(i,j) = k
        endif
       enddo
 
       temp = 1.0
       do k=o_rad-50,o_rad !+ 10
        if ( abs(rhoq(o_rad) - rho0(i,j,k)) .le. temp) then
-	temp = abs(rhoq(o_rad) - rho0(i,j,k))
-	orad_2d(i,j) = k
+  temp = abs(rhoq(o_rad) - rho0(i,j,k))
+  orad_2d(i,j) = k
        endif
       enddo
 
@@ -385,10 +386,10 @@ Contains
       orad_2d = o_rad
 
       if (compute_adjoint) delta_width_2d(i,j) = &
-		2.0/(z(orad_2d(i,j)+1) - z(orad_2d(i,j)-1))
+    2.0/(z(orad_2d(i,j)+1) - z(orad_2d(i,j)-1))
     
  !     if (compute_forward) delta_width_2d(i,j) = &
-!		2.0/(z(erad_2d(i,j)+1) - z(erad_2d(i,j)-1))
+!   2.0/(z(erad_2d(i,j)+1) - z(erad_2d(i,j)-1))
 
 
      enddo
@@ -414,8 +415,8 @@ SUBROUTINE MP_MHD_PML_2d
 
  implicit none
  integer i,j,k,pmlindex
- real*8 tempxy, blip
- real*8, dimension(nx,dim2(rank),nz) :: temp1, temp, temp3
+ real(kind=real64) tempxy, blip
+ real(kind=real64), dimension(nx,dim2(rank),nz) :: temp1, temp, temp3
 
  temp = - (v_x * boz - v_z * box)
 
@@ -443,10 +444,10 @@ SUBROUTINE MP_MHD_PML_2d
  ! CONTIUNUITY FLUX
  ! --------------------------------------
  RHScont = - gradrho0_z * v_z - rho0 * div &
-	   - gradrho0_x * v_x 
+     - gradrho0_x * v_x 
            
  RHSp = - c2rho0 * div - v_x * gradp0_x &
-	- v_z * gradp0_z 
+  - v_z * gradp0_z 
 
 
  temp1 =   boz * (dzbx - temp) + bz * curlboy
@@ -478,8 +479,8 @@ SUBROUTINE CREATE_2D_SLICES ()
 
  implicit none
  integer i, j, k
- real*8 tempxy
- real*8, allocatable, dimension(:,:,:) :: temp
+ real(kind=real64) tempxy
+ real(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  allocate(temp(nx, nx, nz))
  call readfits_local(dirbackmag//'density2D.fits',temp,nx,1,nz)
@@ -508,10 +509,10 @@ END SUBROUTINE CREATE_2D_SLICES
 SUBROUTINE FILTER_VARS_2D
   implicit none
   integer i,k,l,j,kst
-  real*8 coeffs(0:5)
-  real*8, allocatable, dimension(:,:,:) :: temp
-  real*8, allocatable, dimension(:,:,:) :: tempfilt
-  complex*16, allocatable, dimension(:,:,:) :: coeff 
+  real(kind=real64) coeffs(0:5)
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp
+  real(kind=real64), allocatable, dimension(:,:,:) :: tempfilt
+  complex(kind=real64), allocatable, dimension(:,:,:) :: coeff 
   
   coeffs(0) = 0.75390625000000
   coeffs(1) = 0.41015625000000
@@ -592,9 +593,9 @@ SUBROUTINE MP_MHD_SPONGE_2D
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
  integer i,j,k
- real*8 tempxy, blip, alf(nx,dim2(rank))
- real*8 temp1(nx,dim2(rank),nz), temp2(nx,dim2(rank),nz), temp3(nx,dim2(rank),nz)
- real*8 flux1(nx,dim2(rank),nz), flux2(nx,dim2(rank),nz), flux3(nx,dim2(rank),nz)
+ real(kind=real64) tempxy, blip, alf(nx,dim2(rank))
+ real(kind=real64) temp1(nx,dim2(rank),nz), temp2(nx,dim2(rank),nz), temp3(nx,dim2(rank),nz)
+ real(kind=real64) flux1(nx,dim2(rank),nz), flux2(nx,dim2(rank),nz), flux3(nx,dim2(rank),nz)
 
  call ddx(v_x, dvxdx, 1)
  call ddz(v_z, dvzdz, 1)
@@ -605,9 +606,9 @@ SUBROUTINE MP_MHD_SPONGE_2D
  do j=1,dim2(rank)
   do i=1,nx
    gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
-  	    & - rho(i,j,1)*g(1))*unstretch(1)
+        & - rho(i,j,1)*g(1))*unstretch(1)
    gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-	    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+      & - rho(i,j,nz)*g(nz))*unstretch(nz)
   enddo
  enddo
 
@@ -616,7 +617,7 @@ SUBROUTINE MP_MHD_SPONGE_2D
  ! CONTIUNUITY FLUX
  ! --------------------------------------
  RHScont = - gradrho0_z * v_z - rho0 * div &
-	   - spongexyz*rho - gradrho0_x * v_x 
+     - spongexyz*rho - gradrho0_x * v_x 
            
 
  flux3 = bz * box + boz * bx
@@ -639,7 +640,7 @@ SUBROUTINE MP_MHD_SPONGE_2D
  enddo
 
  RHSp = - c2rho0 * div - v_x * gradp0_x &
-	- v_z * gradp0_z - spongexyz * p 
+  - v_z * gradp0_z - spongexyz * p 
 
 
  flux2 = - (v_x * boz - v_z * box)
@@ -723,7 +724,7 @@ SUBROUTINE MP_MHD_PML_2D_DISPL
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
  integer i,j,k, pmlindex,bc
-! real*8, dimension(nx, dim2(rank), nz) :: flux1, flux2, flux3
+! real(kind=real64), dimension(nx, dim2(rank), nz) :: flux1, flux2, flux3
 
 
  bc =1
@@ -825,13 +826,13 @@ SUBROUTINE MP_MHD_PML_2D_DISPL
    pmlindex = pmlindex + 1
 
    RHSpsiinductionbx(:,:,pmlindex) = az(:,:,k)*bx(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
 
    bx(:,:,k) = bx(:,:,k) + psiinductionbx(:,:,pmlindex)
 
 
 !   RHSpsiinductionby(:,:,pmlindex) = az(:,:,k)*dzflux1(:,:,k) &
-!			+ bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
+!     + bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
 
  !  dzflux1(:,:,k) = dzflux1(:,:,k) + psiinductionby(:,:,pmlindex)
 
@@ -858,7 +859,7 @@ SUBROUTINE MP_MHD_PML_2D_DISPL
     pmlindex = pmlindex + 1
 
     RHSpsidzbx(:,:,pmlindex) = az(:,:,k)*dzbx(:,:,k) &
-			+ bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
 
     dzbx(:,:,k) = dzbx(:,:,k) + psidzbx(:,:,pmlindex)
 
@@ -907,7 +908,7 @@ SUBROUTINE MP_MHD_PML_2D_DISPL
     do j=1,dim2(rank)
      do i=1,nx
       RHSv_z(i,j,orad_2d(i,j)) = RHSv_z(i,j,orad_2d(i,j)) +  &
-	forcing(i,j) * delta_width_2d(i,j)/rho0(i,j,orad_2d(i,j)) 
+  forcing(i,j) * delta_width_2d(i,j)/rho0(i,j,orad_2d(i,j)) 
      enddo
     enddo
 
@@ -916,7 +917,7 @@ SUBROUTINE MP_MHD_PML_2D_DISPL
      do j=1,dim2(rank)
       do i=1,nx
        RHSv_z(i,j,erad_2d(i,j)) = RHSv_z(i,j,erad_2d(i,j)) +  &
-	  vr(i,j,1) * fwdsource(time+1)/rho0(i,j,erad_2d(i,j)) * delta_width_2d(i,j)
+    vr(i,j,1) * fwdsource(time+1)/rho0(i,j,erad_2d(i,j)) * delta_width_2d(i,j)
       enddo
      enddo
 
@@ -947,7 +948,7 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
  integer k,i,j,pmlindex
- real*8 f(nx,dim2(rank))
+ real(kind=real64) f(nx,dim2(rank))
 
  call ddx(xi_x, dxixdx, 1)
  dxizdz(:,:,nz) = -dxixdx(:,:,nz)*unstretch(nz)
@@ -1055,7 +1056,7 @@ SUBROUTINE MP_QUIET_PML_2D_DISPL
   elseif (compute_forward) then
  
     RHSv_z(:,:,e_rad) = RHSv_z(:,:,e_rad) + vr(:,:,1) * fwdsource(time+1) * &
-			  delta_width/rho0(:,:,e_rad)
+        delta_width/rho0(:,:,e_rad)
   endif
  endif
 
@@ -1141,7 +1142,7 @@ SUBROUTINE MP_QUIET_SPONGE_2D
 SUBROUTINE PML_BOUNDARY_ACCOUNTING_2D
  implicit none
  integer pmlindex, k
- real*8 tempfilt(nx, dim2(rank), npmltop)
+ real(kind=real64) tempfilt(nx, dim2(rank), npmltop)
  
  pmlindex = 0
  do k=1,nz
@@ -1183,12 +1184,12 @@ SUBROUTINE PML_BOUNDARY_ACCOUNTING_2D
    if ((k .le. npmlbot) .or. (k .ge. (nz-npmltop+1))) then
     pmlindex = pmlindex + 1
     RHSpsiinductionbx(:,:,pmlindex) = az(:,:,k)*dzflux2(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
 
     dzflux2(:,:,k) = dzflux2(:,:,k) + psiinductionbx(:,:,pmlindex)
 
     RHSpsidzbx(:,:,pmlindex) = az(:,:,k)*dzbx(:,:,k) &
-			+ bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
 
     dzbx(:,:,k) = dzbx(:,:,k) + psidzbx(:,:,pmlindex)
 

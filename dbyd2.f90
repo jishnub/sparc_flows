@@ -6,7 +6,8 @@
 !~ c
 !~ C************************************************************
         SUBROUTINE DBYD2(A,B,N1,N2,IBC)
-        PARAMETER(NMAX=700)
+        PARAMETER(NMAX=7000)
+        integer, parameter :: real64 = kind(1.d0)
 !~ C------------------------------------------------------------
 !~ C  This routine evaluates the derivative of array B using 
 !~ C  sixth-order compact differences and 
@@ -24,9 +25,10 @@
 !~ C    Note that the neuman BC must be set if either IBC = 2, 3 or 4
 !~ c       assuming the total interval is unity
 !~ C-------------------------------------------------------------
-        REAL*8, intent(in) :: B(N1,N2)
-        REAL*8, intent(out) :: A(N1,N2)
-        REAL*8 uppr(NMAX),diag(NMAX),lowr(NMAX)
+        real(kind=real64), intent(in) :: B(N1,N2)
+        real(kind=real64), intent(out) :: A(N1,N2)
+        integer, intent(in) :: ibc
+        real(kind=real64) uppr(NMAX),diag(NMAX),lowr(NMAX)
         data diag/NMAX*1.0/
         data revision/1.0/
 !~ C-------------------------------------------------------------

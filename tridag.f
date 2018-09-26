@@ -4,10 +4,11 @@ c     Adapted from Press etal.
 c     Revised 3/17/98 for periodic boundaries -- NEH
 C**************************************************************************
       PARAMETER (NMAX=7000)
-      REAL*8 A(N),B(N),C(N),R(N),U(N)
-      REAL*8 GAM(NMAX),UD(NMAX),BET
-      REAL*8 betas(nmax),betau(nmax),betad(nmax)
-      REAL*8 alpha(nmax),alphab(nmax)
+      integer, parameter :: real64 = kind(1.d0)
+      real(kind=real64) A(N),B(N),C(N),R(N),U(N)
+      real(kind=real64) GAM(NMAX),UD(NMAX),BET
+      real(kind=real64) betas(nmax),betau(nmax),betad(nmax)
+      real(kind=real64) alpha(nmax),alphab(nmax)
       if (ispecial.eq.1) then
 c
 c     Periodic conditions

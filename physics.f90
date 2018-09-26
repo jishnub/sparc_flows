@@ -35,9 +35,9 @@ Contains
 
    implicit none
    integer i,j,k,l,flag(2),trans,counter
-   real*8 temp_r,temp_t,temp_p,in(nz), out(nz),advect0(nx,ny,nz),alphaz(nz), cmax
-   real*8 temp,output,temp2,start_damping,cchar, finish_damping
-   real*8, allocatable, dimension(:,:,:) :: tempin, tempout, dampz, functiondecay, c2a
+   real(kind=real64) temp_r,temp_t,temp_p,in(nz), out(nz),advect0(nx,ny,nz),alphaz(nz), cmax
+   real(kind=real64) temp,output,temp2,start_damping,cchar, finish_damping
+   real(kind=real64), allocatable, dimension(:,:,:) :: tempin, tempout, dampz, functiondecay, c2a
 
    ! Determination of excitation location.
 
@@ -71,24 +71,24 @@ Contains
       temp = 1.0
       do k=e_rad-50,e_rad + 10
        if ( abs(rhoq(e_rad) - rho0(i,j,k)) .le. temp) then
- 	temp = abs(rhoq(e_rad) - rho0(i,j,k))
- 	erad_2d(i,j) = k
+  temp = abs(rhoq(e_rad) - rho0(i,j,k))
+  erad_2d(i,j) = k
        endif
       enddo
 
       temp = 1.0
       do k=o_rad-50,o_rad + 10
        if ( abs(rhoq(o_rad) - rho0(i,j,k)) .le. temp) then
-	temp = abs(rhoq(o_rad) - rho0(i,j,k))
-	orad_2d(i,j) = k
+  temp = abs(rhoq(o_rad) - rho0(i,j,k))
+  orad_2d(i,j) = k
        endif
       enddo
 
       if (compute_adjoint) delta_width_2d(i,j) = &
-		2.0/(z(orad_2d(i,j)+1) - z(orad_2d(i,j)-1))
+    2.0/(z(orad_2d(i,j)+1) - z(orad_2d(i,j)-1))
     
       if (compute_forward) delta_width_2d(i,j) = &
-		2.0/(z(erad_2d(i,j)+1) - z(erad_2d(i,j)-1))
+    2.0/(z(erad_2d(i,j)+1) - z(erad_2d(i,j)-1))
 
 
      enddo
@@ -104,7 +104,7 @@ Contains
    do k=1,nz
     ! Sponge in the z-direction
     spongez(k) =  200.0/(1.0 + exp((1.002 - z(k))/0.0001)) & 
-		+ 300.0/(1.0 + exp((z(k) - (z(1) + 0.005))/0.0005))
+    + 300.0/(1.0 + exp((z(k) - (z(1) + 0.005))/0.0005))
 ! Source depth is where the sources are located
     source_dep(k) = exp(-10.0**(7.0)*4.0 *(z(k) - z(e_rad))**2.0)
 
@@ -172,14 +172,14 @@ Contains
    ! Sponge in the x-direction
     do i=1,nx
      spongex(i) = (1.0 - 1.0/( (1.0 + exp((start_damping-x(i))/0.008))*&
-				(1.0 + exp((x(i)-finish_damping)/0.008)) ))
+        (1.0 + exp((x(i)-finish_damping)/0.008)) ))
     enddo 
 
    ! Sponge in the distributed y-direction
 
     do i=1,dim2(rank)
      spongey(i) = (1.0 - 1.0/( (1.0 + exp((start_damping-y(i+ystart(rank)-1))/0.008))&
-			*(1.0 + exp((y(i+ystart(rank)-1)-finish_damping)/0.008)) ))
+      *(1.0 + exp((y(i+ystart(rank)-1)-finish_damping)/0.008)) ))
     enddo 
 
    endif
@@ -336,7 +336,7 @@ Contains
 
        bypml(:,j,:) = - 0.5*3. * 3.* c2(:,j,:)**0.5/&
        (y(npmlhor) - y(1)) * ((y(j+ystart(rank)-1) - y(npmlhor))/(y(npmlhor) - y(1)))**2. &
-	- 0.005 * diml/dimc * pi * (y(j+ystart(rank)-1) -y(1))/(y(npmlhor) - y(1))
+  - 0.005 * diml/dimc * pi * (y(j+ystart(rank)-1) -y(1))/(y(npmlhor) - y(1))
 
       elseif (j + ystart(rank)-1 .ge. ny - npmlhor + 1) then 
        aypml(:,j,:) = - 0.5*3. * 3.* c2(:,j,:)**0.5/&
@@ -344,7 +344,7 @@ Contains
        (y(ny) - y(ny-npmlhor+1)))**2.
        bypml(:,j,:) = - 0.5*3. * 3.* c2(:,j,:)**0.5/(y(ny) - y(ny-npmlhor+1)) * &
        ((y(ny-npmlhor+1) - y(j+ystart(rank)-1))/(y(ny) - y(ny-npmlhor+1)))**2. &
- 	- 0.005 * diml/dimc * pi * (y(ny) - y(j+ystart(rank)-1))/(y(ny) - y(ny-npmlhor+1))
+  - 0.005 * diml/dimc * pi * (y(ny) - y(j+ystart(rank)-1))/(y(ny) - y(ny-npmlhor+1))
 
       endif
 
@@ -425,9 +425,9 @@ SUBROUTINE MP_QUIET_SPONGE_3D
  do j=1,dim2(rank)
   do i=1,nx
    gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
-		  	    & - rho(i,j,1)*g(1))*unstretch(1)
+            & - rho(i,j,1)*g(1))*unstretch(1)
    gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-      			    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+                & - rho(i,j,nz)*g(nz))*unstretch(nz)
   enddo
  enddo
 
@@ -539,7 +539,7 @@ SUBROUTINE MP_MHD_SPONGE_3D
  ! PRESSURE
 
  RHSp = - c2rho0 * div - v_x * gradp0_x - v_y * gradp0_y &
-	- v_z * gradp0_z  - spongexyz * p 
+  - v_z * gradp0_z  - spongexyz * p 
 
 
  
@@ -587,7 +587,7 @@ SUBROUTINE MP_MHD_SPONGE_3D
 
   implicit none
   integer i,j,k, bc
-  real*8, allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z, advect
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z, advect
 
 !  call derivatives_all ()
 
@@ -602,9 +602,9 @@ SUBROUTINE MP_MHD_SPONGE_3D
   do j=1,dim2(rank)
    do i=1,nx
     gradp_z(i,j,1)  =   (- c_speed(i,j,1)*rho0(i,j,1)*dvzdz(i,j,1)   &
- 		  	    & - rho(i,j,1)*g(1))*unstretch(1)
+            & - rho(i,j,1)*g(1))*unstretch(1)
     gradp_z(i,j,nz)  =  (c_speed(i,j,nz)*rho0(i,j,nz)*dvzdz(i,j,nz)     &
-      			    & - rho(i,j,nz)*g(nz))*unstretch(nz)
+                & - rho(i,j,nz)*g(nz))*unstretch(nz)
    enddo
   enddo
 
@@ -657,7 +657,7 @@ SUBROUTINE MP_MHD_SPONGE_3D
    enddo
 
    RHScont = -rho0*div - v_z * gradrho0_z - v0_x * gradrho_x - v0_y * gradrho_y &
-	  - v0_z * gradrho_z - rho * (div_v0 + spongexyz)
+    - v0_z * gradrho_z - rho * (div_v0 + spongexyz)
 
    RHSv_x = -rhoinv * gradp_x + flow_x + rho * advect0_x - spongexyz*v_x
 
@@ -666,8 +666,8 @@ SUBROUTINE MP_MHD_SPONGE_3D
    RHSv_z = RHSv_z - rhoinv * gradp_z + flow_z + rho * advect0_z - spongexyz*v_z
 
    RHSp   = - v_z * gradp0_z - rho * c2div_v0 - c2rho0 * div - v0_x * gradp_x - v0_y * gradp_y & 
-	 & - v0_z * gradp_z - spongexyz*p  
-	 
+   & - v0_z * gradp_z - spongexyz*p  
+   
 
   if (DAMP_WAVES) call DAMP_VELOCITY
 
@@ -678,7 +678,7 @@ SUBROUTINE MP_MHD_SPONGE_3D
 SUBROUTINE LAGRANGE_INTERP()
 
   implicit none
-  real*8 xt
+  real(kind=real64) xt
 
   xt = DBLE(time)*timestep/cadforcing
   time1 = FLOOR(xt)+1
@@ -726,12 +726,12 @@ SUBROUTINE LAGRANGE_INTERP()
   endif
 
   forcing = LC0 * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x4) * (xt-x5) *(xt-x6)+ &
-  	    LC1 * (xt-x0) * (xt-x2) * (xt-x3) * (xt-x4) * (xt-x5) *(xt-x6)+ &
-	    LC2 * (xt-x0) * (xt-x1) * (xt-x3) * (xt-x4) * (xt-x5) *(xt-x6)+ &
-	    LC3 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x4) * (xt-x5) *(xt-x6)+ &
-	    LC4 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x5) *(xt-x6)+ &
-	    LC5 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x4) *(xt-x6)+ &
-	    LC6 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x4) *(xt-x5)
+        LC1 * (xt-x0) * (xt-x2) * (xt-x3) * (xt-x4) * (xt-x5) *(xt-x6)+ &
+      LC2 * (xt-x0) * (xt-x1) * (xt-x3) * (xt-x4) * (xt-x5) *(xt-x6)+ &
+      LC3 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x4) * (xt-x5) *(xt-x6)+ &
+      LC4 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x5) *(xt-x6)+ &
+      LC5 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x4) *(xt-x6)+ &
+      LC6 * (xt-x0) * (xt-x1) * (xt-x2) * (xt-x3) * (xt-x4) *(xt-x5)
 
 
 END SUBROUTINE LAGRANGE_INTERP
@@ -741,9 +741,9 @@ END SUBROUTINE LAGRANGE_INTERP
 SUBROUTINE FILTER_VARS_3D
   implicit none
   integer i,k,l,kst
-  real*8 coeffs(0:5)
-  real*8, allocatable, dimension(:,:,:) :: tempfilt,temp
-  complex*16, allocatable, dimension(:,:,:) :: coeff 
+  real(kind=real64) coeffs(0:5)
+  real(kind=real64), allocatable, dimension(:,:,:) :: tempfilt,temp
+  complex(kind=real64), allocatable, dimension(:,:,:) :: coeff 
   
   coeffs(0) = 0.75390625000000
   coeffs(1) = 0.41015625000000
@@ -836,8 +836,8 @@ END SUBROUTINE FILTER_VARS_3D
 SUBROUTINE FILTER_VARS_3D_HORIZ_PML
   implicit none
   integer i,k,l,j
-  real*8 coeffs(0:5)
-  real*8, allocatable, dimension(:,:,:) :: temp
+  real(kind=real64) coeffs(0:5)
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp
   
   coeffs(0) = 0.75390625000000
   coeffs(1) = 0.41015625000000

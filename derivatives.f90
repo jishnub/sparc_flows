@@ -9,7 +9,7 @@ Contains
 
 SUBROUTINE ddz(var, dvar, bc)
  implicit none
- real*8 var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
+ real(kind=real64) var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
  integer i,j,k,bc
 
  if (compact_finite_diff) then
@@ -27,9 +27,9 @@ END SUBROUTINE ddz
 
 SUBROUTINE ddx(var, dvar,bc)
  implicit none
- real*8 var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
+ real(kind=real64) var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
  integer i,j,k,bc
- complex*16, allocatable, dimension(:,:,:) :: temp
+ complex(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  if ((PERIODIC) .AND. (USE_FFT)) then
   allocate(temp(nx/2+1,dim2(rank), nz))
@@ -63,10 +63,10 @@ SUBROUTINE ddy(var, dvar,bc)
  implicit none
  integer i,j,k,ierr,sendtag,recvtag,stat(MPI_STATUS_SIZE,2)
  integer n, statt(MPI_STATUS_SIZE), req(2), bc, reqq, tag, nelements
- real*8 var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
- real*8, dimension(:,:,:), allocatable :: trans, temp
- real*8, dimension(:,:), allocatable :: rectemp
- complex*16, allocatable, dimension(:,:,:) :: tempcomp
+ real(kind=real64) var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
+ real(kind=real64), dimension(:,:,:), allocatable :: trans, temp
+ real(kind=real64), dimension(:,:), allocatable :: rectemp
+ complex(kind=real64), allocatable, dimension(:,:,:) :: tempcomp
 
 
  allocate(temp(ny,dim1(rank), nz),trans(ny,dim1(rank),nz),rectemp(nx,nz))
@@ -94,7 +94,7 @@ SUBROUTINE ddy(var, dvar,bc)
   enddo
    
   if (rank .NE. 0) &
-	call MPI_Recv(rectemp, nelements, MPI_DOUBLE_PRECISION, 0, tag, MPI_COMM_WORLD, statt, ierr)
+  call MPI_Recv(rectemp, nelements, MPI_DOUBLE_PRECISION, 0, tag, MPI_COMM_WORLD, statt, ierr)
 
  ! Non - communicative transpose (local transpose) for the boundary condition
   j = 1
@@ -123,7 +123,7 @@ SUBROUTINE ddy(var, dvar,bc)
   enddo
  
   if (rank .NE. numtasks-1) &
-	call MPI_Recv(rectemp, nelements, MPI_DOUBLE_PRECISION, numtasks-1, tag, MPI_COMM_WORLD, statt, ierr)
+  call MPI_Recv(rectemp, nelements, MPI_DOUBLE_PRECISION, numtasks-1, tag, MPI_COMM_WORLD, statt, ierr)
 
  ! Non - communicative transpose (local transpose) for the boundary condition
   j = ny
@@ -179,11 +179,11 @@ SUBROUTINE ddxyz(var1, dvar1, var2, dvar2, var3, dvar3, bc)
  ! PARALLEL ARRAY TRANSFORMS
 
  implicit none
- real*8, dimension(nx,dim2(rank),nz) :: var1, dvar1, var2, dvar2, var3, dvar3
+ real(kind=real64), dimension(nx,dim2(rank),nz) :: var1, dvar1, var2, dvar2, var3, dvar3
  integer i, j, k, sendtag, recvtag, req(2*numtasks-2), req2(2*numtasks-2) , count
  integer ierr, stat(MPI_STATUS_SIZE, 2*numtasks-2), bc, stat2(MPI_STATUS_SIZE, 2*numtasks-2)
- real*8, dimension(ny, dim1(rank), nz) :: tran, dtran
- complex*16, allocatable, dimension(:,:,:) :: temp
+ real(kind=real64), dimension(ny, dim1(rank), nz) :: tran, dtran
+ complex(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  count = 2*numtasks-2
 
@@ -310,8 +310,8 @@ END SUBROUTINE ddxyz
 SUBROUTINE ddz_ninthorder(input, output)
  implicit none
  integer k
- real*8, dimension(nx, dim2(rank), nz) :: input, output
- real*8 consts(0:4)
+ real(kind=real64), dimension(nx, dim2(rank), nz) :: input, output
+ real(kind=real64) consts(0:4)
  
  consts(0) = 0.5*(nz-1.)
  ! Second order differences 
@@ -334,9 +334,9 @@ SUBROUTINE ddz_ninthorder(input, output)
  
  do k=5,nz-4
   output(:,:,k) = ((- input(:,:,k-4) + input(:,:,k+4))*consts(4) +  & 
-		(- input(:,:,k-3) + input(:,:,k+3))*consts(3) +  & 
-		(- input(:,:,k-2) + input(:,:,k+2))*consts(2) +  &
-		(- input(:,:,k-1) + input(:,:,k+1))*consts(1) )*stretch(k)
+    (- input(:,:,k-3) + input(:,:,k+3))*consts(3) +  & 
+    (- input(:,:,k-2) + input(:,:,k+2))*consts(2) +  &
+    (- input(:,:,k-1) + input(:,:,k+1))*consts(1) )*stretch(k)
  enddo
 
 END SUBROUTINE ddz_ninthorder
@@ -346,9 +346,9 @@ END SUBROUTINE ddz_ninthorder
 
 SUBROUTINE d2dx2(var, dvar)
  implicit none
- real*8 var(nx,dim1(rank),nz), dvar(nx,dim1(rank),nz)
+ real(kind=real64) var(nx,dim1(rank),nz), dvar(nx,dim1(rank),nz)
  integer i,j,k
- complex*16, allocatable, dimension(:,:,:) :: temp
+ complex(kind=real64), allocatable, dimension(:,:,:) :: temp
 
  allocate(temp(nx/2+1,dim2(rank), nz))
 
@@ -374,9 +374,9 @@ SUBROUTINE d2dy2(var, dvar)
  implicit none
  integer i,j,k,ierr,sendtag,recvtag,stat(MPI_STATUS_SIZE,2)
  integer n, statt(MPI_STATUS_SIZE), req(2), reqq, tag, nelements
- real*8 var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
- real*8, dimension(:,:,:), allocatable :: temp
- complex*16, dimension(:,:,:), allocatable :: trans
+ real(kind=real64) var(nx,dim2(rank),nz), dvar(nx,dim2(rank),nz)
+ real(kind=real64), dimension(:,:,:), allocatable :: temp
+ complex(kind=real64), dimension(:,:,:), allocatable :: trans
 
  allocate(temp(ny,dim1(rank), nz),trans(ny/2 + 1,dim1(rank),nz))
 
@@ -444,9 +444,9 @@ SUBROUTINE CURL(f_x, f_y, f_z, curl_x, curl_y, curl_z)
                                                                                                                                                             
   implicit none
   integer bcx,bcy,bcz
-  real*8, dimension(nx, dim2(rank), nz) :: curl_x, curl_y, curl_z
-  real*8, dimension(nx, dim2(rank), nz) :: f_x, f_y, f_z
-  real*8, dimension(nx, dim2(rank),nz) ::  scr1, scr2, scr3
+  real(kind=real64), dimension(nx, dim2(rank), nz) :: curl_x, curl_y, curl_z
+  real(kind=real64), dimension(nx, dim2(rank), nz) :: f_x, f_y, f_z
+  real(kind=real64), dimension(nx, dim2(rank),nz) ::  scr1, scr2, scr3
 
   call ddxyz(f_y, curl_z, f_z, curl_x, f_x, curl_y,1)
   call ddxyz(f_z, scr1, f_x, scr2, f_y, scr3,1)
@@ -471,7 +471,7 @@ END SUBROUTINE CURL
 SUBROUTINE CROSS(a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z)
                                                                                                                                                             
   implicit none
-  real*8, dimension(nx, dim2(rank), nz) :: a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z
+  real(kind=real64), dimension(nx, dim2(rank), nz) :: a_x, a_y, a_z, b_x, b_y, b_z, c_x, c_y, c_z
 
   c_x = a_y * b_z - a_z * b_y
   c_y = b_x * a_z - a_x * b_z
@@ -486,7 +486,7 @@ SUBROUTINE TRANSPOSE_3D_Y(input, output)
 
  implicit none
  integer i, j, k, sendtag, recvtag, req(2*numtasks-2), ierr, stat(MPI_STATUS_SIZE, 2*numtasks-2)
- real*8 input(nx, dim2(rank), nz), output(ny, dim1(rank), nz)
+ real(kind=real64) input(nx, dim2(rank), nz), output(ny, dim1(rank), nz)
 
  ! Non - communicative transpose (local transpose)
  do k=1,nz
@@ -517,7 +517,7 @@ SUBROUTINE INV_TRANSPOSE_3D_Y(input, output)
 
  implicit none
  integer i, j, k, sendtag, recvtag, req(2*numtasks-2), ierr, stat(MPI_STATUS_SIZE, 2*numtasks-2)
- real*8 input(ny, dim1(rank), nz), output(nx, dim2(rank), nz)
+ real(kind=real64) input(ny, dim1(rank), nz), output(nx, dim2(rank), nz)
 
  ! Non - communicative transpose
 

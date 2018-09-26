@@ -84,8 +84,9 @@ SUBROUTINE MP_MHD_PML_3D
  ! I can't really do the conservative form - doesn't work for the incredibly small density 
  ! and forcing functions anyway. I don't know what the error is anyway
  implicit none
+
  integer i,j,k
- real*8, dimension(nx,dim2(rank),nz) ::  flux1, flux2, flux3
+ real(kind=real64), dimension(nx,dim2(rank),nz) ::  flux1, flux2, flux3
  
  flux1 = - (v_z * boy - v_y * boz)
  flux2 = - (v_x * boz - v_z * box)
@@ -157,7 +158,7 @@ SUBROUTINE MP_MHD_PML_3D
  ! PRESSURE
 
  RHSp = - c2rho0 * div - v_x * gradp0_x - v_y * gradp0_y &
-	- v_z * gradp0_z 
+  - v_z * gradp0_z 
 
 
  
@@ -212,8 +213,9 @@ SUBROUTINE MP_MHD_PML_3D
 
 SUBROUTINE PML_BOUNDARY_ACCOUNTING_3D
  implicit none
+
  integer pmlindex, i, j, k
- real*8 tempfilt(nx, dim2(rank), npmltop)
+ real(kind=real64) tempfilt(nx, dim2(rank), npmltop)
  
  pmlindex = 0
  do k=1,nz
@@ -257,24 +259,24 @@ SUBROUTINE PML_BOUNDARY_ACCOUNTING_3D
     pmlindex = pmlindex + 1
 
     RHSpsiinductionbx(:,:,pmlindex) = az(:,:,k)*dzflux2(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionbx(:,:,pmlindex)    
 
     dzflux2(:,:,k) = dzflux2(:,:,k) + psiinductionbx(:,:,pmlindex)
 
 
     RHSpsiinductionby(:,:,pmlindex) = az(:,:,k)*dzflux1(:,:,k) &
-			+ bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
+      + bzpml(:,:,k)*psiinductionby(:,:,pmlindex)    
 
     dzflux1(:,:,k) = dzflux1(:,:,k) + psiinductionby(:,:,pmlindex)
 
 
     RHSpsidzbx(:,:,pmlindex) = az(:,:,k)*dzbx(:,:,k) &
-			+ bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzbx(:,:,pmlindex)    
 
     dzbx(:,:,k) = dzbx(:,:,k) + psidzbx(:,:,pmlindex)
 
     RHSpsidzby(:,:,pmlindex) = az(:,:,k)*dzby(:,:,k) &
-			+ bzpml(:,:,k)*psidzby(:,:,pmlindex)    
+      + bzpml(:,:,k)*psidzby(:,:,pmlindex)    
 
     dzby(:,:,k) = dzby(:,:,k) + psidzby(:,:,pmlindex)
 
@@ -335,8 +337,9 @@ END SUBROUTINE PML_BOUNDARY_ACCOUNTING_3D
   ! Right hand side computation
 
   implicit none
+  
   integer i,j,k
-  real*8, allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z, advect
+  real(kind=real64), allocatable, dimension(:,:,:) :: temp_x, temp_y, temp_z, advect
 
   allocate(temp_x(nx,dim2(rank),nz),temp_y(nx,dim2(rank),nz),&
    temp_z(nx,dim2(rank),nz),advect(nx,dim2(rank),nz))
@@ -400,7 +403,7 @@ END SUBROUTINE PML_BOUNDARY_ACCOUNTING_3D
    enddo
 
    RHScont = -rho0*div - v_z * gradrho0_z - v0_x * gradrho_x - v0_y * gradrho_y &
-	  - v0_z * gradrho_z - rho * (div_v0)
+    - v0_z * gradrho_z - rho * (div_v0)
 
    RHSv_x = -rhoinv * gradp_x + flow_x + rho * advect0_x
 
@@ -409,8 +412,8 @@ END SUBROUTINE PML_BOUNDARY_ACCOUNTING_3D
    RHSv_z = RHSv_z - rhoinv * gradp_z + flow_z + rho * advect0_z
 
    RHSp   = - v_z * gradp0_z - rho * c2div_v0 - c2rho0 * div - v0_x * gradp_x - v0_y * gradp_y & 
-	 & - v0_z * gradp_z  
-	 
+   & - v0_z * gradp_z  
+   
 
   if (HORIZONTAL_PMLS) then
 

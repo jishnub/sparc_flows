@@ -23,8 +23,8 @@ function norm2(matrix)
   
    implicit none
    integer i,j,ierr
-   real*8 matrix(nx,dim2(rank))
-   real*8 norm2, sum
+   real(kind=real64) matrix(nx,dim2(rank))
+   real(kind=real64) norm2, sum
 
    sum = 0.0  
    norm2  = 0.0
@@ -36,7 +36,7 @@ function norm2(matrix)
    end do     
 
    call MPI_REDUCE(sum, norm2, 1, MPI_DOUBLE_PRECISION, &
-				MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
    
 
    norm2 = (norm2/(DBLE(nx)*DBLE(ny)))**0.5
@@ -103,8 +103,8 @@ end function norm2
       integer group,firstpix, ierr, stat(MPI_STATUS_SIZE)
       integer disp, temptyp, sendtyp
       integer nelements
-      real*8 nullval,read(nx,dim2(rank),dim3)
-      real*8, dimension(:,:,:), allocatable :: temp
+      real(kind=real64) nullval,read(nx,dim2(rank),dim3)
+      real(kind=real64), dimension(:,:,:), allocatable :: temp
       logical anynull
       character*(*) filename
       integer (KIND=MPI_ADDRESS_KIND) ext, dum, spacing
@@ -146,19 +146,19 @@ end function norm2
       do k=1,numtasks-1
                      
         if (rank ==0) then
- 	 call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
-	 call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
-	 call MPI_TYPE_COMMIT(sendtyp, ierr)
-	 tag = 0
-	 call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, ierr)
-	 disp = disp + dim2(k)
+   call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
+   call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
+   call MPI_TYPE_COMMIT(sendtyp, ierr)
+   tag = 0
+   call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, ierr)
+   disp = disp + dim2(k)
         endif
         if (rank  == k) then
-  	 nelements = nx * dim2(k) * dim3
-	 tag = 0
-	 call MPI_RECV(read, nelements, MPI_DOUBLE_PRECISION,&
-			0, tag, MPI_COMM_WORLD, stat, ierr)
+     nelements = nx * dim2(k) * dim3
+   tag = 0
+   call MPI_RECV(read, nelements, MPI_DOUBLE_PRECISION,&
+      0, tag, MPI_COMM_WORLD, stat, ierr)
         endif
 
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
@@ -177,8 +177,8 @@ function norm(matrix)
 
    implicit none
    integer i, j, k, ierr
-   real*8 matrix(nx,dim2(rank),nz)
-   real*8 norm, sums
+   real(kind=real64) matrix(nx,dim2(rank),nz)
+   real(kind=real64) norm, sums
   
    norm  = 0.0
    sums = 0.0
@@ -205,8 +205,8 @@ function norm_1D(matrix)
    use initialize   
    implicit none
    integer i, j, k, ierr
-   real*8 matrix(nz)
-   real*8 norm_1d, sum
+   real(kind=real64) matrix(nz)
+   real(kind=real64) norm_1d, sum
 
   
    norm_1d  = 0.0
@@ -225,11 +225,11 @@ end function norm_1d
      function date_time()
   
       implicit none 
-      character*27 date_time
+      character(len=27) date_time
       integer i, j, one_day, day, month, hour, minutes
       parameter(one_day = 1440)
-      character*2 monthchar, daychar, hourchar, minutechar, secondchar
-      character*4 yearchar
+      character(len=2) monthchar, daychar, hourchar, minutechar, secondchar
+      character(len=4) yearchar
 
       ! Assuming the timestep (in seconds) divides 60 seconds.
 
@@ -257,8 +257,8 @@ end function norm_1d
       integer blocksize,bitpix,naxes(3),unit1,dim3
       integer status1,group,fpixel, ierr, dim1, dime2
       integer temptype, sendtyp
-      integer*8 nelements
-      real*8 dump_array(dim1,dime2,dim3)
+      integer(kind=8) nelements
+      real(kind=real64) dump_array(dim1,dime2,dim3)
       character*(*) filename
       logical simple,extend,lexist
 
@@ -299,21 +299,21 @@ end function norm_1d
       integer blocksize,bitpix,naxes(3),unit1,k,disp, tag, dim3
       integer status1,group,fpixel,ierr,stat(MPI_STATUS_SIZE),flag
       integer temptype, sendtyp, nelements,req
-      real*8 dump_array(nx,dim2(rank),dim3)
-      real*8, allocatable, dimension(:,:,:) :: temp
+      real(kind=real64) dump_array(nx,dim2(rank),dim3)
+      real(kind=real64), allocatable, dimension(:,:,:) :: temp
       character*(*) filename
       logical simple,extend,lexist
       integer (KIND = MPI_ADDRESS_KIND) space, dum, ext
  
       if (rank == 0) then
-	 allocate(temp(nx,ny,dim3))
+   allocate(temp(nx,ny,dim3))
          temp(:, 1:dim2(0), :) = dump_array
          disp = dim2(0) + 1
          inquire(file=filename,exist=lexist)
 
          if (lexist) then
           print *,'Deleting file '//filename
-	  call system('rm -rf '//filename)
+    call system('rm -rf '//filename)
          endif
 
 
@@ -323,28 +323,28 @@ end function norm_1d
 
 
        if (rank .ne. 0) then
-	 tag = rank
+   tag = rank
          nelements = nx*dim3*dim2(rank)
          call MPI_ISEND(dump_array, nelements, MPI_DOUBLE_PRECISION, &
-			0, tag, MPI_COMM_WORLD, req, ierr)
+      0, tag, MPI_COMM_WORLD, req, ierr)
          !call MPI_TEST(req,flag,stat)
          !print *,flag,rank
        endif
 
        if (rank == 0) then
           do k=1,numtasks-1
-	  space = nx*ny*ext
-	  tag = k
-	  call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
-	  call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
-	  call MPI_TYPE_COMMIT(sendtyp, ierr)
-	  call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, stat, ierr)
+    space = nx*ny*ext
+    tag = k
+    call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
+    call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
+    call MPI_TYPE_COMMIT(sendtyp, ierr)
+    call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, stat, ierr)
 
-	  disp = disp + dim2(k)
+    disp = disp + dim2(k)
          enddo
         endif
- 	call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
        if (rank == 0) then
          status1 = 0
@@ -381,8 +381,8 @@ function sum2(matrix, dima, dimb, option)
   
    implicit none
    integer i,j,ierr, option, dima, dimb
-   real*8 matrix(dima, dimb)
-   real*8 sum2, summer
+   real(kind=real64) matrix(dima, dimb)
+   real(kind=real64) sum2, summer
 
    summer = 0.0  
    sum2  = 0.0
@@ -401,7 +401,7 @@ function sum2(matrix, dima, dimb, option)
    endif
 
    call MPI_REDUCE(summer, sum2, 1, MPI_DOUBLE_PRECISION, &
-				MPI_SUM, 0, MPI_COMM_WORLD, ierr)
+        MPI_SUM, 0, MPI_COMM_WORLD, ierr)
    
 
    sum2 = (sum2/(DBLE(dima)*DBLE(dimb)))
@@ -413,8 +413,8 @@ function sum2_normal(matrix, dima, dimb, option)
   
    implicit none
    integer i,j,ierr, option, dima, dimb
-   real*8 matrix(dima, dimb)
-   real*8 sum2_normal, summer
+   real(kind=real64) matrix(dima, dimb)
+   real(kind=real64) sum2_normal, summer
 
    summer = 0.0  
    sum2_normal  = 0.0
@@ -446,8 +446,8 @@ end function sum2_normal
       integer group,firstpix, ierr, stat(MPI_STATUS_SIZE)
       integer disp, temptyp, sendtyp
       integer nelements
-      real*8 nullval,readarr(dim1,dime2,dim3)
-      real*8, dimension(:,:,:), allocatable :: temp
+      real(kind=real64) nullval,readarr(dim1,dime2,dim3)
+      real(kind=real64), dimension(:,:,:), allocatable :: temp
       logical anynull
       character*(*) filename
       integer (KIND=MPI_ADDRESS_KIND) ext, dum, spacing
@@ -535,7 +535,7 @@ end function sum2_normal
     implicit none
     character*(timestamp_size) tempc
     character*(*) director
-    character*10 ci
+    character(len=10) ci
     integer timest
   
     call convert_to_string(timest,tempc,timestamp_size)
@@ -626,7 +626,7 @@ end function sum2_normal
     integer ierr
     character*(*) director
     character*(timestamp_size) tempc
-    character*10 ci
+    character(len=10) ci
    
     call convert_to_string(time,tempc,timestamp_size)
 
@@ -700,7 +700,7 @@ end function sum2_normal
 
     implicit none
     integer radial
-    real*8 lnorm, cnorm
+    real(kind=real64) lnorm, cnorm
     character*(timestamp_size) tempc
     character*(*) direct
   
@@ -814,14 +814,14 @@ end function sum2_normal
       integer k,disp, tag, dim3, reclmax
       integer ierr,stat(MPI_STATUS_SIZE),flag, i, j
       integer temptype, sendtyp, nelements,req
-      real*8 dump_array(nx,dim2(rank),dim3)
-      real*8, allocatable, dimension(:,:,:) :: temp
+      real(kind=real64) dump_array(nx,dim2(rank),dim3)
+      real(kind=real64), allocatable, dimension(:,:,:) :: temp
       character*(*) filename
       logical simple,extend
       integer (KIND = MPI_ADDRESS_KIND) space, dum, ext
  
       if (rank == 0) then
-	 allocate(temp(nx,ny,dim3))
+   allocate(temp(nx,ny,dim3))
          temp(:, 1:dim2(0), :) = dump_array
          disp = dim2(0) + 1
          print *,'Writing file: ', filename
@@ -831,40 +831,40 @@ end function sum2_normal
 
 
        if (rank .ne. 0) then
-	 tag = rank
+   tag = rank
          nelements = nx*dim3*dim2(rank)
          call MPI_ISEND(dump_array, nelements, MPI_DOUBLE_PRECISION, &
-			0, tag, MPI_COMM_WORLD, req, ierr)
+      0, tag, MPI_COMM_WORLD, req, ierr)
          !call MPI_TEST(req,flag,stat)
          !print *,flag,rank
        endif
 
        if (rank == 0) then
           do k=1,numtasks-1
-	  space = nx*ny*ext
-	  tag = k
-	  call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
-	  call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
-	  call MPI_TYPE_COMMIT(sendtyp, ierr)
-	  call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, stat, ierr)
+    space = nx*ny*ext
+    tag = k
+    call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
+    call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
+    call MPI_TYPE_COMMIT(sendtyp, ierr)
+    call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, stat, ierr)
 
-	  disp = disp + dim2(k)
+    disp = disp + dim2(k)
          enddo
         endif
- 	call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
        if (rank == 0) then
 
         open(44,file=filename,form='unformatted',&
         status='unknown', action='write',&
-	access='direct',recl=reclmax)!,RECORDTYPE='fixed')
+  access='direct',recl=reclmax)!,RECORDTYPE='fixed')
 
         do k=1,dim3
- 	 write(44, rec=k) ((temp(i,j,k),i=1,nx),j=1,ny)
- 	enddo
+   write(44, rec=k) ((temp(i,j,k),i=1,nx),j=1,ny)
+  enddo
 
- 	close(44)
+  close(44)
 
         deallocate(temp)
 
@@ -883,8 +883,8 @@ end function sum2_normal
       integer group,firstpix, ierr, stat(MPI_STATUS_SIZE), reclmax, i, j
       integer disp, temptyp, sendtyp
       integer nelements
-      real*8 nullval,readarr(nx,dim2(rank),dim3)
-      real*8, dimension(:,:,:), allocatable :: temp
+      real(kind=real64) nullval,readarr(nx,dim2(rank),dim3)
+      real(kind=real64), dimension(:,:,:), allocatable :: temp
       logical anynull
       character*(*) filename
       integer (KIND=MPI_ADDRESS_KIND) ext, dum, spacing
@@ -897,7 +897,7 @@ end function sum2_normal
        reclmax = nx * ny * 2
        print *,'Now reading the file: '//filename
        open(344,file=filename,form='unformatted',status='old', action='read',&
- 	access='direct',recl=reclmax)!,recordtype='fixed'
+  access='direct',recl=reclmax)!,recordtype='fixed'
 
        do k=1,dim3
         read(344, rec=k) ((temp(i,j,k),i=1,nx),j=1,ny)
@@ -917,19 +917,19 @@ end function sum2_normal
       do k=1,numtasks-1
                      
         if (rank ==0) then
- 	 call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
-	 call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
-	 call MPI_TYPE_COMMIT(sendtyp, ierr)
-	 tag = 0
-	 call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, ierr)
-	 disp = disp + dim2(k)
+   call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
+   call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
+   call MPI_TYPE_COMMIT(sendtyp, ierr)
+   tag = 0
+   call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, ierr)
+   disp = disp + dim2(k)
         endif
         if (rank  == k) then
-  	 nelements = nx * dim2(k) * dim3
-	 tag = 0
-	 call MPI_RECV(readarr, nelements, MPI_DOUBLE_PRECISION,&
-			0, tag, MPI_COMM_WORLD, stat, ierr)
+     nelements = nx * dim2(k) * dim3
+   tag = 0
+   call MPI_RECV(readarr, nelements, MPI_DOUBLE_PRECISION,&
+      0, tag, MPI_COMM_WORLD, stat, ierr)
         endif
 
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
@@ -950,13 +950,13 @@ end function sum2_normal
       integer k,disp, tag, dim3, reclmax, unitnum, recnum
       integer ierr,stat(MPI_STATUS_SIZE),flag, i, j
       integer temptype, sendtyp, nelements,req
-      real*8 dump_array(nx,dim2(rank),dim3)
-      real*8, allocatable, dimension(:,:,:) :: temp
+      real(kind=real64) dump_array(nx,dim2(rank),dim3)
+      real(kind=real64), allocatable, dimension(:,:,:) :: temp
       logical simple,extend
       integer (KIND = MPI_ADDRESS_KIND) space, dum, ext
  
       if (rank == 0) then
-	 allocate(temp(nx,ny,dim3))
+   allocate(temp(nx,ny,dim3))
          temp(:, 1:dim2(0), :) = dump_array
          disp = dim2(0) + 1
          call MPI_TYPE_GET_EXTENT(MPI_DOUBLE_PRECISION,dum, ext,ierr)
@@ -965,37 +965,37 @@ end function sum2_normal
 
 
        if (rank .ne. 0) then
-	 tag = rank
+   tag = rank
          nelements = nx*dim3*dim2(rank)
          call MPI_ISEND(dump_array, nelements, MPI_DOUBLE_PRECISION, &
-			0, tag, MPI_COMM_WORLD, req, ierr)
+      0, tag, MPI_COMM_WORLD, req, ierr)
          !call MPI_TEST(req,flag,stat)
          !print *,flag,rank
        endif
 
        if (rank == 0) then
           do k=1,numtasks-1
-	  space = nx*ny*ext
-	  tag = k
-	  call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
-	  call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
-	  call MPI_TYPE_COMMIT(sendtyp, ierr)
-	  call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, stat, ierr)
+    space = nx*ny*ext
+    tag = k
+    call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptype,ierr)
+    call MPI_TYPE_CREATE_HVECTOR(dim3,1,space,temptype,sendtyp,ierr)
+    call MPI_TYPE_COMMIT(sendtyp, ierr)
+    call MPI_RECV(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, stat, ierr)
 
-	  disp = disp + dim2(k)
+    disp = disp + dim2(k)
          enddo
         endif
- 	call MPI_BARRIER(MPI_COMM_WORLD,ierr)
+  call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
        if (rank == 0) then
 
 
         do k=1,dim3
- 	 write(unitnum, rec=(recnum+k-1)) ((temp(i,j,k),i=1,nx),j=1,ny)
- 	enddo
+   write(unitnum, rec=(recnum+k-1)) ((temp(i,j,k),i=1,nx),j=1,ny)
+  enddo
 
-! 	close(44)
+!   close(44)
 
         deallocate(temp)
 
@@ -1015,8 +1015,8 @@ end function sum2_normal
       integer group,firstpix, ierr, stat(MPI_STATUS_SIZE), reclmax, i, j
       integer disp, temptyp, sendtyp
       integer nelements
-      real*8 nullval,readarr(nx,dim2(rank),dim3)
-      real*8, dimension(:,:,:), allocatable :: temp
+      real(kind=real64) nullval,readarr(nx,dim2(rank),dim3)
+      real(kind=real64), dimension(:,:,:), allocatable :: temp
       logical anynull
       character*(*) filename
       integer (KIND=MPI_ADDRESS_KIND) ext, dum, spacing
@@ -1029,7 +1029,7 @@ end function sum2_normal
        reclmax = nx * ny * 2
        print *,'Now reading the file: '//filename
        open(344,file=filename,form='unformatted',status='old', action='read',&
- 	access='direct',recl=reclmax)!,recordtype='fixed'
+  access='direct',recl=reclmax)!,recordtype='fixed'
 
        do k=1,dim3
         read(344, rec=k) ((temp(i,j,dim3-k+1),i=1,nx),j=1,ny)
@@ -1049,19 +1049,19 @@ end function sum2_normal
       do k=1,numtasks-1
                      
         if (rank ==0) then
- 	 call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
-	 call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
-	 call MPI_TYPE_COMMIT(sendtyp, ierr)
-	 tag = 0
-	 call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
-			k, tag, MPI_COMM_WORLD, ierr)
-	 disp = disp + dim2(k)
+   call MPI_TYPE_VECTOR(nx*dim2(k),1,1,MPI_DOUBLE_PRECISION,temptyp,ierr)
+   call MPI_TYPE_CREATE_HVECTOR(dim3,1,spacing,temptyp,sendtyp,ierr)
+   call MPI_TYPE_COMMIT(sendtyp, ierr)
+   tag = 0
+   call MPI_SEND(temp(1,disp,1), 1, sendtyp, &
+      k, tag, MPI_COMM_WORLD, ierr)
+   disp = disp + dim2(k)
         endif
         if (rank  == k) then
-  	 nelements = nx * dim2(k) * dim3
-	 tag = 0
-	 call MPI_RECV(readarr, nelements, MPI_DOUBLE_PRECISION,&
-			0, tag, MPI_COMM_WORLD, stat, ierr)
+     nelements = nx * dim2(k) * dim3
+   tag = 0
+   call MPI_RECV(readarr, nelements, MPI_DOUBLE_PRECISION,&
+      0, tag, MPI_COMM_WORLD, stat, ierr)
         endif
 
         call MPI_BARRIER(MPI_COMM_WORLD, ierr)
@@ -1082,13 +1082,13 @@ end function sum2_normal
 
       implicit none
       integer reclmax, i, j, k, dim3
-      real*8 readarr(nx,ny,dim3), tempoa(nx,ny)
+      real(kind=real64) readarr(nx,ny,dim3), tempoa(nx,ny)
       character*(*) filename, output_filename
       inquire(iolength=reclmax) tempoa
 
        print *,'Now reading the file: ', filename, output_filename
        open(344,file=filename,form='unformatted',status='old', action='read',&
- 	access='direct',recl=reclmax)!,recordtype='fixed'
+  access='direct',recl=reclmax)!,recordtype='fixed'
 
        do k=1,dim3
         read(344, rec=k) ((readarr(i,j,k),i=1,nx),j=1,ny)

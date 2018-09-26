@@ -21,44 +21,49 @@ def compute_forward_adjoint_kernel(src):
     ####################################################################
     #~ Forward
     ####################################################################
-    
-    shutil.copyfile("Spectral",Instruction)
 
-    with open(datadir/forward/"out_forward",'w') as outfile:
-        fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
+    def compute_forward():
     
-    assert fwd==0,"Error in running forward"
-    
-    print("Finished forward computation for src {:02d}".format(src))
-    
-    for ttfile in fnmatch.filter(os.listdir(os.path.join(datadir,forward)),"ttdiff.[0-9]" ) :
-        shutil.copyfile(os.path.join(datadir,forward,ttfile),
-                            os.path.join(tt_dir,ttfile))
-                        
+        shutil.copyfile("Spectral",Instruction)
+
+        with open(datadir/forward/"out_forward",'w') as outfile:
+            fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
+        
+        assert fwd==0,"Error in running forward"
+        
+        for ttfile in fnmatch.filter(os.listdir(os.path.join(datadir,forward)),"ttdiff.[0-9]" ) :
+            shutil.copyfile(os.path.join(datadir,forward,ttfile),
+                                os.path.join(tt_dir,ttfile))                
     
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    shutil.copyfile("Adjoint",Instruction)
+    def compute_adjoint():
+        shutil.copyfile("Adjoint",Instruction)
 
-    with open(datadir/adjoint/"out_adjoint",'w') as outfile:
-        adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
+        with open(datadir/adjoint/"out_adjoint",'w') as outfile:
+            adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
 
-    assert adj==0,"Error in running adjoint"
-
-    print("Finished adjoint computation for src {:02d}".format(src))
+        assert adj==0,"Error in running adjoint"
             
     ####################################################################
     #~ Kernel
     ####################################################################
 
-    with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
-        kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
+    def compute_kernel():
+        with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
+            kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env)
 
-    assert kern==0,"Error in computing kernel"
+        assert kern==0,"Error in computing kernel"
 
-    print("Finished kernel computation for src {:02d}".format(src))
+    ####################################################################
+    # Call the functions
+    ####################################################################
+
+    compute_forward()
+    compute_adjoint()
+    compute_kernel()
 
     ####################################################################
     # if you've reached here then everything has finished correctly. Cleaning up
