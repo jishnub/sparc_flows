@@ -22,7 +22,7 @@ FC77= mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
 #LIBS1 = -lfftw3 -lcfitsio
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio -lgfortran -L/home/apps/lapack-3.5 -llapack -lcurl #-lquadmath
+LIBS1 = -L/home/apps/fftw-3.2/lib -lfftw3 -lcfitsio -lgfortran -L/home/apps/lapack-3.5 -llapack -lcurl #-lquadmath
 
 COMMAND1= sparc
 COMMAND2= tt_test

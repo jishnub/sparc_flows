@@ -6,11 +6,13 @@
 echo $PBS_JOBID
 export TERM=xterm
 cd $PBS_O_WORKDIR
-python $PBS_O_WORKDIR/setup.py 6
-export MPI_TYPE_MAX=1280280
+directory=$($HOME/anaconda3/bin/python -c 'import read_params; print(read_params.get_directory())')
+num_src=$(cat $directory/master.pixels|wc -l)
+num_ls=5
+~/anaconda3/bin/python -c "import setup; setup.create_directories($num_src,$num_ls)"
 echo "Starting at "`date`
 find . -name "linesearch" -delete
 touch compute_data
-/usr/local/bin/pbsdsh python $PBS_O_WORKDIR/data_forward.py
+/usr/local/bin/pbsdsh $HOME/anaconda3/bin/python $PBS_O_WORKDIR/data_forward.py
 find . -name "compute_data" -delete
 echo "Finished at "`date`

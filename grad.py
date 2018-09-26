@@ -173,7 +173,10 @@ def main():
             return False
 
     eps = map(float,filter(isfloat,args))
-    if eps==[]: eps=[0.1*i for i in xrange(1,7)]
+    num_ls_per_src = len(eps)
+    if eps==[]:
+        num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
+        eps=[0.01*i for i in xrange(1,num_ls_per_src+1)]
 
     Rsun=6.95989467700E2 # Mm
     z = np.loadtxt(read_params.get_solarmodel(),usecols=[0]); z=(z-1)*Rsun
@@ -586,12 +589,12 @@ def main():
             epslist = {i:epslist[i] for i in iter_done_list}
             epslist.update({str(iterno):ls_iter})
         else:
-            arr = np.zeros((4,6))
+            arr = np.zeros((4,num_ls_per_src))
             arr[0] = eps
             epslist = {i:epslist[i] for i in iter_done_list}
             epslist[str(iterno)] = arr
     except IOError:
-        arr = np.zeros((4,6))
+        arr = np.zeros((4,num_ls_per_src))
         arr[0] = eps
         epslist = {str(iterno):arr}
 

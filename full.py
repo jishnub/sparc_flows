@@ -1,140 +1,96 @@
-import os,shutil,glob,subprocess,datetime,time,read_params,sys,fnmatch
+import os,shutil,glob,subprocess,time,read_params,sys,fnmatch
+from pathlib import Path
+from datetime import datetime
 
-env=dict(os.environ, MPI_TYPE_MAX="1280280")
-env["LD_LIBRARY_PATH"]=env.get("LD_LIBRARY_PATH","")+":/home/apps/openmpi-1.6.5/lib"
-
-codedir=os.path.dirname(os.path.abspath(__file__))
-HOME=os.environ["HOME"]
-
-datadir=read_params.get_directory()
-
-def get_iter_no():
-    updatedir=os.path.join(datadir,"update")
-    # Count the number of misfit_xx files
-    return len(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
-iterno=get_iter_no()
-iterno2dig=str(iterno).zfill(2)
-
-with open(os.path.join(datadir,'master.pixels'),'r') as mp:
-    nmasterpixels=sum(1 for _ in mp)
-
-procno=int(os.environ["PBS_VNODENUM"])
-nodeno=int(os.environ["PBS_NODENUM"])
-
-if procno>=nmasterpixels:
-    print "Stopping job on node",nodeno,"proc",procno,"at",time.strftime("%H:%M:%S")
-    quit()
-
-src=str(procno+1).zfill(2)
-
-def safemkdir(a):
-    if not os.path.exists(a):
-        try: os.makedirs(a)
-        except OSError as e:
-            if e.errno == 17: pass
-            else: print e
+  
 
 def compute_forward_adjoint_kernel(src):
 
-    forward="forward_src"+src+"_ls00"
-    adjoint="adjoint_src"+src
+    forward="forward_src{:02d}_ls00".format(src)
+    adjoint="adjoint_src{:02d}".format(src)
     kernel="kernel"
 
-    Spectral=os.path.join(codedir,"Spectral")
-    Adjoint=os.path.join(codedir,"Adjoint")
-    Instruction=os.path.join(codedir,"Instruction_src"+src+"_ls00")
-
-    modes={'0':'fmode'}
-    for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
-    modes['8']='first_bounce_pmode'
+    Instruction=codedir/"Instruction_src{:02d}_ls00".format(src)
 
     ridge_filters = read_params.get_modes_used()
-
-    for ridge_filter in ridge_filters:
-        for freq_range in xrange(4):
-            if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range))):
-                shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range)),
-                        os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter+"."+str(freq_range)))
-        if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
-            shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                    os.path.join(datadir,forward,"ttdiff_prev."+ridge_filter))
-
-    mpipath="/home/apps/openmpi-1.6.5/bin/mpiexec"
-    # mpipath=os.path.join(HOME,"anaconda/bin/mpiexec")
-    sparccmd=mpipath+" -np 1 ./sparc "+src+" 00"
-
+    
+    mpipath=HOME/"anaconda3/bin/mpiexec"
+    sparccmd="{} -np 1 ./sparc {:02d} 00".format(mpipath,src)
+    
     ####################################################################
     #~ Forward
     ####################################################################
 
-    shutil.copyfile(Spectral,Instruction)
+    def compute_forward():
+    
+        shutil.copyfile(codedir/"Spectral",Instruction)
 
-    with open(os.path.join(datadir,forward,"out_forward"),'w') as outfile:
-        fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        with open(datadir/forward/"out_forward",'w') as outfile:
+            fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        
+        assert fwd==0,"Error in running forward"
+        
+        (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
 
-    assert fwd==0,"Error in running forward"
-
-    safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig))
-    # safemkdir(os.path.join(datadir,"tt","iter"+iterno2dig,"windows"+src))
-
-    shutil.copyfile(os.path.join(datadir,forward,"vz_cc.fits"),
-                    os.path.join(datadir,"tt","iter"+iterno2dig,"vz_cc_src"+src+".fits"))
-
-    for ridge_filter in ridge_filters:
-        for freq_range in xrange(4):
-            if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range))):
-                shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter+"."+str(freq_range)),
-                    os.path.join(datadir,"tt","iter"+iterno2dig,
-                    "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)+"."+str(freq_range)))
-        if os.path.exists(os.path.join(datadir,forward,"ttdiff."+ridge_filter)):
-            shutil.copyfile(os.path.join(datadir,forward,"ttdiff."+ridge_filter),
-                os.path.join(datadir,"tt","iter"+iterno2dig,
-                "ttdiff_src"+src+"."+modes.get(ridge_filter,ridge_filter)))
-
-
-    # julia = os.path.join(HOME,"lib/julia/bin/julia")
-    # adjsrc_julia_cmd = julia+" adjoint_source.jl"
-    # with open(os.path.join(datadir,adjoint,"out"+forward),'a') as outfile:
-    #     adj=subprocess.call(adjsrc_julia_cmd.split(),stdout=outfile,env=env,cwd=codedir)
-
+        for ridge_filter in ridge_filters:
+            shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),
+                            datadir/"tt"/"iter{:02d}".format(iterno)/
+                            "ttdiff_src{:02d}.{}".format(src,ridge_filter))
+    
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    shutil.copyfile(Adjoint,Instruction)
+    def compute_adjoint():
 
-    with open(os.path.join(datadir,adjoint,"out_adjoint"),'w') as outfile:
-        adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        shutil.copyfile(codedir/"Adjoint",Instruction)
 
-    assert adj==0,"Error in running adjoint"
+        with open(datadir/adjoint/"out_adjoint",'w') as outfile:
+            adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
+        assert adj==0,"Error in running adjoint"
 
     ####################################################################
     #~ Kernel
     ####################################################################
 
-    with open(os.path.join(datadir,kernel,"out_kernel"+src),'w') as outfile:
-        kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
-    assert kern==0,"Error in computing kernel"
+    def compute_kernel():
+        with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
+            kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
-    ####################################################################
-    #~ Remove leftover files
-    ####################################################################
-    for f in glob.glob(os.path.join(datadir,forward,"*full*")): os.remove(f)
-    for f in glob.glob(os.path.join(datadir,forward,"*partial*")): os.remove(f)
-    for f in glob.glob(os.path.join(datadir,adjoint,"*full*")): os.remove(f)
-    for f in glob.glob(os.path.join(datadir,adjoint,"*partial*")): os.remove(f)
+        assert kern==0,"Error in computing kernel"
 
+    compute_forward()
+    compute_adjoint()
+    compute_kernel()
 
-    if os.path.exists(os.path.join(datadir,forward,"vz_cc.bin")):
-        os.remove(os.path.join(datadir,forward,"vz_cc.bin"))
+if __name__ == "__main__":
 
-    if os.path.exists(os.path.join(datadir,forward,"vz_cc.fits")):
-        os.remove(os.path.join(datadir,forward,"vz_cc.fits"))
+    env=dict(os.environ, MPI_TYPE_MAX="1280280")
+    env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
+                                        "/home/apps/gcc-6.1/lib64",
+                                        "/home/apps/openmpi-1.6.5/lib",
+                                        "/home/apps/lapack-3.5"])
 
-timestart=datetime.datetime.now()
-print "Launching on proc no",procno,"for source",src,"at time",datetime.datetime.strftime(timestart, '%Y-%m-%d %H:%M:%S')
-compute_forward_adjoint_kernel(src)
-timefin= datetime.datetime.now()
-#~ elapsedTime = timefin - timestart
-#~ runtime=divmod(elapsedTime.total_seconds(), 60)
-print "Finished on proc no",procno,"for source",src,"at",datetime.datetime.strftime(timefin, '%Y-%m-%d %H:%M:%S')
+    codedir=Path(os.path.dirname(os.path.abspath(__file__)))
+    HOME=Path(os.environ["HOME"])
+
+    datadir= Path(read_params.get_directory())
+
+    iterno=len(fnmatch.filter(os.listdir(datadir/"update"),'misfit_[0-9][0-9]'))
+
+    with open(datadir/'master.pixels','r') as mp:
+        nmasterpixels=sum(1 for _ in mp)
+
+    procno=int(os.environ["PBS_VNODENUM"])
+
+    if procno>=nmasterpixels: quit()
+
+    src = procno + 1
+
+    t_start = datetime.now()
+
+    compute_forward_adjoint_kernel(src)
+    delta_t = datetime.now() - t_start
+
+    print("Finished computing full for source {} in {}".format(src,delta_t))
