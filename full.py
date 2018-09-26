@@ -20,44 +20,57 @@ def compute_forward_adjoint_kernel(src):
     ####################################################################
     #~ Forward
     ####################################################################
-    
-    shutil.copyfile(codedir/"Spectral",Instruction)
 
-    with open(datadir/forward/"out_forward",'w') as outfile:
-        fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+    def compute_forward():
     
-    assert fwd==0,"Error in running forward"
-    
-    (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(codedir/"Spectral",Instruction)
 
-    for ridge_filter in ridge_filters:
-        shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),
-                        datadir/"tt"/"iter{:02d}".format(iterno)/
-                        "ttdiff_src{:02d}.{}"format(src,ridge_filter))
+        with open(datadir/forward/"out_forward",'w') as outfile:
+            fwd=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        
+        assert fwd==0,"Error in running forward"
+        
+        (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
+
+        for ridge_filter in ridge_filters:
+            shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),
+                            datadir/"tt"/"iter{:02d}".format(iterno)/
+                            "ttdiff_src{:02d}.{}".format(src,ridge_filter))
     
     ####################################################################
     #~ Adjoint
     ####################################################################
 
-    shutil.copyfile(codedir/"Adjoint",Instruction)
+    def compute_adjoint():
 
-    with open(datadir/adjoint/"out_adjoint",'w') as outfile:
-        adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+        shutil.copyfile(codedir/"Adjoint",Instruction)
 
-    assert adj==0,"Error in running adjoint"
-            
+        with open(datadir/adjoint/"out_adjoint",'w') as outfile:
+            adj=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+
+        assert adj==0,"Error in running adjoint"
+
     ####################################################################
     #~ Kernel
     ####################################################################
 
-    with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
-        kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
+    def compute_kernel():
+        with open(datadir/kernel/"out_kernel{:02d}".format(src),'w') as outfile:
+            kern=subprocess.call(sparccmd.split(),stdout=outfile,env=env,cwd=codedir)
 
-    assert kern==0,"Error in computing kernel"
+        assert kern==0,"Error in computing kernel"
+
+    compute_forward()
+    compute_adjoint()
+    compute_kernel()
 
 if __name__ == "__main__":
 
     env=dict(os.environ, MPI_TYPE_MAX="1280280")
+    env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
+                                        "/home/apps/gcc-6.1/lib64",
+                                        "/home/apps/openmpi-1.6.5/lib",
+                                        "/home/apps/lapack-3.5"])
 
     codedir=Path(os.path.dirname(os.path.abspath(__file__)))
     HOME=Path(os.environ["HOME"])

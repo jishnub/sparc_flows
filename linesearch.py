@@ -10,7 +10,7 @@ def compute_forward(src,linesearch_no):
 
     Instruction=codedir/"Instruction_src{:02d}_ls{:02d}".format(src,linesearch_no)
 
-    shutil.copyfile(datadir/"Spectral",Instruction)
+    shutil.copyfile(codedir/"Spectral",Instruction)
 
     mpipath=HOME/"anaconda3/bin/mpiexec"
     sparccmd="{} -np 1 ./sparc {:02d} {:02d}".format(mpipath,src,linesearch_no)
@@ -25,7 +25,13 @@ def compute_forward(src,linesearch_no):
 if __name__ == "__main__":
 
     env=dict(os.environ, MPI_TYPE_MAX="1280280")
-    codedir=Path(os.path.dirname(os.path.abspath(__file__)))
+    env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
+                                        "/home/apps/gcc-6.1/lib64",
+                                        "/home/apps/openmpi-1.6.5/lib",
+                                        "/home/apps/lapack-3.5"])
+
+
+    codedir=Path(os.path.dirname(__file__))
     HOME=Path(os.environ["HOME"])
 
     datadir= Path(read_params.get_directory())
@@ -36,7 +42,7 @@ if __name__ == "__main__":
     with open(datadir/'master.pixels','r') as mp:
         nsrc=sum(1 for _ in mp)
 
-    num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src00_ls[0-9][1-9]"))
+    num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
 
     total_no_of_jobs=nsrc*num_ls_per_src
 

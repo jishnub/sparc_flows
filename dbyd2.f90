@@ -25,7 +25,9 @@
 !~ C    Note that the neuman BC must be set if either IBC = 2, 3 or 4
 !~ c       assuming the total interval is unity
 !~ C-------------------------------------------------------------
-        real(kind=real64) A(N1,N2),B(N1,N2)
+        real(kind=real64), intent(in) :: B(N1,N2)
+        real(kind=real64), intent(out) :: A(N1,N2)
+        integer, intent(in) :: ibc
         real(kind=real64) uppr(NMAX),diag(NMAX),lowr(NMAX)
         data diag/NMAX*1.0/
         data revision/1.0/

@@ -16,12 +16,13 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 	damping.o	kernels.o	bspline90_22.o integrals.o spline.o \
 	splevl.o splint.o
 
-
-FC= mpif90
-FC77= mpif77
+# compile witha  recent version of gcc, eg load the module gcc/6.1 on the cluster
+MPIPATH = "/home/apps/openmpi-1.6.5/bin"
+FC= $(MPIPATH)/mpif90
+FC77= $(MPIPATH)/mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g -pedantic ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
-LIBS1 = -L$(HOME)/lib/fftw-3.3.4/lib -lfftw3 -lcfitsio -lcurl
+LIBS1 = -L/home/apps/fftw-3.2/lib -lfftw3 -lcfitsio -lcurl -L/home/apps/lapack-3.5 -llapack
 
 COMMAND1=	sparc
 
@@ -39,7 +40,7 @@ $(COMMAND1): $(OBJS1)
 clean:
 	@find . -maxdepth 1 -name "*.o" -delete
 	@find . -maxdepth 1 -name "*.mod" -delete
-	@find . -maxdepth 1 -name "*.fits" -delete
+	@find . -maxdepth 1 -name "*mode_filter.fits" -delete
 	@find . -maxdepth 1 -name "$(COMMAND1)" -delete
 
 

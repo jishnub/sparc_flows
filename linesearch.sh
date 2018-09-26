@@ -21,13 +21,16 @@ touch linesearch
 echo "Starting iterations at "`date`
 
 [[ numls -eq 0 ]] && numls=$(find $directory/update -maxdepth 1 -regex "$directory/update/test_psi_[0-9]+.fits"|wc -l)
-echo "Number of linesearches: "$numls
 
 for lin in $(seq 1 $numls)
 do
     linzpd=$(printf "%02d" $lin)
     [[ -e $directory/update/test_psi_"$lin".fits ]] && cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
 done
+
+nmasterpixels=$(wc -l < $directory/master.pixels)
+
+echo "Number of sources: $nmasterpixels, number of linesearches per src: $numls"
 
 ########################################################################
 #~ Main computation
@@ -37,7 +40,7 @@ done
 
 ########################################################################
 
-nmasterpixels=$(wc -l < $directory/master.pixels)
+
 
 for lin in $(seq -f "%02g" 1 $numls)
 do

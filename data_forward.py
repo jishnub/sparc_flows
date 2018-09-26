@@ -29,8 +29,15 @@ if __name__ == "__main__":
 
 
     env=dict(os.environ, MPI_TYPE_MAX="1280280")
+    env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
+                                        "/home/apps/gcc-6.1/lib64",
+                                        "/home/apps/openmpi-1.6.5/lib",
+                                        "/home/apps/lapack-3.5"])
+
     HOME=Path(os.environ["HOME"])
     codedir=Path(os.path.dirname(__file__))
+
+
     datadir=Path(read_params.get_directory())
 
     procno=int(os.environ["PBS_VNODENUM"])

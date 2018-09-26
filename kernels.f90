@@ -192,7 +192,7 @@ SUBROUTINE PRODUCE_KERNELS
  flow_kernels = .false.
  if (FLOWS) flow_kernels = .true.
  if (magnetic) magnetic_kernels = .true.
- density_kernels = .true.
+ density_kernels = .false.
 
 
 ! grav =0.
@@ -577,7 +577,7 @@ SUBROUTINE PRODUCE_KERNELS
  if (SOUND_SPEED_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED SOUND-SPEED KERNELS ARE s^2 Mm^-3'
   kernelc2 = - kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
-
+  ! if (flows .and. psi_cont) kernelc2 = kernelc2 + kernelpsi*(1.-psivar(1,1,1)/psivar)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_c_'//contrib//'.fits', kernelc2, nz_kern)
 
 !~   if (rank==0) then
