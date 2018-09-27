@@ -20,7 +20,7 @@ itername=$(printf "%02d" $iter)
 touch linesearch
 echo "Starting iterations at "`date`
 
-[[ numls -eq 0 ]] && numls=$(find $directory/update -maxdepth 1 -regex "$directory/update/test_psi_[0-9]+.fits"|wc -l)
+numls=$(find $directory/update -maxdepth 1 -regex "$directory/update/test_psi_[0-9]+.fits"|wc -l)
 
 for lin in $(seq 1 $numls)
 do

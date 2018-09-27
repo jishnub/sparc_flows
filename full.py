@@ -1,4 +1,4 @@
-import os,shutil,glob,subprocess,time,read_params,sys,fnmatch
+import os,shutil,subprocess,time,read_params,sys,fnmatch
 from pathlib import Path
 from datetime import datetime
 
@@ -73,9 +73,8 @@ if __name__ == "__main__":
                                         "/home/apps/lapack-3.5",
                                         "/home/apps/fftw-3.2/lib"])
 
-    codedir=Path(os.path.dirname(os.path.abspath(__file__)))
+    codedir=Path(__file__).parent.absolute()
     HOME=Path(os.environ["HOME"])
-
     datadir= Path(read_params.get_directory())
 
     iterno=len(fnmatch.filter(os.listdir(datadir/"update"),'misfit_[0-9][0-9]'))

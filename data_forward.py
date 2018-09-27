@@ -1,4 +1,4 @@
-import os,sys,shutil,glob,subprocess,read_params
+import os,sys,shutil,subprocess,read_params
 from pathlib import Path
 from datetime import datetime
 
@@ -35,15 +35,13 @@ if __name__ == "__main__":
                                         "/home/apps/lapack-3.5",
                                         "/home/apps/fftw-3.2/lib"])
 
+    codedir=Path(__file__).parent.absolute()
     HOME=Path(os.environ["HOME"])
-    codedir=Path(os.path.dirname(__file__))
-
-
     datadir=Path(read_params.get_directory())
 
     procno=int(os.environ["PBS_VNODENUM"])
 
-    with open(os.path.join(datadir,'master.pixels'),'r') as mp:
+    with open(datadir/'master.pixels','r') as mp:
         nsrc=sum(1 for _ in mp)
 
     if procno>=nsrc: quit()

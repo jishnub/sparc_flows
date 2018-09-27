@@ -1,4 +1,4 @@
-import os,sys,shutil,glob,subprocess,read_params,fnmatch
+import os,sys,shutil,subprocess,read_params,fnmatch
 from pathlib import Path
 from datetime import datetime
 
@@ -32,9 +32,8 @@ if __name__ == "__main__":
                                         "/home/apps/fftw-3.2/lib"])
 
 
-    codedir=Path(os.path.dirname(__file__))
+    codedir=Path(__file__).parent.absolute()
     HOME=Path(os.environ["HOME"])
-
     datadir= Path(read_params.get_directory())
 
     procno=int(env["PBS_VNODENUM"])

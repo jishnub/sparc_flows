@@ -1,20 +1,20 @@
-
 import numpy as np
 import os,sys,fnmatch
 import read_params
+from pathlib import Path
 
-datadir = read_params.get_directory()
+datadir = Path(read_params.get_directory())
 
 iterno = len(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),"misfit_[0-9][0-9]")) - 1
 
-with np.load(os.path.join(datadir,"epslist.npz")) as f:
+with np.load(datadir/"epslist.npz") as f:
     step_sizes = f[str(iterno)][0]
     lsdata = f[str(iterno)][1]
 
-lsfile=os.path.join(datadir,"update","linesearch_{:02d}".format(iterno))
-ls_rm_file = os.path.join(datadir,"update","ls_{:02d}.rnm".format(iterno))
+lsfile=datadir/"update"/"linesearch_{:02d}".format(iterno)
+ls_rm_file = datadir/"update"/,"ls_{:02d}.rnm".format(iterno)
 
-nmasterpixels = np.loadtxt(os.path.join(datadir,"master.pixels"),ndmin=1).size
+nmasterpixels = np.loadtxt(datadir/"master.pixels",ndmin=1).size
 
 no_of_linesearches=len(step_sizes)
 if os.path.exists(lsfile):
@@ -33,3 +33,4 @@ arbitrary_steps = [min_step*(0.7+0.1*i) for i in range(no_of_linesearches)]
 print(list(step_sizes))
 print(misfit)
 print("python grad.py algo=bfgs"+("{:10.2E}"*6).format(*arbitrary_steps))
+print("Expected misfits: "+("{:10.2E}"*6).format(*np.polyval(p,arbitrary_steps)))
