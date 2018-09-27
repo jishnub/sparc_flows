@@ -1,4 +1,4 @@
-import os,sys,shutil,subprocess,read_params,fnmatch
+import os,shutil,subprocess,read_params,fnmatch
 from pathlib import Path
 from datetime import datetime
 

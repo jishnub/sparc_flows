@@ -1,5 +1,5 @@
 import numpy as np
-import os,sys,fnmatch
+import os,fnmatch
 import read_params
 from pathlib import Path
 
@@ -12,7 +12,7 @@ with np.load(datadir/"epslist.npz") as f:
     lsdata = f[str(iterno)][1]
 
 lsfile=datadir/"update"/"linesearch_{:02d}".format(iterno)
-ls_rm_file = datadir/"update"/,"ls_{:02d}.rnm".format(iterno)
+ls_rm_file = datadir/"update"/"ls_{:02d}.rnm".format(iterno)
 
 nmasterpixels = np.loadtxt(datadir/"master.pixels",ndmin=1).size
 
@@ -30,7 +30,7 @@ p=np.polyfit(step_sizes,misfit,2)
 min_step = -p[1]/(2*p[0])
 
 arbitrary_steps = [min_step*(0.7+0.1*i) for i in range(no_of_linesearches)]
-print(list(step_sizes))
-print(misfit)
+print("Step sizes: ",list(step_sizes))
+print("Linesearch misfits: ",misfit)
 print("python grad.py algo=bfgs"+("{:10.2E}"*6).format(*arbitrary_steps))
 print("Expected misfits: "+("{:10.2E}"*6).format(*np.polyval(p,arbitrary_steps)))
