@@ -56,4 +56,4 @@ if __name__ == "__main__":
     compute_forward(src_no,linesearch_no)
     delta_t = datetime.now() - t_start
 
-    print(("Finished computing full for source {} in {}".format(src,delta_t)))
+    print(("Finished computing full for source {} in {}".format(src_no,delta_t)))
