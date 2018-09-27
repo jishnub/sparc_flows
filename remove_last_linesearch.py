@@ -22,7 +22,7 @@ try:
         ls_file_new=os.path.join(datadir,"update","ls_"+last_ls_no+".rnm")
         shutil.move(ls_file,ls_file_new)
 except IOError:
-    print "Can't move",ls_file
+    print("Can't move",ls_file)
 
 try:
     if iterstatus_good and ls_all_files:
@@ -30,4 +30,4 @@ try:
         ls_all_file_new=os.path.join(datadir,"update","ls_all_"+last_ls_no+".rnm")
         shutil.move(ls_all_file,ls_all_file_new)
 except IOError:
-    print "Can't move",ls_all_file
+    print("Can't move",ls_all_file)

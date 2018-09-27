@@ -1,4 +1,4 @@
-from __future__ import division,print_function
+
 import subprocess ,time, os, shutil,read_params,glob,fnmatch,sys
 import numpy as np,pyfits
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ def modification_date(filename):
 
 def check_if_built():
     with open("makefile","r") as f: l=f.readlines()
-    exec_name = filter(lambda x:x.lower().startswith("command1"),l)[0].split("=")[-1].strip()
+    exec_name = [x for x in l if x.lower().startswith("command1")][0].split("=")[-1].strip()
     sparc_build_time = modification_date(exec_name)
     for corefile in ["params.i",'driver.f90','integrals.f90','physics2d.f90','derivatives.f90',
                  'physics.f90','initialize.f90','all_modules.f90','pml.f90','step.f90',
@@ -54,7 +54,7 @@ iter_var="psi"
 
 num_linesearches = 6
 
-def grad_command(algo="bfgs",eps=[0.01*i for i in xrange(1,num_linesearches+1)]):
+def grad_command(algo="bfgs",eps=[0.01*i for i in range(1,num_linesearches+1)]):
     eps_str = ' '.join([str(i) for i in eps])
     return "python grad.py algo="+algo+" "+str(eps_str)
 
@@ -111,10 +111,10 @@ def get_eps_around_minimum(prev1_eps,prev1_misfits):
         eps = np.array(prev1_eps)*10
     elif p[0]>0:
         step = - p[1]/(2*p[0])
-        eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
+        eps = np.array([step*(0.8+0.1*i) for i in range(num_linesearches)])
     elif p[0]==0:
         step = -p[2]/p[1]
-        eps = np.array([step*(0.8+0.1*i) for i in xrange(num_linesearches)])
+        eps = np.array([step*(0.8+0.1*i) for i in range(num_linesearches)])
 
 
     pred_misfit = np.polyval(p,eps)
@@ -186,12 +186,12 @@ def print_status(all_lines):
     return (steps_done,number_of_timesteps,steps_done/number_of_timesteps*100,
     estimated_time)
 
-for query in xrange(100000):
+for query in range(100000):
 
     #~ print("Query",query)
     qstat=subprocess.check_output(["qstat"]).split()
 
-    job_id_indices = [qstat.index(i) for i in filter(lambda x:x.endswith("daahpc1") or x.endswith("daahpc2"),qstat)]
+    job_id_indices = [qstat.index(i) for i in [x for x in qstat if x.endswith("daahpc1") or x.endswith("daahpc2")]]
     job_names = [qstat[i+1] for i in job_id_indices]
     job_statuses = [qstat[i+4] for i in job_id_indices]
 
@@ -336,7 +336,7 @@ for query in xrange(100000):
                             print("using step size from iteration",closest_iter)
                         else:
                             print("using arbitary step sizes")
-                            eps=[1e-2*i for i in xrange(1,num_linesearches+1)]
+                            eps=[1e-2*i for i in range(1,num_linesearches+1)]
             else:
                 print("Linesearch for this iteration not done yet, choosing step size from iteration",)
                 #~ Iteration not yet done
@@ -350,7 +350,7 @@ for query in xrange(100000):
             #~ If the file doesn't exist, no linesearches have been carried out
             #~ Assign arbitrary small value
             print("Using arbitary step sizes")
-            eps=np.array([1e-2*i for i in xrange(1,num_linesearches+1)])
+            eps=np.array([1e-2*i for i in range(1,num_linesearches+1)])
         #~ Run grad
         gradcmd = grad_command(algo=opt_algo,eps=eps)
         def exp_notation(a):
@@ -395,7 +395,7 @@ for query in xrange(100000):
 
         assert len(np.where(lsdata[:,0]==1)[0])==num_linesearches,"Not all linesearches finished correctly"
         nmasterpixels = lsdata.shape[0]//num_linesearches
-        misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels,2]) for i in xrange(num_linesearches)])
+        misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels,2]) for i in range(num_linesearches)])
 
         print("Linesearch misfits",misfit)
         if np.isnan(misfit).any():

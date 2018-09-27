@@ -1,4 +1,4 @@
-from __future__ import division
+
 import plotc
 import matplotlib
 import matplotlib.pyplot as plt
@@ -92,10 +92,10 @@ plt.subplots_adjust(wspace=0,hspace=0.3)
 save = read_params.parse_cmd_line_params("save")
 if save is not None:
     savepath = os.path.join("plots",save)
-    print "saving to",savepath
+    print("saving to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()

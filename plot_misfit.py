@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import pyfits
 import os,re,sys,glob,fnmatch
@@ -29,7 +29,7 @@ num_misfit_all_files=len(misfit_all_files)
 num_coeff_files = len(coeff_files)
 
 if num_misfit_files==0:
-    print "No misfit files found"
+    print("No misfit files found")
     quit()
 
 #~ If iteration cutoff is specified use it
@@ -49,7 +49,7 @@ num_source = len(srclocs)
 #~ Get ridges used
 ridges=read_params.get_modes_used()
 modes={'0':'f'}
-for i in xrange(1,8): modes[str(i)]='p'+str(i)
+for i in range(1,8): modes[str(i)]='p'+str(i)
 modes['8']='first_bounce_p'
 
 np.set_printoptions(linewidth=200,precision=4)
@@ -75,9 +75,9 @@ if mistype == "data":
 
         nsources_found = 0
 
-        for src in xrange(1,num_source+1):
+        for src in range(1,num_source+1):
 
-            for iterno in xrange(num_misfit_files):
+            for iterno in range(num_misfit_files):
 
                 ttfile = os.path.join(datadir,'tt','iter'+str(iterno).zfill(2),
                             'ttdiff_src'+str(src).zfill(2)+'.'+modes[ridge]+'mode.0')
@@ -92,7 +92,7 @@ if mistype == "data":
         if nsources_found>0:
             modemisfit[ridgeno] /= nsources_found
         else:
-            print ridge,nsources_found
+            print(ridge,nsources_found)
 
         try:
             plotdict=dict(label=modes[ridge],marker=next(markers),color="black")
@@ -102,7 +102,7 @@ if mistype == "data":
                 plotdict["color"]=next(modecolors)
 
 
-            plt.semilogy(range(num_misfit_files),modemisfit[ridgeno],**plotdict)
+            plt.semilogy(list(range(num_misfit_files)),modemisfit[ridgeno],**plotdict)
         except Exception as e: print(e)
 
     plt.tick_params(axis='both', which='major', labelsize=14)
@@ -119,7 +119,7 @@ if mistype == "data":
     plotdict = dict(color='black',marker='o',ls='solid',zorder=1)
     if plotcolors:
         plotdict["color"]="darkorchid"
-    plt.semilogy(range(num_misfit_files),total_misfit,**plotdict)
+    plt.semilogy(list(range(num_misfit_files)),total_misfit,**plotdict)
     plt.tick_params(axis='both', which='major', labelsize=14)
     plt.ylabel('Total misfit',fontsize=20)
     plt.title("Misfit reduction by {:.1E}".format(total_misfit[0]/total_misfit[-1]),fontsize=16)
@@ -175,7 +175,7 @@ elif mistype == "model":
     misfit_vx = []
     misfit_vz = []
 
-    for iterno in xrange(num_coeff_files):
+    for iterno in range(num_coeff_files):
         with np.load(os.path.join(datadir,'update',
             'model_psi_{:02d}_coeffs.npz'.format(iterno))) as f:
             cz_model = f['z'] + cz_top
@@ -242,8 +242,8 @@ if save is not None:
     savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
-    print "Saved to",savepath
+    print("Saved to",savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()

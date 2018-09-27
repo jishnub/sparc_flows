@@ -1,143 +1,161 @@
 import os,fnmatch,sys
+from pathlib import Path
+
+codedir = Path(__file__).parent.absolute()
+paramsfile = codedir/"params.i"
+driverfile = codedir/'driver.f90'
+
+def strip_comments(line):
+    line=line.strip()
+    head,_,_ = line.partition("!") # strip comments
+    return head
 
 def get_directory():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+    
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("directory" in line.lower()):
                 return line.split()[-1].split("'")[1].rstrip("/")
+    return None
 
 def get_xlength():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+    
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("xlength" in line.lower()):
                 return float(line.split()[3]) # Mm
 
 def get_dt():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("outputcad" in line.lower()):
                 return float(line.split()[3].split(")")[0]) # seconds
 
 def get_dt_simulation():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("timestep" in line.lower()):
                 return float(line.split()[-1].split(")")[0]) # seconds
 
 def get_total_simulation_time():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("solartime" in line.lower()):
                 return float(line.split()[3].split(")")[0]) # hours
 
 def get_ridge_filter():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    driverfile = os.path.join(codedir,'driver.f90')
-    with open(driverfile,'r') as driverfile:
+    
+    with open(driverfile,'r') as df:
         adjoint_src_filt=False
         ridge_filter=False
-        for line in driverfile.readlines():
+        for line in df:
             if "SUBROUTINE ADJOINT_SOURCE_FILT" in line.upper(): adjoint_src_filt=True
             if "RIDGE FILTERS" in line.upper(): ridge_filter=True
             if adjoint_src_filt and "do pord=" in line.lower() and ridge_filter:
                 ridges=line.split()[1].split("=")[1].split(",")
                 if len(ridges)==2:
-                    ridges=[str(i) for i in xrange(int(ridges[0]),int(ridges[1])+1)]
+                    ridges=[str(i) for i in range(int(ridges[0]),int(ridges[1])+1)]
                 elif len(ridges)==3:
-                    ridges=[str(i) for i in xrange(int(ridges[0]),int(ridges[1])+1,int(ridges[2]))]
+                    ridges=[str(i) for i in range(int(ridges[0]),int(ridges[1])+1,int(ridges[2]))]
                 return ridges
             if "PHASE-SPEED FILTERS" in line.upper(): ridge_filter=False
             if "END SUBROUTINE ADJOINT_SOURCE_FILT" in line.upper(): adjoint_src_filt=False
 
 def get_nx():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("nx" in line.lower()):
                 return int(line.split()[3].split(',')[0])
 
 def get_nz():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+    
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("nz" in line.lower()):
                 return int(line.split()[-1].strip(")"))
 
 def get_solarmodel():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("file_data" in line.lower()):
                 return line.split("=")[-1].strip().strip("'")
 
 def get_excitedepth():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("excitdep" in line.lower()):
                 return float(line.split("=")[-1].strip(")").replace(" ",""))
 
 def get_obs_depth():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+    
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("obsheight" in line.lower()):
                 return float(line.split("=")[-1].strip(")").replace(" ",""))
 
 def if_continuity_enforced():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("enf_cont" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
     return None
 
 def get_continuity_variable():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("psi_cont" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return 'psi'
             if ("parameter" in line.lower()) and ("vx_cont" in line.lower()):
@@ -147,20 +165,24 @@ def get_continuity_variable():
     return "unknown"
 
 def if_soundspeed_perturbed():
-    with open("params.i",'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("sound_speed_perturbation" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
     return None
 
 def if_flows():
-    with open("params.i",'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
+    with open(paramsfile,'r') as pf:
+        for line in pf:
+            
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
+
             if ("parameter" in line.lower()) and ("flows" in line.lower()):
                 if line.split("=")[1].split(")")[0].strip().strip(".").lower()=='true': return True
                 elif line.split("=")[1].split(")")[0].strip().strip(".").lower()=='false': return False
@@ -174,11 +196,10 @@ def get_modes_used():
     return ridge_filters
 
 def get_Lregular():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    driverfile = os.path.join(codedir,'driver.f90')
-    with open(driverfile,'r') as driverfile:
+
+    with open(driverfile,'r') as df:
         psi_cont_check=False
-        for line in driverfile:
+        for line in df:
             if "if (psi_cont .and. enf_cont) then" in line.lower(): psi_cont_check=True
             if psi_cont_check and "Lregular" in line:
                 if "Lregular" != line.strip().split()[0]: continue
@@ -188,14 +209,15 @@ def get_Lregular():
                 break
 
 def get_cutoff_dist():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
+
     switch=False
     val = None
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile.readlines():
-            line=line.strip()
-            if line.startswith("!"): continue
+
+    with open(paramsfile,'r') as pf:
+        for line in pf.readlines():
+
+            line = strip_comments(line)
+            if not len(line): continue # if a line is entirely commented out
 
             if ("parameter" in line.lower()) and ("cutoff_switch" in line.lower()):
                 switch= line.split("=")[-1].split(")")[0].strip()
@@ -206,59 +228,23 @@ def get_cutoff_dist():
 
     return switch,val
 
-def get_true_psi_filename():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
-            if ("parameter" in line.lower()) and ("true_psi_filename" in line.lower()):
-                return line.split("=")[-1].strip().strip("'")
 
-def get_true_vx_filename():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
-            if ("parameter" in line.lower()) and ("true_vx_filename" in line.lower()):
-                return line.split("=")[-1].strip().strip("'")
 
-def get_true_vz_filename():
-    codedir=os.path.dirname(os.path.abspath(__file__))
-    paramsfile = os.path.join(codedir,"params.i")
-    with open(paramsfile,'r') as paramsfile:
-        for line in paramsfile:
-            line=line.strip()
-            if line.startswith("!"): continue
-            if ("parameter" in line.lower()) and ("true_vz_filename" in line.lower()):
-                return line.split("=")[-1].strip().strip("'")
 ################################################################################################
 
 
 def parse_cmd_line_params(key,mapto=None,default=None,return_list=False,zfill=None):
-    cmd_line_param = filter(lambda x: x.startswith(key+"="),sys.argv)
+    cmd_line_param = [x for x in sys.argv if x.startswith(key+"=")]
 
     if len(cmd_line_param)!=0:
         retval=cmd_line_param[0].split("=")[-1]
         retval = retval.strip().lstrip('[').rstrip(']').split(',')
-        if zfill is not None: retval=map(lambda x: x.zfill(zfill), retval)
-        if mapto is not None: retval=map(mapto,retval)
+        if zfill is not None: retval=[x.zfill(zfill) for x in retval]
+        if mapto is not None: retval=list(map(mapto,retval))
         retval = [None if element=='None' else element for element in retval]
         if not return_list and len(retval)==1:
             retval=retval[0]
 
-    else:
-        if isinstance(default,(list,)) and mapto is not None:
-            retval=map(mapto,default)
-        elif mapto is not None:
-            try:
-                retval = mapto(default)
-            except:
-                retval = default
-        else:
-            retval=default
+    else: retval=default
 
     return retval

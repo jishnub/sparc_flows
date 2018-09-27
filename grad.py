@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import scipy
 from scipy.ndimage.filters import gaussian_filter1d
@@ -7,7 +7,7 @@ from scipy.special import j1,j0,jn
 def j2(z): return jn(2,z)
 def j1prime(z): return 0.5*(j0(z)-j2(z))
 import os,fnmatch,sys
-import pyfits
+from astropy.io import fits
 import warnings
 import read_params
 import matplotlib
@@ -30,10 +30,10 @@ DH13 = supergranule(R = 15,
 ########################################################################
 
 def fitsread(f):
-    try:
-        arr=pyfits.getdata(f)
-    except IOError:
-        raise IOError
+    
+    with fits.open(f) as hdul:
+        arr=hdul[0].data
+
     # If it is 2D, make it 3D.
     # Dimension will be (nz,1,nx) after this
     if len(arr.shape)==2: arr=arr[:,np.newaxis,:]
@@ -41,12 +41,11 @@ def fitsread(f):
     return arr.transpose(2,1,0)
 
 def fitswrite(f,arr):
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        # Change dimensions from (nx,ny,nz) to (nz,ny,nx)
-        # arr=arr.transpose(2,1,0)
-        # clobber=True rewrites a pre-existing file
-        pyfits.writeto(f,arr,clobber=True)
+    
+    # Change dimensions from (nx,ny,nz) to (nz,ny,nx)
+    # arr=arr.transpose(2,1,0)
+
+    fits.writeto(f,arr,overwrite=True)
 
 def get_iter_no():
     datadir = read_params.get_directory()
@@ -90,7 +89,7 @@ def filterz(arr,algo='spline',sp=1.0):
 
         kst=1
 
-        for k in xrange(5,nz-5):
+        for k in range(5,nz-5):
             temp[:,:,k] =( coeffs[0]*arr[:,:,k] + 0.5*coeffs[1]*(arr[:,:,k-1] + arr[:,:,k+1])
                         +  0.5*coeffs[2]*(arr[:,:,k-2] + arr[:,:,k+2])
                         +  0.5*coeffs[3]*(arr[:,:,k-3] + arr[:,:,k+3])
@@ -105,8 +104,8 @@ def filterz(arr,algo='spline',sp=1.0):
         arr[:,:,kst:nz-kst+1]=temp[:,:,kst:nz-kst+1]
 
     elif algo=='spline':
-        for x_ind in xrange(nx):
-            for y_ind in xrange(ny):
+        for x_ind in range(nx):
+            for y_ind in range(ny):
                 arrz=arr[x_ind,y_ind]
                 arrzmax=arrz.max()
                 arrz=arrz/arrzmax
@@ -162,7 +161,7 @@ def main():
     BFGS = optimization_algo.lower()=='bfgs'
 
     if not (BFGS or steepest_descent or conjugate_gradient):
-        print "No matching optimization algorithm, quitting"
+        print("No matching optimization algorithm, quitting")
         quit()
 
     def isfloat(value):
@@ -172,11 +171,11 @@ def main():
         except ValueError:
             return False
 
-    eps = map(float,filter(isfloat,args))
+    eps = list(map(float,list(filter(isfloat,args))))
     num_ls_per_src = len(eps)
     if eps==[]:
         num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
-        eps=[0.01*i for i in xrange(1,num_ls_per_src+1)]
+        eps=[0.01*i for i in range(1,num_ls_per_src+1)]
 
     Rsun=6.95989467700E2 # Mm
     z = np.loadtxt(read_params.get_solarmodel(),usecols=[0]); z=(z-1)*Rsun
@@ -195,7 +194,7 @@ def main():
         # Assume (nz,nx) format
         return integrate.simps(integrate.simps(arr,dx=dx,axis=1),x=z,axis=0)
 
-    back=np.loadtxt(read_params.get_solarmodel())
+    solarmodel=np.loadtxt(read_params.get_solarmodel())
 
     num_src=get_number_of_sources()
 
@@ -204,30 +203,31 @@ def main():
     def read_model(var='psi',iterno=iterno):
         modelfile = updatedir('model_'+var+'_'+str(iterno).zfill(2)+'_coeffs.npz')
         with np.load(modelfile) as f:
-            return dict(f.items())
+            return dict(list(f.items()))
 
     def read_grad(var='psi',iterno=iterno):
-        # return pyfits.getdata(updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        
         modelfile = updatedir('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
         with np.load(modelfile) as f:
-            return dict(f.items())
+            return dict(list(f.items()))
 
     def read_update(var='psi',iterno=iterno):
-        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        
         modelfile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
         with np.load(modelfile) as f:
-            return dict(f.items())
+            return dict(list(f.items()))
 
     def read_BFGS_hessian(var='psi',iterno=iterno):
-        # return pyfits.getdata(updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.fits'))
+        
         modelfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
         with np.load(modelfile) as f:
-            return dict(f.items())
+            return dict(list(f.items()))
 
     def read_kern(var='psi',src=1):
         return fitsread(os.path.join(datadir,'kernel','kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
 
-    psi_true = np.squeeze(pyfits.getdata(read_params.get_true_psi_filename()))
+    
+    
 
     ############################################################################
     # Spline
@@ -272,7 +272,7 @@ def main():
             return self.iterated[low_ind:high_ind]
 
         def get_range(self):
-            return np.array(range(self.low_ind,self.high_ind))
+            return np.array(list(range(self.low_ind,self.high_ind)))
 
     iter_model = read_model()
 
@@ -293,13 +293,13 @@ def main():
     totkern_psi=np.zeros(array_shape)
     hess=np.zeros(array_shape)
 
-    for src in xrange(1,num_src+1):
+    for src in range(1,num_src+1):
 
         totkern_psi += read_kern(var='psi',src=src)
 
         hess+=abs(fitsread(os.path.join(datadir,'kernel','hessian_'+str(src).zfill(2)+'.fits')))
 
-    hess=hess*np.atleast_3d(back[:,2]).transpose(0,2,1)
+    hess=hess*np.atleast_3d(solarmodel[:,2]).transpose(0,2,1)
     hess = hess/abs(hess).max()
     hess[hess<5e-3]=5e-3
 
@@ -310,11 +310,9 @@ def main():
 
     kernel = np.squeeze(totkern_psi).T
 
-    cutoff_x = 1/(1+np.exp((abs(x)-large_x_cutoff)/5))
-    # kernel = kernel*cutoff_x[None,:]
+    fitswrite(updatedir("grad_psi_{:02d}.fits".format(iterno)),kernel)
 
-
-    fitswrite(updatedir("grad_psi_"+str(iterno).zfill(2)+".fits"),kernel)
+    psi_true = fitsread("true_psi.fits").squeeze().T # shape would be (nz,nx)
 
     # Plot gradient (kernel)
     f=plt.figure()
@@ -336,7 +334,7 @@ def main():
 
     f.set_size_inches(8,3.5)
     plt.tight_layout()
-    plt.savefig(os.path.join(datadir,"update","grad_"+str(iterno).zfill(2)+".png"))
+    plt.savefig(os.path.join(datadir,"update","grad_{:02d}.png".format(iterno)))
 
     # compute basis coefficient gradients
     def compute_grad_basis(coeffs):
@@ -347,11 +345,11 @@ def main():
         hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
         g_c = f0_x[None,:]
 
-        grad = dict.fromkeys(coeffs.keys())
+        grad = dict.fromkeys(list(coeffs.keys()))
         for key in grad:
             grad[key] = np.zeros(coeffs[key].size)
 
-        if "R" in coeffs.keys() and coeffs["R"].iterated is not None:
+        if "R" in list(coeffs.keys()) and coeffs["R"].iterated is not None:
             # f1_x is the derivative of f0_x wrt R
             f1_x = x*np.exp(-abs(x)/DH13.R)/DH13.R**2*(j1(DH13.k*abs(x))-np.pi*j1prime(DH13.k*abs(x)))
             # f1_x/=f0_x_max
@@ -369,6 +367,7 @@ def main():
             "basis_kernels","iter_{:02d}".format(iterno))):
             os.makedirs(os.path.join(datadir,"update",
             "basis_kernels","iter_{:02d}".format(iterno)))
+
         for j in coeffs["z"].get_range():
             bj = np.zeros_like(coeffs["z"].iterated)
             bj[j] = 1
@@ -402,17 +401,16 @@ def main():
         return grad
 
     #~ Write out gradients for this iteration
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        np.savez(updatedir('gradient_psi_'+str(iterno).zfill(2)+'.npz'),
-        **compute_grad_basis(coeffs))
+    
+    np.savez(updatedir('gradient_psi_{:02d}.npz'.format(iterno)),
+                                            **compute_grad_basis(coeffs))
 
     ############################################################################
     # Optimization
     ############################################################################
 
     def normalize(d):
-        for key,value in d.items():
+        for key,value in list(d.items()):
             if value.max()!=0:
                 d[key] = value/value.max()
 
@@ -423,16 +421,16 @@ def main():
 
         def sd_update(var='psi'):
             grad = read_grad(var='psi',iterno=iterno)
-            update = {p:-grad[p] for p in grad.keys()}
+            update = {p:-grad[p] for p in list(grad.keys())}
             # normalize(update)
             # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
             # np.savez(updatefile,**update)
-            print "Steepest descent"
+            print("Steepest descent")
             return update
 
         update = sd_update(var='psi')
 
-        if iterno > 0: print 'Forcing steepest descent'
+        if iterno > 0: print('Forcing steepest descent')
 
     elif conjugate_gradient:
 
@@ -460,11 +458,11 @@ def main():
 
             beta_k = {}
             update = {}
-            for param in grad_k.keys():
+            for param in list(grad_k.keys()):
                 beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
                 update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
                 np.set_printoptions(linewidth=200,precision=4)
-            print "beta",dict((k,round(v,2)) for k,v in beta_k.iteritems())
+            print(("beta",dict((k,round(v,2)) for k,v in list(beta_k.items()))))
             # normalize(update)
             # updatefile = updatedir('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
             # np.savez(updatefile,**update)
@@ -475,7 +473,7 @@ def main():
 
     elif BFGS:
         def BFGS_update(var='psi'):
-            print "Using BFGS"
+            print("Using BFGS")
             grad_k = read_grad(var=var,iterno=iterno)
             grad_km1 = read_grad(var=var,iterno=iterno-1)
 
@@ -486,12 +484,12 @@ def main():
                 Hkm1 = read_BFGS_hessian(var=var,iterno=iterno)
             except IOError:
                 Hkm1 = {}
-                for key in grad_k.keys():
+                for key in list(grad_k.keys()):
                     Hkm1[key] = np.identity(grad_k[key].size)
 
 
             Hk = {}
-            for key in grad_k.keys():
+            for key in list(grad_k.keys()):
                 y_km1 = grad_k[key] - grad_km1[key]
                 s_km1 = model_k[key] - model_km1[key]
 
@@ -508,7 +506,7 @@ def main():
 
                 update[key] = -Hk[key].dot(grad_k[key])
 
-            hessfile = updatedir('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+            hessfile = updatedir('BFGS_hessian_{}_{:02d}.npz'.format(var,iterno))
             np.savez(hessfile,**Hk)
 
             return update
@@ -516,7 +514,7 @@ def main():
         update = BFGS_update(var='psi')
 
     normalize(update)
-    updatefile = updatedir('update_psi_'+str(iterno).zfill(2)+'.npz')
+    updatefile = updatedir('update_psi_{:02d}.npz'.format(iterno))
     np.savez(updatefile,**update)
 
     ############################################################################
@@ -549,12 +547,11 @@ def main():
                 ls_cR *= 1+eps*update
 
         h_z=interpolate.splev(z,(tz,ls_cz+cz_ref_top,kz),ext=1)
-        lsmodel = f0_x[None,:]*h_z[:,None]
+        lsmodel = f0_x[None,:]*h_z[:,None] # shape would be (nz,nx)
 
-        lsmodel += iter_model["back"]
         lsmodel = lsmodel[:,np.newaxis,:]
 
-        coeffdict = {"z":ls_cz,"back":iter_model["back"]}
+        coeffdict = {"z":ls_cz}
         if ls_cR is not None:
             coeffdict["R"] = ls_cR
         return lsmodel,coeffdict
@@ -563,18 +560,18 @@ def main():
     for i,eps_i in enumerate(eps):
         lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
 
-        _,lsmodel_max_col = divmod(np.squeeze(lsmodel).argmax(),nx)
+        peak_value_x = np.unravel_index(psi_true.argmax(),psi_true.shape)[1]
+
         plt.figure()
-        plt.plot(z,psi_true[:,lsmodel_max_col],ls='solid',lw=2,label="true")
-        plt.plot(z,lsmodel[:,0,lsmodel_max_col]-model_coeffs['back'],'o',
-        mfc='tomato',ms=4,label="model")
+        plt.plot(z,psi_true[:,peak_value_x],ls='solid',lw=2,label="true")
+        plt.plot(z,lsmodel[:,0,peak_value_x],'o',mfc='tomato',ms=4,label="model")
         plt.legend(loc="best")
         plt.xlim(ax1.get_ylim())
         plt.savefig(updatedir('test_psi_{:d}.png'.format(i+1)))
         plt.margins(x=0.1)
 
-        fitswrite(updatedir('test_psi_'+str(i+1)+'.fits'), lsmodel)
-        np.savez(updatedir('test_psi_'+str(i+1)+'_coeffs.npz'),**model_coeffs)
+        fitswrite(updatedir('test_psi_{:d}.fits'.format(i+1)), lsmodel)
+        np.savez(updatedir('test_psi_{:d}_coeffs.npz'.format(i+1)),**model_coeffs)
 
     #~ Update epslist
     epslist_path = os.path.join(datadir,"epslist.npz")

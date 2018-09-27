@@ -14,8 +14,8 @@ no_of_linesearches=len(fnmatch.filter(os.listdir(os.path.join(datadir,"update"))
 lsfile=os.path.join(datadir,"update","linesearch_{:02d}".format(iterno))
 
 if not os.path.exists(lsfile):
-    print lsfile,("doesn't exist, probably linesearch has not been run yet,"
-    " or file nas been renamed/removed")
+    print(lsfile,("doesn't exist, probably linesearch has not been run yet,"
+    " or file nas been renamed/removed"))
     quit()
 
 with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
@@ -23,9 +23,9 @@ with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
 
 lsdata=np.loadtxt(lsfile,usecols=[2])
 
-misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in xrange(no_of_linesearches)]
+misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_linesearches)]
 
-print "iteration",int(iterno)
+print("iteration",int(iterno))
 
 for m in misfit:
-    print m
+    print(m)

@@ -32,7 +32,8 @@ if __name__ == "__main__":
     env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
                                         "/home/apps/gcc-6.1/lib64",
                                         "/home/apps/openmpi-1.6.5/lib",
-                                        "/home/apps/lapack-3.5"])
+                                        "/home/apps/lapack-3.5",
+                                        "/home/apps/fftw-3.2/lib"])
 
     HOME=Path(os.environ["HOME"])
     codedir=Path(os.path.dirname(__file__))
@@ -57,7 +58,7 @@ if __name__ == "__main__":
     file_to_remove=datadir/"status"/"forward_src{:02d}_ls00".format(src)
     if file_to_remove.exists(): os.remove(file_to_remove)
 
-    print("Finished computing data for source {} in {}".format(src,delta_t))
+    print(("Finished computing data for source {} in {}".format(src,delta_t)))
 
     
 

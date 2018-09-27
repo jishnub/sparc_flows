@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import pyfits
 import matplotlib.pyplot as plt
@@ -69,11 +69,11 @@ plt.tight_layout()
 
 if tdfig is not None:
     savepath = os.path.join("plots",save[0])
-    print "saving time distance plot to",savepath
+    print("saving time distance plot to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving time distance plot to file"
+    print("Not saving time distance plot to file")
 
 
 #############################################################################################
@@ -111,10 +111,10 @@ if mode is not None:
     plt.axhline(popt[0]*np.exp(-0.5),ls='dashed',color='red')
     plt.axhline(popt[0]*0.5,ls='dashed',color='olive')
 
-    print("max",int(popt[1]),abs(nu_ridge[abs(k*Rsun-popt[1]).argmin()]))
-    print("1 sigma",int(popt[1]-popt[2]),abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]).argmin()]))
-    print("half power",int(popt[1]-popt[2]*np.sqrt(np.log(4))),
-    abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]*np.sqrt(np.log(4))).argmin()]))
+    print(("max",int(popt[1]),abs(nu_ridge[abs(k*Rsun-popt[1]).argmin()])))
+    print(("1 sigma",int(popt[1]-popt[2]),abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]).argmin()])))
+    print(("half power",int(popt[1]-popt[2]*np.sqrt(np.log(4))),
+    abs(nu_ridge[abs(k*Rsun-popt[1]+popt[2]*np.sqrt(np.log(4))).argmin()])))
 
 fig = plt.figure()
 plt.pcolormesh(k_edges*Rsun,nu_edges,data_spec/data_spec.max(),
@@ -146,10 +146,10 @@ plt.tight_layout()
 
 if specfig is not None:
     savepath = os.path.join("plots",specfig)
-    print "saving spectrum plot to",savepath
+    print("saving spectrum plot to",savepath)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
 else:
-    print "Not saving spectrum plot to file"
+    print("Not saving spectrum plot to file")
 
 plt.show()

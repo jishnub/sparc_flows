@@ -1,4 +1,4 @@
-from __future__ import division
+
 import read_params
 import numpy as np
 from matplotlib import pyplot as plt,ticker,colors
@@ -46,14 +46,14 @@ if len(sys.argv)>1:
         for mode in modes:
             if mode.startswith(m): modes[mode]=True
 else:
-    print "Usage: python plot_filters.py <list of modes>"
-    print "eg: python plot_filters.py fmode p3mode p4mode"
+    print("Usage: python plot_filters.py <list of modes>")
+    print("eg: python plot_filters.py fmode p3mode p4mode")
 
 plot_time_distance=True
 
 ###########################################################################################
 
-for mode,to_plot in modes.items():
+for mode,to_plot in list(modes.items()):
     if to_plot:
         mode_filter_function = getattr(modefilters,mode+"_filter")
         mode_filter = mode_filter_function(nt,dt,nx,Lx)
@@ -83,8 +83,8 @@ for mode,to_plot in modes.items():
         Poly=np.array(Poly)
         Polylow=np.array(Polylow)
 
-        print "Poly",Poly
-        print "Polylow",Polylow
+        print("Poly",Poly)
+        print("Polylow",Polylow)
 
         plt.figure()
 

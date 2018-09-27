@@ -1,4 +1,4 @@
-from __future__ import division
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import pyfits
@@ -35,49 +35,49 @@ x=np.linspace(-Lx/2,Lx/2,num=nx,endpoint=False)
 
 srcpix = abs(x-srcloc).argmin()
 
-if filter(lambda x: x.startswith("dist"),sys.argv): coord='distance'
-elif filter(lambda x: x.startswith("pix"),sys.argv): coord='pixel'
-elif filter(lambda x: x.startswith("coord"),sys.argv): coord='coord'
+if [x for x in sys.argv if x.startswith("dist")]: coord='distance'
+elif [x for x in sys.argv if x.startswith("pix")]: coord='pixel'
+elif [x for x in sys.argv if x.startswith("coord")]: coord='coord'
 else: coord = 'unspecified'
     
 pix=130
 if coord=='distance':
-    dist=float(filter(lambda x: x.startswith("dist"),sys.argv)[0].split("=")[-1])
+    dist=float([x for x in sys.argv if x.startswith("dist")][0].split("=")[-1])
     xcoord = (srcloc + dist) % Lx 
     if xcoord > Lx/2: xcoord = xcoord - Lx
     pix = abs(x-xcoord).argmin()
         
 elif coord == 'coord':
-    xcoord=float(filter(lambda x: x.startswith("coord"),sys.argv)[0].split("=")[-1])
+    xcoord=float([x for x in sys.argv if x.startswith("coord")][0].split("=")[-1])
     pix = abs(x-xcoord).argmin()
 
 elif coord=='pixel':
-    if len(filter(lambda x: x.startswith("pix"),sys.argv)):
-        pix=int(filter(lambda x: x.startswith("pix"),sys.argv)[0].split("=")[-1])
+    if len([x for x in sys.argv if x.startswith("pix")]):
+        pix=int([x for x in sys.argv if x.startswith("pix")][0].split("=")[-1])
         
 else:
-    print "Using default pixel",pix
-    print "Pass pixel as pix=<pix no>, eg pix=123; or distance as dist=<dist>; or coordinate as coord=<coord>"
+    print("Using default pixel",pix)
+    print("Pass pixel as pix=<pix no>, eg pix=123; or distance as dist=<dist>; or coordinate as coord=<coord>")
 
 modes={'0':'f'}
-for i in xrange(1,8): modes[str(i)]='p'+str(i)
+for i in range(1,8): modes[str(i)]='p'+str(i)
 modes['8']='first_bounce_p'
 
 modes_used=read_params.get_modes_used()
 
-plotridge=filter(lambda x: x in ['f','p1','p2','p3','p4','p5','p6','p7','first_bounce_p'],sys.argv)
+plotridge=[x for x in sys.argv if x in ['f','p1','p2','p3','p4','p5','p6','p7','first_bounce_p']]
 if plotridge:
     ridges=[r+'mode' for r in sys.argv if r in plotridge]
 else:
     ridges=[modes[modes_used[0]]+'mode']
     
 iterno=0
-if filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv): 
-    iterno=int(filter(lambda x: x.startswith("iter=") or x.startswith("iterno="),sys.argv)[0].split("=")[-1])
+if [x for x in sys.argv if x.startswith("iter=") or x.startswith("iterno=")]: 
+    iterno=int([x for x in sys.argv if x.startswith("iter=") or x.startswith("iterno=")][0].split("=")[-1])
     assert iterno>=0,"Iteration number must be greater than zero"
     
 ls=0   
-ls_passed = filter(lambda x: x.startswith("ls="),sys.argv)
+ls_passed = [x for x in sys.argv if x.startswith("ls=")]
 if ls_passed:
     ls = int(ls_passed[0].split("=")[-1].strip())
 
@@ -96,10 +96,10 @@ for ridge in ridges:
         if len(lineno)==0: 
             pixold=pix
             pix=int(ttfile[:,0][abs(ttfile[:,0]-pix).argmin()])
-            print "Pixel",pixold,"not in file, using pixel",pix,"instead"
+            print("Pixel",pixold,"not in file, using pixel",pix,"instead")
         lineno = np.where(ttfile[:,0]==pix)[0][0]
-        print "pix",ttfile[lineno,0],"lef",ttfile[lineno,2],\
-                "rig",ttfile[lineno,3],"loc",ttfile[lineno,4],"tmin",ttfile[lineno,5],"tmax",ttfile[lineno,6]
+        print("pix",ttfile[lineno,0],"lef",ttfile[lineno,2],\
+                "rig",ttfile[lineno,3],"loc",ttfile[lineno,4],"tmin",ttfile[lineno,5],"tmax",ttfile[lineno,6])
         lef=ttfile[lineno,2]
         rig=ttfile[lineno,3]
     except: pass

@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import pyfits as pyfits
 import plotc
@@ -28,12 +28,12 @@ Nsources=len(master_pixels)
 wavespeed=np.zeros((Nsources,10))
 
 modes_to_plot=dict(fmode=False)
-for i in xrange(10): modes_to_plot.update({'p'+str(i)+'mode':False})
+for i in range(10): modes_to_plot.update({'p'+str(i)+'mode':False})
 
 ridge_filters=read_params.get_modes_used()
 
 modes={'0':'fmode'}
-for pmodeno in xrange(1,10): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+for pmodeno in range(1,10): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
 
 #~ for m in ridge_filters: modes_to_plot[modes[m]]=True
 modes_to_plot['fmode']=True
@@ -41,21 +41,25 @@ modes_to_plot['fmode']=True
 try:
     for m in sys.argv[1:]:
         if m.startswith("f"): modes_to_plot['fmode']=True
-        for i in xrange(1,10):
+        for i in range(1,10):
             if m.startswith("p"+str(i)): modes_to_plot['p'+str(i)+'mode']=True
 except IndexError: pass
 
 #~ Line fit to bottom of wavepacket, coordinates in Mm and min
-def bot_time(x,(x1,y1),(x2,y2),sourceloc,source_bot_y):
+def bot_time(x, xxx_todo_changeme, xxx_todo_changeme1,sourceloc,source_bot_y):
+    (x1,y1) = xxx_todo_changeme
+    (x2,y2) = xxx_todo_changeme1
     return (y2-y1)/(x2-x1)*(x-sourceloc)+source_bot_y
     
 #~ Line fit to top of wavepacket, coordinates in Mm and min
-def top_time(x,(x1,y1),(x2,y2),sourceloc,source_top_y):
+def top_time(x, xxx_todo_changeme2, xxx_todo_changeme3,sourceloc,source_top_y):
+    (x1,y1) = xxx_todo_changeme2
+    (x2,y2) = xxx_todo_changeme3
     return (y2-y1)/(x2-x1)*(x-sourceloc)+source_top_y
     
 
 
-for sourceno in xrange(Nsources):
+for sourceno in range(Nsources):
     sourceloc=master_pixels[sourceno]
     sourcedir='forward_src'+str(sourceno+1).zfill(2)+'_ls00'
 
@@ -83,7 +87,7 @@ for sourceno in xrange(Nsources):
         #~ exit()
 
         Npoints=4
-        x_pix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-30-ind*6 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         #~ plotc.draw_vlines(x_coord)
@@ -154,7 +158,7 @@ for sourceno in xrange(Nsources):
         
         #~ print peakcenter,x_coord
 
-        print "Source",sourceno+1,"velocity of f mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of f mode",abs(v),"Mm/min")
             
         #~ plt.show()
         #~ exit()
@@ -181,7 +185,7 @@ for sourceno in xrange(Nsources):
         #~ exit()
 
         Npoints=4
-        x_pix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-30-ind*6 for ind in range(Npoints)])+sourcepix
         x_coord=x[x_pix]
         #~ np.set_printoptions(threshold=np.nan)
         #~ print vzcc_p[140:200,214]
@@ -260,7 +264,7 @@ for sourceno in xrange(Nsources):
             
         v,_=np.polyfit(peakcenter,x_coord,1)
         
-        print "Source",sourceno+1,"velocity of p mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,1]=abs(v)
@@ -282,7 +286,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=4
-        x_pix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-30-ind*6 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         #~ plotc.draw_vlines(x_coord)
@@ -349,7 +353,7 @@ for sourceno in xrange(Nsources):
         peakwidth=np.array(peakwidth)
         
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p2 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p2 mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,2]=abs(v)
@@ -371,7 +375,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=4
-        x_pix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-30-ind*6 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         #~ plotc.draw_vlines(x_coord)
@@ -437,7 +441,7 @@ for sourceno in xrange(Nsources):
         peakwidth=np.array(peakwidth)
         
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p3 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p3 mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,3]=abs(v)
@@ -459,7 +463,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=4
-        x_pix=np.array([-30-ind*6 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-30-ind*6 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         plotc.draw_vlines(x_coord)
@@ -528,7 +532,7 @@ for sourceno in xrange(Nsources):
 
             
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p4 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p4 mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,4]=abs(v)
@@ -550,7 +554,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=6
-        x_pix=np.array([-80-ind*12 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-80-ind*12 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         #~ plotc.draw_vlines(x_coord)
@@ -616,7 +620,7 @@ for sourceno in xrange(Nsources):
         
             
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p5 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p5 mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,5]=abs(v)
@@ -638,7 +642,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=6
-        x_pix=np.array([-80-ind*12 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-80-ind*12 for ind in range(Npoints)])+sourcepix
         x_coord=x[x_pix]
 
         #~ plotc.draw_vlines(x_coord)
@@ -704,7 +708,7 @@ for sourceno in xrange(Nsources):
         peakwidth=np.array(peakwidth)
         
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p6 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p6 mode",abs(v),"Mm/min")
         #~ plt.show()
         #~ exit()
         wavespeed[sourceno,6]=abs(v)
@@ -726,7 +730,7 @@ for sourceno in xrange(Nsources):
 
 
         Npoints=6
-        x_pix=np.array([-80-ind*12 for ind in xrange(Npoints)])+sourcepix
+        x_pix=np.array([-80-ind*12 for ind in range(Npoints)])+sourcepix
         x_coord=(x_pix-nx//2+1)/nx*Lx
 
         plotc.draw_vlines(x_coord)
@@ -792,7 +796,7 @@ for sourceno in xrange(Nsources):
         peakwidth=np.array(peakwidth)
             
         v,_=np.polyfit(peakcenter,x_coord,1)
-        print "Source",sourceno+1,"velocity of p7 mode",abs(v),"Mm/min"
+        print("Source",sourceno+1,"velocity of p7 mode",abs(v),"Mm/min")
         plt.show()
         exit()
         wavespeed[sourceno,7]=abs(v)

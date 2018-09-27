@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import read_params
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ sigma_x = sigma_x.reshape(nz,1)
 
 Lx=read_params.get_xlength()
 nx=read_params.get_nx()
-print "nx={:d}, nz={:d}".format(nx,nz)
+print("nx={:d}, nz={:d}".format(nx,nz))
 
 x=np.linspace(-Lx/2,Lx/2,nx,endpoint=False)
 x2D=x.reshape(1,nx)

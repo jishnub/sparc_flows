@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import plotc
 import pyfits as pf
@@ -45,7 +45,7 @@ nt=data.shape[0]
 time=np.arange(nt)*dt
 
 modes={'0':'fmode'}
-for pmodeno in xrange(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
+for pmodeno in range(1,8): modes.update({str(pmodeno):'p'+str(pmodeno)+'mode'})
 modes['8']="first_bounce_pmode"
 ridge_filters=sorted(read_params.get_modes_used())
 
@@ -66,7 +66,7 @@ srcloc=round(x[srcloc_ind],1)
 
 ttdiff_ridges={}
 for mode in modes: ttdiff_ridges.update({mode:{"iter_no":[],"misfits":[]}})
-for iteration_no in xrange(0,100):
+for iteration_no in range(0,100):
     ttpath=os.path.join(datadir,'tt','iter'+str(iteration_no).zfill(2))
     if os.path.exists(ttpath):
         for modeno,mode in enumerate(ridge_filters):
@@ -157,8 +157,8 @@ if save is not None:
     savepath = os.path.join("plots",save)
     if not os.path.exists("plots"): os.makedirs("plots")
     plt.savefig(savepath)
-    print "Saved to",savepath
+    print("Saved to",savepath)
 else:
-    print "Not saving plot to file"
+    print("Not saving plot to file")
 
 plt.show()

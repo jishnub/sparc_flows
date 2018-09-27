@@ -1,4 +1,4 @@
-from __future__ import division,print_function
+
 import modefilters
 import numpy as np
 import pyfits
@@ -118,7 +118,7 @@ class MainWindow(Gtk.Window):
         align_list[-1].set_padding(0,0,10,0)
 
         ridge_filters = ["f"]
-        ridge_filters.extend(["p"+str(i) for i in xrange(1,8)])
+        ridge_filters.extend(["p"+str(i) for i in range(1,8)])
         self.ridge_filters_list = Gtk.ComboBoxText()
         self.ridge_filters_list.set_entry_text_column(0)
         for ridge in ridge_filters: self.ridge_filters_list.append_text(ridge)
@@ -372,7 +372,7 @@ class MainWindow(Gtk.Window):
         tt_gb_30s = []
         pixel_x_list = []
 
-        for pixel in xrange(nx):
+        for pixel in range(nx):
 
             pixel_x = (pixel/nx-0.5)*Lx
             distance_Mm = abs(pixel_x - self.source_x)
@@ -439,8 +439,8 @@ class MainWindow(Gtk.Window):
         plt.show()
 
     def compute_tt_quadratic_fit(self,u0, u,t_low_index,t_high_index):
-        u0 = np.take(u0,range(t_low_index,t_high_index+1),mode='wrap')
-        u  =  np.take(u,range(t_low_index,t_high_index+1),mode='wrap')
+        u0 = np.take(u0,list(range(t_low_index,t_high_index+1)),mode='wrap')
+        u  =  np.take(u,list(range(t_low_index,t_high_index+1)),mode='wrap')
         cc=signal.correlate(u0,u).real
         cc_max_index = cc.argmax()
         t = np.arange(-len(u)+1,len(u))*dt_sec
@@ -455,12 +455,12 @@ class MainWindow(Gtk.Window):
     def compute_tt_gizonbirch(self,u0,u,t_low_index,t_high_index):
 
         w = np.zeros(self.nt,dtype=float)
-        np.put(w,range(t_low_index,t_high_index+1),[1],mode='wrap')
+        np.put(w,list(range(t_low_index,t_high_index+1)),[1],mode='wrap')
         # w[t_low_index:t_high_index+1] = 1
 
         degree = 4
 
-        u0dot = np.array([fftpack.diff(u0,period=self.nt*dt_sec,order=i) for i in xrange(degree+2)])
+        u0dot = np.array([fftpack.diff(u0,period=self.nt*dt_sec,order=i) for i in range(degree+2)])
 
         p = np.zeros(degree)
 

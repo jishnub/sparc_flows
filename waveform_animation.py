@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -39,8 +39,8 @@ src_locs=np.loadtxt(os.path.join(datadir,'master.pixels'),ndmin=1)
 src_x = src_locs[src-1]
 rec_x=18
 
-for i in xrange(280):
-    print i,
+for i in range(280):
+    print(i, end=' ')
     tstring = str(i*15).zfill(6)
     try:
         data=fitsread(os.path.join(datadir,'forward_src'+str(src).zfill(2)+'_ls00','vx_'+tstring+'_partial.fits'))

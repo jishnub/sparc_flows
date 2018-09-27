@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ def onpress(event):
     if event.key=="c":
         
         if not poly: return
-        xcoords,ycoords = zip(*poly)
+        xcoords,ycoords = list(zip(*poly))
         if len(xcoords)<3: return
         pfit = np.polyfit(xcoords,ycoords,2)
 
@@ -43,7 +43,7 @@ def onpress(event):
         polystr=polystr.rstrip("+")
         polystr=polystr.rstrip("*")
 
-        print polystr
+        print(polystr)
         
         global x
         global srcloc

@@ -1,4 +1,4 @@
-from __future__ import division,print_function
+
 import matplotlib
 from matplotlib import pyplot as plt
 import numpy as np
@@ -19,7 +19,7 @@ true_coeffs_top = true_coeffs["cz_top"]
 c_surf_cutoff = true_coeffs['c_surf_cutoff']
 
 modenames = {'0':'f'}
-for i in xrange(1,8): modenames[str(i)] = 'p{:d}'.format(i)
+for i in range(1,8): modenames[str(i)] = 'p{:d}'.format(i)
 
 iterno = read_params.parse_cmd_line_params(key="iter",
         default=len(spline_basis_z)-1,mapto=int)
