@@ -6,10 +6,12 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
+python=$HOME/anaconda3/bin/python
+
 [[ -e running_full ]] && echo "Full running, quitting" && exit
 [[ -e linesearch ]] && echo "Linesearch already running, quitting" && exit
 
-directory=$($HOME/anaconda3/bin/python -c 'import read_params; print(read_params.get_directory())')
+directory=$($python -c 'import read_params; print(read_params.get_directory())')
 
 find $directory -name "compute_data" -exec rm -f {} \; 
 find $directory -name "compute_synth" -exec rm -f {} \; 
@@ -36,7 +38,7 @@ echo "Number of sources: $nmasterpixels, number of linesearches per src: $numls"
 #~ Main computation
 ########################################################################
 
-/usr/local/bin/pbsdsh $HOME/anaconda3/bin/python $PBS_O_WORKDIR/linesearch.py
+/usr/local/bin/pbsdsh $python $PBS_O_WORKDIR/linesearch.py
 
 ########################################################################
 

@@ -7,6 +7,8 @@ cd $PBS_O_WORKDIR
 echo $PBS_JOBID
 export TERM=xterm
 
+python=$HOME/anaconda3/bin/python
+
 [[ -e linesearch ]] && echo "Linesearch running, quitting. Remove the 'linesearch' file if it's not"\
  && exit
 
