@@ -1,7 +1,16 @@
-export directory=$(python -c 'import read_params; print(read_params.get_directory())')
-export nmasterpixels=$(wc -l < $directory/master.pixels)
+[ ! -e sparc ] && echo "The executable sparc doesn't exist, maybe you've not run make?" && exit 1
 
-python -c "import setup; setup.create_directories(\"$directory\",$nmasterpixels,3)"
+export directory=$(python -c 'import read_params; print(read_params.get_directory())')
+
+if [ -e $directory/master.pixels ] 
+then 
+	num_src=$(wc -l < $directory/master.pixels)
+else
+	num_src=1
+	python -c "import generate_master_pixels; generate_master_pixels.populate($num_src)"
+fi
+
+python -c "import setup; setup.create_directories($num_src,3)"
 
 start=$(date +%s)
 
@@ -24,11 +33,13 @@ compute_forward(){
 
     find . -name Instruction_src"$1"_ls00 -delete
     find $directory/status -name forward_src"$1"_ls00 -delete
+ 
 }
 
 export -f compute_forward
 
-parallel compute_forward ::: $(seq -f "%02g" $nmasterpixels)
+echo "Starting $num_src forward calculations"
+parallel compute_forward ::: $(seq -f "%02g" $num_src)
 
 find . -name compute_data -delete
 

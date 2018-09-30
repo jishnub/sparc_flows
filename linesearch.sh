@@ -1,3 +1,5 @@
+[ ! -e sparc ] && echo "The executable sparc doesn't exist, maybe you've not run make?" && exit 1
+
 [[ -e running_full ]] && echo "Full running, quitting" && exit
 [[ -e linesearch ]] && echo "Linesearch already running, quitting" && exit
 

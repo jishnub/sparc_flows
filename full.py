@@ -31,9 +31,8 @@ def compute_forward_adjoint_kernel(src):
         
         assert fwd==0,"Error in running forward"
         
-        for ttfile in fnmatch.filter(os.listdir(os.path.join(datadir,forward)),"ttdiff.[0-9]" ) :
-            shutil.copyfile(os.path.join(datadir,forward,ttfile),
-                                os.path.join(tt_dir,ttfile))                
+        for ttfile in fnmatch.filter(os.listdir(datadir/forward),"ttdiff.[0-9]" ) :
+            shutil.copyfile(datadir/forward/ttfile,tt_dir/ttfile)
     
     ####################################################################
     #~ Adjoint

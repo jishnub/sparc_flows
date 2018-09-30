@@ -1,4 +1,8 @@
-def create_directories(datadir,num_src,num_ls):
+import read_params
+from pathlib import Path
+datadir = Path(read_params.get_directory())
+
+def create_directories(num_src,num_ls):
 
     for src in range(1,num_src+1):
 
@@ -8,5 +12,5 @@ def create_directories(datadir,num_src,num_ls):
 
         (datadir/"adjoint_src{:02d}".format(src)).mkdir(parents=True,exist_ok=True)
 
-    for subdir in ["kernel","update","status","tt"]:
+    for subdir in ["kernel","update","status","tt","data"]:
         (datadir/subdir).mkdir(parents=True,exist_ok=True)
