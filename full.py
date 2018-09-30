@@ -1,4 +1,4 @@
-import os,shutil,glob,subprocess,time,read_params,sys,fnmatch
+import os,shutil,subprocess,time,read_params,fnmatch
 from pathlib import Path
 from datetime import datetime
 
@@ -30,7 +30,7 @@ def compute_forward_adjoint_kernel(src):
         
         assert fwd==0,"Error in running forward"
         
-        (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
+        (datadir/"tt"/"iter{:02d}".format(iterno)).mkdir(parents=True,exist_ok=True)
 
         for ridge_filter in ridge_filters:
             shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),
@@ -70,11 +70,11 @@ if __name__ == "__main__":
     env['LD_LIBRARY_PATH'] = ":".join([env.get('LD_LIBRARY_PATH',''),
                                         "/home/apps/gcc-6.1/lib64",
                                         "/home/apps/openmpi-1.6.5/lib",
-                                        "/home/apps/lapack-3.5"])
+                                        "/home/apps/lapack-3.5",
+                                        "/home/apps/fftw-3.2/lib"])
 
-    codedir=Path(os.path.dirname(os.path.abspath(__file__)))
+    codedir=Path(__file__).parent.absolute()
     HOME=Path(os.environ["HOME"])
-
     datadir= Path(read_params.get_directory())
 
     iterno=len(fnmatch.filter(os.listdir(datadir/"update"),'misfit_[0-9][0-9]'))
@@ -93,4 +93,4 @@ if __name__ == "__main__":
     compute_forward_adjoint_kernel(src)
     delta_t = datetime.now() - t_start
 
-    print("Finished computing full for source {} in {}".format(src,delta_t))
+    print(("Finished computing full for source {} in {}".format(src,delta_t)))
