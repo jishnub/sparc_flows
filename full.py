@@ -30,7 +30,7 @@ def compute_forward_adjoint_kernel(src):
         
         assert fwd==0,"Error in running forward"
         
-        (datadir/"tt"/"iter{:02d}"/"windows{}".format(src)).mkdir(parents=True,exist_ok=True)
+        (datadir/"tt"/"iter{:02d}".format(iterno)).mkdir(parents=True,exist_ok=True)
 
         for ridge_filter in ridge_filters:
             shutil.copyfile(datadir/forward/"ttdiff.{}".format(ridge_filter),

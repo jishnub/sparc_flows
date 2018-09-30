@@ -11,13 +11,12 @@ python=$HOME/anaconda3/bin/python
 [[ -e running_full ]] && echo "Full running, quitting" && exit
 [[ -e linesearch ]] && echo "Linesearch already running, quitting" && exit
 
+find . -name "compute_data" -delete
+find . -name "compute_synth" -delete 
+
 directory=$($python -c 'import read_params; print(read_params.get_directory())')
-
-find $directory -name "compute_data" -exec rm -f {} \; 
-find $directory -name "compute_synth" -exec rm -f {} \; 
-
-iter=$(find $directory/update -maxdepth 1 -name 'linesearch_[0-9][0-9]'|wc -l)
-itername=$(printf "%02d" $iter)
+iter=$(find $directory/update -maxdepth 1 -name 'misfit_[0-9][0-9]'|wc -l)
+iter2digits=$(python -c "print('{:02d}'.format(max(0,$iter-1)))")
 
 touch linesearch
 echo "Starting iterations at "`date`
@@ -42,18 +41,19 @@ echo "Number of sources: $nmasterpixels, number of linesearches per src: $numls"
 
 ########################################################################
 
-
+[ -e $directory/update/linesearch_$iter2digits ] && mv $directory/update/linesearch_$iter2digits $directory/update/ls_$iter2digits.rnm
+[ -e $directory/update/linesearch_all_$iter2digits ] && mv $directory/update/linesearch_all_$iter2digits $directory/update/ls_all_$iter2digits.rnm
 
 for lin in $(seq -f "%02g" 1 $numls)
 do
     for src in $(seq -f "%02g" 1 $nmasterpixels)
     do
         [[ -e $directory/kernel/misfit_"$src"_"$lin" ]]  && \
-        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$itername &&\
+        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$iter2digits &&\
         rm $directory/kernel/misfit_"$src"_"$lin"
         
         [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
-        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$itername &&\
+        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$iter2digits &&\
         rm $directory/kernel/misfit_all_"$src"_"$lin"
     
     done
