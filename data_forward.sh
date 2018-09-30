@@ -11,7 +11,8 @@ python=$HOME/anaconda3/bin/python
 
 # Setup
 directory=$($python -c 'import read_params; print(read_params.get_directory())')
-if [ -e $directory/master.pixels ] then 
+if [ -e $directory/master.pixels ] 
+then 
 	num_src=$(cat $directory/master.pixels|wc -l)
 else
 	num_src=8
