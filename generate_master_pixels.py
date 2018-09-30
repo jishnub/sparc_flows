@@ -10,5 +10,5 @@ def populate(num_src):
 	print("master pixels",master_pixels.flatten())
 	print("Writing to {}".format(datadir/"master.pixels"))
 	
-	np.savetxt(datadir/"master.pixels",master_pixels)
+	np.savetxt(datadir/"master.pixels",master_pixels,fmt="%.1f")
 
