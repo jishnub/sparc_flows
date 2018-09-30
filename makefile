@@ -17,8 +17,9 @@ OBJS1=   driver.o        initialize.o    physics.o       dbyd2.o\
 	splevl.o splint.o
 OBJS2= tt_test.o
 
-FC= mpif90
-FC77= mpif77
+MPIPATH="/home/apps/openmpi-1.6.5/bin"
+FC= $(MPIPATH)/mpif90
+FC77= $(MPIPATH)/mpif77
 
 FFLAGS= -DDOUBLE_PRECISION -g ##-p ##-check all ##-fpe0 -traceback -debug #-check bounds
 #LIBS1 = -lfftw3 -lcfitsio

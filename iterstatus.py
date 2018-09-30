@@ -4,8 +4,6 @@ from pathlib import Path
 datadir=Path(read_params.get_directory())
 print(datadir)
 
-num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
-
 if not datadir.exists():
     print(datadir,"doesn't exist. Modify params.i")
     quit()
@@ -22,6 +20,7 @@ if not (datadir/"data"/"01.fits").exists():
     print("qsub data_forward.sh")
     quit()
 
+num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
 updatedir = datadir/"update"
 lsfiles=sorted(fnmatch.filter(os.listdir(updatedir),'linesearch_[0-9][0-9]'))
 misfitfiles=sorted(fnmatch.filter(os.listdir(updatedir),'misfit_[0-9][0-9]'))
