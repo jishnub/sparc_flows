@@ -6,6 +6,7 @@ def populate(num_src):
 	datadir = Path(read_params.get_directory())
 	# Choose uniformly random numbers between [-20,20)
 	master_pixels = np.random.random((num_src,1))*40 - 20
+	master_pixels = sorted(master_pixels)
 	
 	print("master pixels",master_pixels.flatten())
 	print("Writing to {}".format(datadir/"master.pixels"))
