@@ -58,9 +58,9 @@ if misfittype=="data":
     if normtype=="--normed" and misfit_00_found: misfit/=sum(misfit_00)
 
     if '--iterno' in sys.argv:
-        print(int(iterno),misfit)
+        print("Iteration",int(iterno),"Misfit",'{:.3g}'.format(misfit))
     else:
-        print(misfit)
+        print('{:.3g}'.format(misfit))
 
 elif misfittype=="psi":
 

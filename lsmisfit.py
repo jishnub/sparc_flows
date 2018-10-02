@@ -28,4 +28,4 @@ misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_li
 print("iteration",int(iterno))
 
 for m in misfit:
-    print(m)
+    print('{:.3g}'.format(m))

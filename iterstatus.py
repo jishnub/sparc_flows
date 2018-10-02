@@ -48,7 +48,7 @@ if len(misfitfiles)==len(lsfiles):
         print("qsub full.sh")
     else:
         print("python lsmisfit.py")
-        print("If you detect a misfit in minimum, run")
+        print("If you detect a minimum in misfit, run")
         print("python copy_updated_model.py")
     quit()
 

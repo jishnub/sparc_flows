@@ -21,9 +21,9 @@ if os.path.exists(lsfile):
     lsdata=np.loadtxt(lsfile,usecols=[2])
 elif os.path.exists(ls_rm_file):
     lsdata = np.loadtxt(ls_rm_file,usecols=[2])
-misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_linesearches)]
+misfit=np.array([sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_linesearches)])
 
-np.set_printoptions(precision=3)
+np.set_printoptions(formatter={'float_kind':'{:.3g}'.format})
 
 p=np.polyfit(step_sizes,misfit,2)
 
@@ -32,5 +32,5 @@ min_step = -p[1]/(2*p[0])
 arbitrary_steps = [min_step*(0.7+0.1*i) for i in range(no_of_linesearches)]
 print("Step sizes: ",list(step_sizes))
 print("Linesearch misfits: ",misfit)
-print("python grad.py algo=bfgs"+("{:10.2E}"*6).format(*arbitrary_steps))
-print("Expected misfits: "+("{:10.2E}"*6).format(*np.polyval(p,arbitrary_steps)))
+print("python grad.py algo=bfgs"+("{:10.2E}"*no_of_linesearches).format(*arbitrary_steps))
+print("Expected misfits:       "+("{:10.3g}"*no_of_linesearches).format(*np.polyval(p,arbitrary_steps)))
