@@ -8,13 +8,17 @@ if not datadir.exists():
     print(datadir,"doesn't exist. Modify params.i")
     quit()
 
-if not (datadir/"data"/"01.fits").exists():
-    print("No iterations done")
-    print("bash data_forward.sh")
+if not (datadir/"master.pixels").exists():
+    print(datadir/"master.pixels","doesn't exist. Please generate this before running the code")
     quit()
 
 with open(datadir/'master.pixels','r') as mp:
         nsrc=sum(1 for _ in mp)
+
+if not (datadir/"data"/"01.fits").exists():
+    print("No iterations done")
+    print("bash data_forward.sh")
+    quit()
 
 num_ls_per_src = len(fnmatch.filter(os.listdir(datadir),"forward_src01_ls[0-9][1-9]"))
 updatedir = datadir/"update"
@@ -27,7 +31,7 @@ if len(misfitfiles)==0:
     quit()
 
 if len(misfitfiles)>len(lsfiles):
-    print("Forward computation for iteration",misfitfiles[-1],"done")
+    print("Forward computation for iteration",int(misfitfiles[-1][-2:]),"done")
     eps_str = " ".join(["{:.2f}".format(0.01*i) for i in range(1,num_ls_per_src+1)])
     print("python grad.py algo=cg {}".format(eps_str))
     print("bash linesearch.sh")
@@ -44,7 +48,7 @@ if len(misfitfiles)==len(lsfiles):
         print("bash full.sh")
     else:
         print("python lsmisfit.py")
-        print("If you detect a misfit in minimum, run")
+        print("If you detect a minimum in misfit, run")
         print("python copy_updated_model.py")
     quit()
 
