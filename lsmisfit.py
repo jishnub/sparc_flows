@@ -6,25 +6,16 @@ codedir=os.path.dirname(os.path.abspath(__file__))
 
 datadir=read_params.get_directory()
 
-number_args=[x for x in sys.argv if x.isdigit()]
-if number_args:
-    iterno=number_args[0].zfill(2)
-else:
-    lsfiles=[os.path.join(datadir,"update",f) for f in 
-    fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'linesearch_[0-9][0-9]')]
-    nfiles=len(lsfiles)
-    if nfiles==0:
-        print("No linesearch files found")
-        quit()
-    else:
-        iterno=str(nfiles-1).zfill(2)
+iterno = len(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'misfit_[0-9][0-9]'))-1
+iterno = read_params.parse_cmd_line_params("iterno",default=iterno,mapto=int)
 
-no_of_linesearches=5
+no_of_linesearches=len(fnmatch.filter(os.listdir(os.path.join(datadir,"update")),'test_psi_[0-9].fits'))
 
-lsfile=os.path.join(datadir,"update","linesearch_"+iterno)
+lsfile=os.path.join(datadir,"update","linesearch_{:02d}".format(iterno))
 
 if not os.path.exists(lsfile):
-    print(lsfile,"doesn't exist")
+    print(lsfile,("doesn't exist, probably linesearch has not been run yet,"
+    " or file nas been renamed/removed"))
     quit()
 
 with open(os.path.join(datadir,'master.pixels'),'r') as mpixfile:
@@ -36,6 +27,5 @@ misfit=[sum(lsdata[i*nmasterpixels:(i+1)*nmasterpixels]) for i in range(no_of_li
 
 print("iteration",int(iterno))
 
-np.set_printoptions(precision=3)
-
-for m in misfit: print(m)
+for m in misfit:
+    print('{:.3g}'.format(m))
