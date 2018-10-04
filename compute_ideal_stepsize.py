@@ -32,5 +32,5 @@ min_step = -p[1]/(2*p[0])
 arbitrary_steps = [min_step*(0.7+0.1*i) for i in range(no_of_linesearches)]
 print("Step sizes: ",list(step_sizes))
 print("Linesearch misfits: ",misfit)
-print("python grad.py algo=bfgs"+("{:10.2E}"*no_of_linesearches).format(*arbitrary_steps))
+print("python grad.py algo=cg"+("{:10.2E}"*no_of_linesearches).format(*arbitrary_steps))
 print("Expected misfits:       "+("{:10.3g}"*no_of_linesearches).format(*np.polyval(p,arbitrary_steps)))

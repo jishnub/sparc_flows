@@ -33,7 +33,7 @@ if len(misfitfiles)==0:
 if len(misfitfiles)>len(lsfiles):
     print("Forward computation for iteration",int(misfitfiles[-1][-2:]),"done")
     eps_str = " ".join(["{:.2f}".format(0.01*i) for i in range(1,num_ls_per_src+1)])
-    print("python grad.py algo=bfgs {}".format(eps_str))
+    print("python grad.py algo=cg {}".format(eps_str))
     print("qsub linesearch.sh")
     quit()
 
