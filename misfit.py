@@ -19,6 +19,7 @@ except StopIteration:
 
 try:
     iterno=next(element for element in sys.argv if element.isdigit()).zfill(2)
+    misfitfile=datadir/"update"/"misfit_{:02d}".format(int(iterno))
 except StopIteration:
     misfit_files=sorted(fnmatch.filter(os.listdir(datadir/"update"),"misfit_[0-9][0-9]"))
     nfiles=len(misfit_files)
@@ -26,6 +27,7 @@ except StopIteration:
         print("No misfit files found")
         quit()
     else:
+        misfitfile=datadir/"update"/misfit_files[-1]
         iterno=str(nfiles-1).zfill(2)
 
 def fitsread(f):
@@ -35,27 +37,21 @@ def fitsread(f):
 
 if misfittype=="data":
     
-    misfitfile=datadir/"update"/misfit_files[-1]
-    
     if not misfitfile.exists():
         print(misfitfile,"doesn't exist")
         quit()
 
-    
     misfitdata=np.loadtxt(misfitfile,usecols=[2],ndmin=1)
+    misfit=sum(misfitdata)
     
-    misfit_00_found=False
     misfit_00_file=datadir/"update"/"misfit_00"
     
     if normtype=="--normed":
-        try:
+        if misfit_00_file.exists():
             misfit_00=np.loadtxt(misfit_00_file,usecols=[2],ndmin=1)
-            misfit_00_found=True
-        except IOError:
+            misfit /= sum(misfit_00)
+        else:
             print(misfit_00_file,"not found, using unnormed")
-    
-    misfit=sum(misfitdata)
-    if normtype=="--normed" and misfit_00_found: misfit/=sum(misfit_00)
 
     if '--iterno' in sys.argv:
         print("Iteration",int(iterno),"Misfit",'{:.3g}'.format(misfit))
@@ -65,14 +61,14 @@ if misfittype=="data":
 elif misfittype=="psi":
 
     try:  
-        truemodel=np.squeeze(pyfits.getdata("true_psi.fits"))
+        truemodel=fitsread("true_psi.fits")
 
     except IOError:
         print("True model doesn't exist")
         quit()
         
     try:  
-        itermodel = fitsread(datadir/"update"/"model_psi_"+iterno+".fits")
+        itermodel = fitsread(datadir/"update"/("model_psi_"+iterno+".fits"))
 
     except IOError:
         print("model_psi_"+iterno+".fits doesn't exist")
@@ -104,7 +100,7 @@ elif misfittype=="vx":
         quit()
         
     try:  
-        itermodel=fitsread(datadir/"update"/"vx_"+iterno+".fits")
+        itermodel=fitsread(datadir/"update"/("vx_"+iterno+".fits"))
     except IOError:
         print("vx_"+iterno+".fits doesn't exist")
         quit()
@@ -134,7 +130,7 @@ elif misfittype=="vz":
         quit()
         
     try:  
-        itermodel=fitsread(datadir/"update"/"vz_"+iterno+".fits")
+        itermodel=fitsread(datadir/"update"/("vz_"+iterno+".fits"))
     except IOError:
         print("vz_"+iterno+".fits doesn't exist")
         quit()
