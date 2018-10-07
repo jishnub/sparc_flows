@@ -63,14 +63,14 @@ elif misfittype=="psi":
     try:  
         truemodel=fitsread("true_psi.fits")
 
-    except IOError:
+    except FileNotFoundError:
         print("True model doesn't exist")
         quit()
         
     try:  
         itermodel = fitsread(datadir/"update"/("model_psi_"+iterno+".fits"))
 
-    except IOError:
+    except FileNotFoundError:
         print("model_psi_"+iterno+".fits doesn't exist")
         quit()
     
@@ -82,7 +82,7 @@ elif misfittype=="psi":
 
             model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
             modelmisfit/=model0_misfit
-        except IOError:
+        except FileNotFoundError:
             print("model_psi_00.fits not found, computing unnormed misfits")
 
     
@@ -95,13 +95,13 @@ elif misfittype=="vx":
     
     try:  
         truemodel=fitsread("true_vx.fits")
-    except IOError:
+    except FileNotFoundError:
         print("True model doesn't exist")
         quit()
         
     try:  
         itermodel=fitsread(datadir/"update"/("vx_"+iterno+".fits"))
-    except IOError:
+    except FileNotFoundError:
         print("vx_"+iterno+".fits doesn't exist")
         quit()
     
@@ -112,7 +112,7 @@ elif misfittype=="vx":
             model0=fitsread(datadir/"update"/"vx_00.fits")
             model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
             modelmisfit/=model0_misfit
-        except IOError:
+        except FileNotFoundError:
             print("vx_00.fits not found, computing unnormed misfits")
 
     
@@ -125,13 +125,13 @@ elif misfittype=="vz":
     
     try:  
         truemodel=fitsread("true_vz.fits")
-    except IOError:
+    except FileNotFoundError:
         print("True model doesn't exist")
         quit()
         
     try:  
         itermodel=fitsread(datadir/"update"/("vz_"+iterno+".fits"))
-    except IOError:
+    except FileNotFoundError:
         print("vz_"+iterno+".fits doesn't exist")
         quit()
     
@@ -142,7 +142,7 @@ elif misfittype=="vz":
             model0=fitsread(datadir/"update"/"vz_00.fits")
             model0_misfit=np.sqrt(np.sum((truemodel-model0)**2))
             modelmisfit/=model0_misfit
-        except IOError:
+        except FileNotFoundError:
             print("vz_00.fits not found, computing unnormed misfits")
 
     

@@ -5,7 +5,7 @@ import read_params
 from scipy.special import j1,j0,jn
 def j2(z): return jn(2,z)
 def j1prime(z): return 0.5*(j0(z)-j2(z))
-import os,shutil
+import shutil
 import dbyd2
 from pathlib import Path
 
@@ -119,16 +119,19 @@ peak_and_surf_vel(vz_spline,label="vz")
 import read_params
 
 datadir = Path(read_params.get_directory())
-    
-fits.writeto(datadir/"model_psi_ls00.fits",psi_spline_surf[:,np.newaxis,:],overwrite=True)
 
-shutil.copyfile(datadir/"model_psi_ls00.fits", datadir/"model_psi_ls00_start.fits")
+if datadir.exists():
+    fits.writeto(datadir/"model_psi_ls00.fits",psi_spline_surf[:,np.newaxis,:],overwrite=True)
 
-np.savez(datadir/"model_psi_ls00_coeffs.npz",z=np.zeros_like(cz1D))
+    shutil.copyfile(datadir/"model_psi_ls00.fits", datadir/"model_psi_ls00_start.fits")
 
-shutil.copyfile(datadir/"model_psi_ls00_coeffs.npz", datadir/"model_psi_ls00_coeffs_start.npz")
+    np.savez(datadir/"model_psi_ls00_coeffs.npz",z=np.zeros_like(cz1D))
 
-np.savez(datadir/"true_psi_coeffs.npz",tz=tz1D,kz=kz,
+    shutil.copyfile(datadir/"model_psi_ls00_coeffs.npz", datadir/"model_psi_ls00_coeffs_start.npz")
+else:
+    print(datadir,"doesn't exist, not writing out starting models")
+
+np.savez("true_psi_coeffs.npz",tz=tz1D,kz=kz,
     cz_top=cz1D_top,cz_bot=cz1D_bottom,c_surf_cutoff=c_surf_cutoff,z_cutoff = z_cutoff,
         deep_z_cutoff_ind=deep_z_cutoff_ind)
 

@@ -235,7 +235,7 @@ def main():
 
     f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
 
-    f= dict(np.load(os.path.join(datadir,"true_psi_coeffs.npz")))
+    f= dict(np.load("true_psi_coeffs.npz"))
     coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
     tR = f.get("tR")
     tz = f.get("tz")
