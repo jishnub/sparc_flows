@@ -16,7 +16,7 @@ then
 	num_src=$(cat $directory/master.pixels|wc -l)
 else
 	num_src=8
-	$python -c "import generate_master_pixels; generate_master_pixels.populate(num_src)"
+	$python -c "import generate_master_pixels; generate_master_pixels.populate($num_src)"
 fi
 num_ls=5
 $python -c "import setup; setup.create_directories($num_src,$num_ls)"
