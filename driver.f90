@@ -64,6 +64,13 @@ Program driver
 
     if (COMPUTE_DATA) then
 
+        if (sound_speed_perturbation) then
+
+            call readfits('Sunspot_dcs.fits',c_bump,nz)
+            c_speed = c_speed + c_bump/dimc
+            c2 = c_speed**2
+        endif
+
         if (FLOWS) then
 
            call readfits('true_vx.fits',v0_x,nz)
@@ -82,19 +89,28 @@ Program driver
 
         endif
 
-
     else
+
+        if (sound_speed_perturbation) then
+            
+            inquire(file=directory//'model_c_ls'//jobno//'.fits', exist = iteration)    
+
+            if (iteration) then
+
+                call readfits(directory//'model_c_ls'//jobno//'.fits',c_bump,nz)
+                c_speed = c_speed + c_bump/dimc
+                c2 = c_speed**2
+
+            endif
+
+        endif
 
         if (FLOWS) then
             v0_x = 0.0
             v0_z = 0.0
-        endif
 
-
-        if (FLOWS) then
             if (psi_cont .and. enf_cont) then
                 inquire(file=directory//'model_psi_ls'//jobno//'.fits', exist = iteration)
-            
             endif
 
             if (iteration) then
@@ -140,12 +156,13 @@ Program driver
 
             endif
 
-
             if (compute_adjoint .and. FLOWS) then
                 v0_x = -v0_x
                 v0_z = -v0_z
             endif
+
         endif
+
     endif
 !~      stop
     if (CONSTRUCT_KERNELS) then 

@@ -777,19 +777,19 @@ Subroutine solar_data
   c2 = c_speed**2.0 !smoothed c2
 
   height = (z-1.)*rsun
-    if (sound_speed_perturbation) then
-        do k=1,nz_kern
-        sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional
-        sigmaz = 1.4
-        do i=1,nx
+    ! if (sound_speed_perturbation) then
+    !     do k=1,nz_kern
+    !     sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional
+    !     sigmaz = 1.4
+    !     do i=1,nx
 
-            c_bump(i,1,k) = 3e-3*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
-                      exp(-(height(k)- (-2.5))**2/(2*sigmaz**2))
-        end do
-        end do
-        c_speed = c_speed*(1+c_bump)
-        c2 = c_speed**2
-    end if
+    !         c_bump(i,1,k) = 3e-3*exp(-(x(i)- 0.5)**2/(2*sigmax**2))*&
+    !                   exp(-(height(k)- (-2.5))**2/(2*sigmaz**2))
+    !     end do
+    !     end do
+    !     c_speed = c_speed*(1+c_bump)
+    !     c2 = c_speed**2
+    ! end if
 
 end Subroutine solar_data
 
