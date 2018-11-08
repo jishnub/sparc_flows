@@ -61,8 +61,8 @@ def compute_forward_adjoint_kernel(src):
         assert kern==0,"Error in computing kernel"
 
     compute_forward()
-    compute_adjoint()
-    compute_kernel()
+    # compute_adjoint()
+    # compute_kernel()
 
 if __name__ == "__main__":
 

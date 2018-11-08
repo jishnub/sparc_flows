@@ -12,15 +12,20 @@ ls_last = np.array([sum(ls_last[i*8:(i+1)*8,2])
 print("Linesearch misfits: "+("{:.1e} "*len(ls_last)).format(*ls_last))
 num = read_params.parse_cmd_line_params(key="num",default=ls_last.argmin()+1,mapto=int)
 
-if (datadir/"model_psi_ls00_coeffs.npz").exists():  basis="spline"
+for var in ["c","psi"]:
 
-basis = read_params.parse_cmd_line_params(key="basis",default=basis)
+	basis = None
+	if (datadir/"model_{}_ls00_coeffs.npz".format(var)).exists():  basis="spline"
 
-print(("Copying model {}, basis {}".format(num,basis)))
+	basis = read_params.parse_cmd_line_params(key="basis",default=basis)
 
-shutil.copyfile(datadir/'update'/'test_psi_{:d}.fits'.format(num),
-				datadir/'model_psi_ls00.fits')
+	
 
-if basis=="spline":
-    shutil.copyfile(datadir/'update'/'test_psi_{:d}_coeffs.npz'.format(num),
-    				datadir/'model_psi_ls00_coeffs.npz')
+	test_model = datadir/'update'/'test_{}_{:d}.fits'.format(var,num)
+	if test_model.exists():
+		print(("Copying {} model {}, basis {}".format(var,num,basis)))
+		shutil.copyfile(test_model,datadir/'model_{}_ls00.fits'.format(var))
+
+	if basis=="spline":
+	    shutil.copyfile(datadir/'update'/'test_{}_{:d}_coeffs.npz'.format(var,num),
+	    				datadir/'model_{}_ls00_coeffs.npz'.format(var))

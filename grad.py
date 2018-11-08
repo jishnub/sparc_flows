@@ -16,33 +16,18 @@ updatedir = datadir/"update"
 
 ########################################################################
 
-class supergranule():
-    def __init__(self,**kwargs):
-        self.__dict__.update(kwargs)
-
-DH13 = supergranule(R = 15,
-                    k = 2*np.pi/30,
-                    )
-
-########################################################################
-
 def fitsread(f):
     
     with fits.open(f) as hdul:
-        arr=hdul[0].data
-
-    # If it is 2D, make it 3D.
-    # Dimension will be (nz,1,nx) after this
-    if len(arr.shape)==2: arr=arr[:,np.newaxis,:]
-    # Change dimension to (nx,ny,nz)
-    return arr.transpose(2,1,0)
+        return hdul[0].data
 
 def fitswrite(f,arr):
     fits.writeto(f,arr,overwrite=True)
 
 
 def antisymmetrize(arr):   arr[:]=0.5*(arr[:]-arr[::-1])
-def symmetrize(arr):   arr[:]=0.5*(arr[:]+arr[::-1])
+def symmetrize(arr):
+    return 0.5*(arr + np.flip(arr,axis=2))
 
 
 def rms(arr): return np.sqrt(np.sum(arr**2)/np.prod(arr.shape))
@@ -101,116 +86,91 @@ def main():
         return integrate.simps(integrate.simps(arr,dx=dx,axis=1),x=z,axis=0)
 
     solarmodel=np.loadtxt(read_params.get_solarmodel())
+    c = solarmodel[:,1]
+    c_surface = c[abs(z).argmin()]
+    
+    c_quiet_3D = np.tile(c[:,None,None],(1,1,nx))
 
     num_src=len(np.loadtxt(datadir/'master.pixels',ndmin=1))
 
     ############################################################################
 
     def read_model(var='psi',iterno=iterno):
-        modelfile = updatedir/('model_'+var+'_'+str(iterno).zfill(2)+'_coeffs.npz')
-        with np.load(modelfile) as f:
-            return dict(list(f.items()))
+        modelfile = updatedir/'model_{}_{:02d}.fits'.format(var,iterno)
+        return fitsread(modelfile)
+        # modelfile = updatedir/('model_'+var+'_'+str(iterno).zfill(2)+'_coeffs.npz')
+        # with np.load(modelfile) as f:
+        #     return dict(list(f.items()))
 
     def read_grad(var='psi',iterno=iterno):
-        
-        modelfile = updatedir/('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
-        with np.load(modelfile) as f:
-            return dict(list(f.items()))
+        modelfile = updatedir/'gradient_{}_{:02d}.fits'.format(var,iterno)
+        return fitsread(modelfile)
+
+        # modelfile = updatedir/('gradient_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        # with np.load(modelfile) as f:
+        #     return dict(list(f.items()))
 
     def read_update(var='psi',iterno=iterno):
-        
-        modelfile = updatedir/('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
-        with np.load(modelfile) as f:
-            return dict(list(f.items()))
+        modelfile = updatedir/'update_{}_{:02d}.fits'.format(var,iterno)
+        return fitsread(modelfile)
 
-    def read_BFGS_hessian(var='psi',iterno=iterno):
+        # modelfile = updatedir/('update_'+var+'_'+str(iterno).zfill(2)+'.npz')
+        # with np.load(modelfile) as f:
+        #     return dict(list(f.items()))
+
+    # def read_BFGS_hessian(var='psi',iterno=iterno):
         
-        modelfile = updatedir/('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
-        with np.load(modelfile) as f:
-            return dict(list(f.items()))
+    #     modelfile = updatedir/('BFGS_hessian_'+var+'_'+str(iterno).zfill(2)+'.npz')
+    #     with np.load(modelfile) as f:
+    #         return dict(list(f.items()))
 
     def read_kern(var='psi',src=1):
-        return fitsread(datadir/'kernel'/('kernel_'+var+'_'+str(src).zfill(2)+'.fits'))
+        return fitsread(datadir/'kernel'/'kernel_{}_{:02d}.fits'.format(var,src))
 
+    current_model = read_model(var="c",iterno=iterno)
     
-    
+    true_dc = fitsread("dc_true.fits")
 
-    ############################################################################
-    # Spline
-    ############################################################################
-
-    f0_x = np.sign(x)*j1(DH13.k*abs(x))*np.exp(-abs(x)/DH13.R)
-
-    f= dict(np.load("true_psi_coeffs.npz"))
-    coeff_surf_cutoff_ind = f.get("c_surf_cutoff").item()
-    tz = f.get("tz")
-    cz_ref_top = f.get("cz_top")
-    cz_ref_bot = f.get("cz_bot")
-
-    # print("True model coeffs",cz_ref_bot[:coeff_surf_cutoff_ind])
-
-    kz = f.get("kz")
-
-    z_spl_cutoff = f.get("z_cutoff")
-
-    c_deep_z_cutoff_index = f.get("deep_z_cutoff_ind")
-
-    class spline_basis_coeffs():
-        def __init__(self,true_coeffs,iter_coeffs,low_ind=0,high_ind=None):
-            self.true = true_coeffs
-            self.iterated = iter_coeffs
-            self.low_ind = low_ind
-            if high_ind is not None:
-                self.high_ind = high_ind if high_ind>0 else self.true.size+high_ind
-            else:
-                self.high_ind = None
-            self.size = self.iterated.size if self.iterated is not None else None
-
-
-        def get_true(self,low_ind=None,high_ind=None):
-            low_ind = self.low_ind if low_ind is None else low_ind
-            high_ind = self.high_ind if high_ind is None else high_ind
-            return self.true[low_ind:high_ind]
-
-        def get_iterated(self,low_ind=None,high_ind=None):
-            low_ind = self.low_ind if low_ind is None else low_ind
-            high_ind = self.high_ind if high_ind is None else high_ind
-            return self.iterated[low_ind:high_ind]
-
-        def get_range(self):
-            return np.array(list(range(self.low_ind,self.high_ind)))
-
-    iter_model = read_model()
-
-    coeffs = {
-    "z":spline_basis_coeffs(true_coeffs=cz_ref_bot,iter_coeffs=iter_model["z"],
-    low_ind=0,high_ind=coeff_surf_cutoff_ind)}
+    fig = plt.figure()
 
     ############################################################################
     # Gradient computation
     ############################################################################
 
-    totkern_psi=np.zeros((nx,ny,nz))
-    hess=np.zeros_like(totkern_psi)
+    for var in ["c"]:
 
-    for src in range(1,num_src+1):
+        kernel=np.zeros_like(current_model)
+        hess=np.zeros_like(kernel)
 
-        totkern_psi += read_kern(var='psi',src=src)
+        for src in range(1,num_src+1):
 
-        hess+=abs(fitsread(datadir/'kernel'/'hessian_{:02d}.fits'.format(src)))
+            kernel_i = read_kern(var=var,src=src)
 
-    hess=hess*np.atleast_3d(solarmodel[:,2]).transpose(0,2,1)
-    hess = hess/abs(hess).max()
-    hess[hess<5e-3]=5e-3
+            # fig.clf()
+            # plt.pcolormesh(x,z,kernel_i.squeeze(),vmax=abs(kernel_i).max(),vmin=-abs(kernel_i).max(),cmap="RdBu_r")
+            # plt.savefig(str(updatedir/"kernel_{}_src{:d}.png".format(var,src)))
+            kernel += kernel_i
 
-    totkern_psi /= hess
-    antisymmetrize(totkern_psi)
+            hessian_i = abs(fitsread(datadir/'kernel'/'hessian_{:02d}.fits'.format(src)))
+            hess += hessian_i
 
-    kernel = np.squeeze(totkern_psi).T
+        hess=hess * np.reshape(solarmodel[:,2],(nz,1,1))
+        hess = hess/abs(hess).max()
+        hess[hess<5e-3]=5e-3
 
-    fitswrite(updatedir/"grad_psi_{:02d}.fits".format(iterno),kernel)
+        kernel /= hess
+        kernel = symmetrize(kernel)
 
-    psi_true = fitsread("true_psi.fits").squeeze().T # shape would be (nz,nx)
+        fitswrite(updatedir/"gradient_{}_{:02d}.fits".format(var,iterno),kernel)
+
+        fig.clf()
+        plt.pcolormesh(x,z,kernel.squeeze(),cmap="RdBu_r",vmax=abs(kernel).max(),vmin=-abs(kernel).max())
+        plt.savefig(str(updatedir/"gradient_{}_{:02d}.png".format(var,iterno)))
+
+
+    # fitswrite(updatedir/"grad_psi_{:02d}.fits".format(iterno),kernel)
+
+    # psi_true = fitsread("true_psi.fits").squeeze().T # shape would be (nz,nx)
 
     # Plot gradient (kernel)
     # f=plt.figure()
@@ -235,49 +195,51 @@ def main():
     # plt.savefig(str(updatedir/"grad_{:02d}.png".format(iterno)))
 
     # compute basis coefficient gradients
-    def compute_grad_basis(coeffs):
+    # def compute_grad_basis(coeffs):
 
-        hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
-        g_c = f0_x[None,:]
+    #     hs = interpolate.splev(z,(tz,coeffs["z"].iterated+cz_ref_top,kz),ext=1)
+    #     g_c = f0_x[None,:]
 
-        grad = dict.fromkeys(list(coeffs.keys()))
-        for key in grad:
-            grad[key] = np.zeros(coeffs[key].size)
+    #     grad = dict.fromkeys(list(coeffs.keys()))
+    #     for key in grad:
+    #         grad[key] = np.zeros(coeffs[key].size)
 
-        for j in coeffs["z"].get_range():
-            bj = np.zeros_like(coeffs["z"].iterated)
-            bj[j] = 1
-            bz = interpolate.splev(z,(tz,bj,kz),ext=1)
-            grad["z"][j] = integrate_2D(kernel*bz[:,None]*g_c)
+    #     for j in coeffs["z"].get_range():
+    #         bj = np.zeros_like(coeffs["z"].iterated)
+    #         bj[j] = 1
+    #         bz = interpolate.splev(z,(tz,bj,kz),ext=1)
+    #         grad["z"][j] = integrate_2D(kernel*bz[:,None]*g_c)
 
-        return grad
+    #     return grad
 
     #~ Write out gradients for this iteration
     
-    np.savez(updatedir/'gradient_psi_{:02d}.npz'.format(iterno),**compute_grad_basis(coeffs))
+    # np.savez(updatedir/'gradient_psi_{:02d}.npz'.format(iterno),**compute_grad_basis(coeffs))
 
     ############################################################################
     # Optimization
     ############################################################################
 
     def normalize(d):
-        for key,value in list(d.items()):
-            if value.max()!=0:
-                d[key] = value/value.max()
+        if d.max()!=0:
+            d /= d.max()
+        # for key,value in list(d.items()):
+        #     if value.max()!=0:
+        #         d[key] = value/value.max()
 
-    update={}
+    # update={}
 
     #~ Get update direction based on algorithm of choice
     if (iterno==0) or steepest_descent:
 
         def sd_update(var='psi'):
-            grad = read_grad(var='psi',iterno=iterno)
-            update = {p:-grad[p] for p in list(grad.keys())}
+            grad = read_grad(var=var,iterno=iterno)
+            update = - grad
 
             print("Steepest descent")
             return update
 
-        update = sd_update(var='psi')
+        update = sd_update(var='c')
 
         if iterno > 0: print('Forcing steepest descent')
 
@@ -290,11 +252,11 @@ def main():
 
             np.seterr(divide="raise")
             try:
-                beta = grad.dot(grad - lastgrad)
+                beta = np.dot(grad.flatten(),(grad - lastgrad).flatten())
                 if polak_ribiere:
                     beta/= np.sum(lastgrad**2.)
                 elif hestenes_stiefel:
-                    beta/= np.dot(grad - lastgrad,lastupdate)
+                    beta/= np.dot((grad - lastgrad).flatten(),lastupdate.flatten())
             except FloatingPointError:
                 beta=0
 
@@ -305,137 +267,168 @@ def main():
             grad_km1 = read_grad(var=var,iterno=iterno-1)
             p_km1 = read_update(var=var,iterno=iterno-1)
 
-            beta_k = {}
-            update = {}
-            for param in list(grad_k.keys()):
-                beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
-                update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
-                np.set_printoptions(linewidth=200,precision=4)
-            print(("beta",dict((k,round(v,2)) for k,v in list(beta_k.items()))))
+            beta_k = get_beta(grad_k,grad_km1,p_km1)
+            update = -grad_k +  beta_k*p_km1
+
+            np.set_printoptions(linewidth=200,precision=4)
+
+            # beta_k = {}
+            # update = {}
+            # for param in list(grad_k.keys()):
+            #     beta_k[param] = get_beta(grad_k[param],grad_km1[param],p_km1[param])
+            #     update[param] = -grad_k[param] +  beta_k[param]*p_km1[param]
+            
+            print("beta",beta_k)
 
             return update
 
-        update = cg_update(var='psi')
+        update = cg_update(var='c')
 
-    elif BFGS:
-        def BFGS_update(var='psi'):
-            print("Using BFGS")
-            grad_k = read_grad(var=var,iterno=iterno)
-            grad_km1 = read_grad(var=var,iterno=iterno-1)
+    # elif BFGS:
+    #     def BFGS_update(var='psi'):
+    #         print("Using BFGS")
+    #         grad_k = read_grad(var=var,iterno=iterno)
+    #         grad_km1 = read_grad(var=var,iterno=iterno-1)
 
-            model_k  = read_model(var=var,iterno=iterno)
-            model_km1  = read_model(var=var,iterno=iterno-1)
+    #         model_k  = read_model(var=var,iterno=iterno)
+    #         model_km1  = read_model(var=var,iterno=iterno-1)
 
-            try:
-                Hkm1 = read_BFGS_hessian(var=var,iterno=iterno)
-            except IOError:
-                Hkm1 = {}
-                for key in list(grad_k.keys()):
-                    Hkm1[key] = np.identity(grad_k[key].size)
+    #         try:
+    #             Hkm1 = read_BFGS_hessian(var=var,iterno=iterno)
+    #         except IOError:
+    #             Hkm1 = {}
+    #             for key in list(grad_k.keys()):
+    #                 Hkm1[key] = np.identity(grad_k[key].size)
 
 
-            Hk = {}
-            for key in list(grad_k.keys()):
-                y_km1 = grad_k[key] - grad_km1[key]
-                s_km1 = model_k[key] - model_km1[key]
+    #         Hk = {}
+    #         for key in list(grad_k.keys()):
+    #             y_km1 = grad_k[key] - grad_km1[key]
+    #             s_km1 = model_k[key] - model_km1[key]
 
-                if (not y_km1.any()) or (not s_km1.any()):
-                    Hk[key] = Hkm1[key]
-                else:
+    #             if (not y_km1.any()) or (not s_km1.any()):
+    #                 Hk[key] = Hkm1[key]
+    #             else:
 
-                    rho_km1 = 1/y_km1.dot(s_km1)
+    #                 rho_km1 = 1/y_km1.dot(s_km1)
 
-                    left = np.identity(s_km1.size) - rho_km1*np.outer(s_km1,y_km1)
-                    right = np.identity(s_km1.size) - rho_km1*np.outer(y_km1,s_km1)
+    #                 left = np.identity(s_km1.size) - rho_km1*np.outer(s_km1,y_km1)
+    #                 right = np.identity(s_km1.size) - rho_km1*np.outer(y_km1,s_km1)
 
-                    Hk[key] = left.dot(Hkm1[key]).dot(right) + rho_km1*np.outer(s_km1,s_km1)
+    #                 Hk[key] = left.dot(Hkm1[key]).dot(right) + rho_km1*np.outer(s_km1,s_km1)
 
-                update[key] = -Hk[key].dot(grad_k[key])
+    #             update[key] = -Hk[key].dot(grad_k[key])
 
-            hessfile = updatedir/('BFGS_hessian_{}_{:02d}.npz'.format(var,iterno))
-            np.savez(hessfile,**Hk)
+    #         hessfile = updatedir/('BFGS_hessian_{}_{:02d}.npz'.format(var,iterno))
+    #         np.savez(hessfile,**Hk)
 
-            return update
+    #         return update
 
-        update = BFGS_update(var='psi')
+    #     update = BFGS_update(var='psi')
 
     
     ############################################################################
 
     # Deep z cutoff
-    update["z"] *= 1/(1+np.exp(-(np.arange(cz_ref_bot.size)-c_deep_z_cutoff_index)/0.2))
+    # update["z"] *= 1/(1+np.exp(-(np.arange(cz_ref_bot.size)-c_deep_z_cutoff_index)/0.2))
 
     normalize(update)
-    np.savez(updatedir/'update_psi_{:02d}.npz'.format(iterno),**update)
+    update *= c_surface
+    fitswrite(updatedir/"update_c_{:02d}.fits".format(iterno),update)
+    # np.savez(updatedir/'update_psi_{:02d}.npz'.format(iterno),**update)
 
-    plt.figure()
-    plt.subplot(211)
-    plt.bar(range(len(cz_ref_top)),cz_ref_top,facecolor="lightgreen",edgecolor="green",label="above the surface")
-    plt.bar(range(len(cz_ref_bot)),cz_ref_bot,facecolor="skyblue",edgecolor="blue",label="below the surface")
-    plt.ylabel("Coefficient value")
-    plt.title("Spline coefficients of true model")
-    plt.legend(loc="best")
-    plt.subplot(212)
-    plt.bar(range(len(update["z"])),update["z"])
-    plt.title("Normalized update")
-    plt.xlabel("Coefficient index")
-    plt.ylabel("Coefficient value")
+    fig.clf()
+    plt.subplot(121)
+    plt.pcolormesh(x,z,true_dc.squeeze(),cmap="RdBu_r",vmax=abs(true_dc).max(),vmin=-abs(true_dc).max())
+    plt.xlim(-50,50)
+    plt.ylim(-10,z[-1])
+    plt.colorbar()
+    plt.title("true dc")
+    plt.subplot(122)
+    plt.pcolormesh(x,z,update.squeeze(),cmap="RdBu_r",vmax=abs(update).max(),vmin=-abs(update).max())
+    plt.xlim(-50,50)
+    plt.ylim(-10,z[-1])
+    plt.colorbar()
+    plt.title("Update")
     plt.tight_layout()
-    plt.savefig(str(updatedir/"update.png"))
-    plt.clf()
+    plt.savefig(str(updatedir/"update_c_{:02d}.png".format(iterno)))
+
+    # plt.figure()
+    # plt.subplot(211)
+    # plt.bar(range(len(cz_ref_top)),cz_ref_top,facecolor="lightgreen",edgecolor="green",label="above the surface")
+    # plt.bar(range(len(cz_ref_bot)),cz_ref_bot,facecolor="skyblue",edgecolor="blue",label="below the surface")
+    # plt.ylabel("Coefficient value")
+    # plt.title("Spline coefficients of true model")
+    # plt.legend(loc="best")
+    # plt.subplot(212)
+    # plt.bar(range(len(update["z"])),update["z"])
+    # plt.title("Normalized update")
+    # plt.xlabel("Coefficient index")
+    # plt.ylabel("Coefficient value")
+    # plt.tight_layout()
+    # plt.savefig(str(updatedir/"update.png"))
+    # plt.clf()
 
     ############################################################################
 
+    
+
     def create_ls_model(var='psi',eps=0,kind='linear'):
 
-        ls_cz = coeffs.get("z").iterated.copy()
+        # ls_cz = coeffs.get("z").iterated.copy()
 
         if kind=='linear':
-            cz_scale = rms(coeffs["z"].get_iterated())
-            if cz_scale==0: cz_scale=0.01
-            ls_cz += eps*update["z"]*cz_scale
+            
+            lsmodel = current_model + eps*update
 
-        elif kind=='exp':
-            ls_cz *= 1+eps*update
+        # elif kind=='exp':
+        #     ls_cz *= 1+eps*update
 
 
         # print("eps {} coeffs".format(eps),ls_cz[:coeff_surf_cutoff_ind])
 
-        h_z=interpolate.splev(z,(tz,ls_cz+cz_ref_top,kz),ext=1)
-        lsmodel = f0_x[None,:]*h_z[:,None] # shape would be (nz,nx)
+        # h_z=interpolate.splev(z,(tz,ls_cz+cz_ref_top,kz),ext=1)
+        # lsmodel = f0_x[None,:]*h_z[:,None] # shape would be (nz,nx)
 
-        lsmodel = lsmodel[:,np.newaxis,:]
+        # lsmodel = lsmodel[:,np.newaxis,:]
 
-        coeffdict = {"z":ls_cz}
+        # coeffdict = {"z":ls_cz}
 
-        return lsmodel,coeffdict
+        return lsmodel
 
-    test_model_vertical_slice_fig = plt.figure()
-    test_model_vertical_slice_ax = plt.gca()
-    
-    plt.axvline(0,label="surface",ls="dotted",color="black",zorder=1)
-
-    peak_value_x = np.unravel_index(psi_true.argmax(),psi_true.shape)[1]
-    plt.plot(z,psi_true[:,peak_value_x],ls='solid',lw=2,label="true",zorder=2)
-    
-    plt.xlim(-20,z[-1])
-    plt.margins(x=0.1)
-    plt.xlabel("z [Mm]")
-    plt.ylabel(r"$\psi$ [Mm]")
 
 
     #~ Create models for linesearch
-    for i,eps_i in enumerate(eps):
-        lsmodel,model_coeffs = create_ls_model(var='psi',eps=eps_i,kind='linear')
-        
-        test_model_vertical_slice_ax.plot(z,lsmodel[:,0,peak_value_x],'o',ms=3,label="model {:d}".format(i+1),zorder=3)
+    for var in ["c"]:
+        for i,eps_i in enumerate(eps):
 
-        fitswrite(updatedir/'test_psi_{:d}.fits'.format(i+1), lsmodel)
-        np.savez(updatedir/'test_psi_{:d}_coeffs.npz'.format(i+1),**model_coeffs)
+            lsmodel = create_ls_model(var=var,eps=eps_i,kind='linear')
 
-    plt.legend(loc="best")
-    test_model_vertical_slice_fig.tight_layout()
-    test_model_vertical_slice_fig.savefig(str(updatedir/'test_psi_vertical.png'.format(i+1)))
+            fig.clf()
+            plt.subplot(121)
+            plt.pcolormesh(x,z,true_dc.squeeze(),cmap="RdBu_r",vmax=abs(true_dc).max(),vmin=-abs(true_dc).max())
+            plt.xlim(-50,50)
+            plt.ylim(-10,z[-1])
+            plt.colorbar()
+            plt.subplot(122)
+            test_dc = (lsmodel- c_quiet_3D ).squeeze()
+            plt.pcolormesh(x,z,test_dc, cmap="RdBu_r",vmax = abs(test_dc).max(),vmin = -abs(test_dc).max())
+            plt.xlim(-50,50)
+            plt.ylim(-10,z[-1])
+            plt.colorbar()
+            
+
+            plt.tight_layout()
+            plt.savefig(str(updatedir/"test_{}_{:d}.png".format(var,i+1)))
+            
+            # test_model_vertical_slice_ax.plot(z,lsmodel[:,0,peak_value_x],'o',ms=3,label="model {:d}".format(i+1),zorder=3)
+
+            fitswrite(updatedir/'test_{}_{:d}.fits'.format(var,i+1), lsmodel)
+        # np.savez(updatedir/'test_psi_{:d}_coeffs.npz'.format(i+1),**model_coeffs)
+
+    # plt.legend(loc="best")
+    # test_model_vertical_slice_fig.tight_layout()
+    # test_model_vertical_slice_fig.savefig(str(updatedir/'test_psi_vertical.png'.format(i+1)))
 
     #~ Update epslist
     epslist_path = datadir/"epslist.npz"

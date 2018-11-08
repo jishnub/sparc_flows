@@ -21,11 +21,13 @@ iter2digits=$(python -c "print('{:02d}'.format(max(0,$iter-1)))")
 touch linesearch
 echo "Starting iterations at "`date`
 
-numls=$(find $directory/update -name "test_psi_*.fits"|wc -l)
+numls=$(find $directory/update -name "test_c_*.fits"|wc -l)
+[ "$numls" -eq "0" ] && numls=$(find $directory/update -name "test_psi_*.fits"|wc -l)
 
 for lin in $(seq 1 $numls)
 do
     linzpd=$(printf "%02d" $lin)
+    [[ -e $directory/update/test_c_"$lin".fits ]] && cp $directory/update/test_c_"$lin".fits  $directory/model_c_ls"$linzpd".fits
     [[ -e $directory/update/test_psi_"$lin".fits ]] && cp $directory/update/test_psi_"$lin".fits  $directory/model_psi_ls"$linzpd".fits
 done
 
@@ -49,15 +51,16 @@ do
     for src in $(seq -f "%02g" 1 $nmasterpixels)
     do
         [[ -e $directory/kernel/misfit_"$src"_"$lin" ]]  && \
-        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$iter2digits &&\
-        rm $directory/kernel/misfit_"$src"_"$lin"
+        cat $directory/kernel/misfit_"$src"_"$lin" >> $directory/update/linesearch_$iter2digits #&&\
+        # rm $directory/kernel/misfit_"$src"_"$lin"
         
         [[ -e $directory/kernel/misfit_all_"$src"_"$lin" ]] && \
-        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$iter2digits &&\
-        rm $directory/kernel/misfit_all_"$src"_"$lin"
+        cat $directory/kernel/misfit_all_"$src"_"$lin" >> $directory/update/linesearch_all_$iter2digits #&&\
+        # rm $directory/kernel/misfit_all_"$src"_"$lin"
     
     done
     
+    [[ -e $directory/model_c_ls"$lin".fits ]] && rm $directory/model_c_ls"$lin".fits
     [[ -e $directory/model_psi_ls"$lin".fits ]] && rm $directory/model_psi_ls"$lin".fits
     
 done

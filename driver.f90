@@ -66,9 +66,11 @@ Program driver
 
         if (sound_speed_perturbation) then
 
-            call readfits('Sunspot_dcs.fits',c_bump,nz)
-            c_speed = c_speed + c_bump/dimc
+            
+            call readfits('c_true.fits',c_speed,nz)
+            c_speed = c_speed/dimc
             c2 = c_speed**2
+
         endif
 
         if (FLOWS) then
@@ -90,17 +92,18 @@ Program driver
         endif
 
     else
-
+        
         if (sound_speed_perturbation) then
+
+            c_bump = 0
             
             inquire(file=directory//'model_c_ls'//jobno//'.fits', exist = iteration)    
 
             if (iteration) then
 
-                call readfits(directory//'model_c_ls'//jobno//'.fits',c_bump,nz)
-                c_speed = c_speed + c_bump/dimc
+                call readfits(directory//'model_c_ls'//jobno//'.fits',c_speed,nz)
+                c_speed = c_speed/dimc
                 c2 = c_speed**2
-
             endif
 
         endif
@@ -115,7 +118,7 @@ Program driver
 
             if (iteration) then
 
-!~                  These logical variables are defined in params.i
+
                 if (psi_cont .and. enf_cont) then
 
                     allocate(psivar(nx,dim2(rank),nz))
@@ -164,7 +167,7 @@ Program driver
         endif
 
     endif
-!~      stop
+
     if (CONSTRUCT_KERNELS) then 
         call PRODUCE_KERNELS
     else
@@ -941,11 +944,6 @@ SUBROUTINE COMPUTE_TT_GIZONBIRCH(u0,u,tau,dt,nt, lef, rig)
 
     u0dot=u0dot/nt
 
-!~     open(unit=395,file="u_udot",status='REPLACE')
-!~     do k=1,nt
-!~         write(395,'(F14.3,X,F14.3,X,F14.3)')  u0(k),u0dot(k),u(k)
-!~     end do
-!~     close(395)
 
     call integrate_time(window*u0dot*(u0-u),numerator,dt)
     call integrate_time(window*u0dot**2,denominator,dt)
@@ -969,32 +967,13 @@ SUBROUTINE VZ_FROM_VX_CONTINUITY(vx,vz)
     real(kind=real64), dimension(nx,1,nz), intent(in) :: vx
     real(kind=real64), dimension(nx,1,nz) :: dxrhovx
     real(kind=real64), dimension(nx,1,nz), intent(out) :: vz
-!~     CHARACTER(len=255) :: cwd,homedir,pythoncmd
-!~     integer e
-!~     logical rhoex
+
 
 
     call ddx(rho0*vx,dxrhovx,1)
     call writefits_3d("dxrhovx.fits",dxrhovx,nz)
     call integrate_z(dxrhovx,vz)
     vz=-vz/rho0
-
-!~     call writefits_3d("dxrhovx_"//contrib//"_"//jobno//".fits",dxrhovx,nz)
-    !stop
-
-!~     inquire(file="rho.fits",exist=rhoex)
-!~     if (rhoex .eqv. .false.) then
-!~     call writefits_3d("rho.fits",rho0,nz)
-!~     endif
-!~     CALL getcwd(cwd)
-!~     CALL getenv("HOME", homedir)
-!~     pythoncmd = trim(trim(homedir)//"/anaconda/bin/python "//trim(cwd)//&
-!~     "/vz_from_vx_continuity.py "//contrib//" "//jobno)
-!~     call system(pythoncmd,e)
-!~     if (e /= 0) print *,"Python call exit code",e
-!~     call readfits('vz_int_'//contrib//'_'//jobno//'.fits',vz,nz)
-!~     call system('rm vz_int_'//contrib//'_'//jobno//'.fits')
-!~     call system("rm dxrhovx_"//contrib//"_"//jobno//".fits")
 
 
 END SUBROUTINE VZ_FROM_VX_CONTINUITY
@@ -1014,7 +993,7 @@ SUBROUTINE VX_FROM_VZ_CONTINUITY(vz,vx)
     real(kind=real64), dimension(nx,1,nz), intent(out) :: vx
 
     call ddz(rho0*vz,dzrhovz,1)
-!~     call writefits_3d("dzrhovz.fits",dzrhovz,nz)
+
     call integrate_x(dzrhovz,vx)
     vx=-vx/rho0
 
@@ -1043,8 +1022,6 @@ SUBROUTINE CONTINUITY_CHECK(vx,vz)
     deallocate(dzrhovz,dxrhovx,dzrho)
 
     print *,"Continuity check maxval",maxval(abs(cont)),", should ideally be zero"
-
-!~     if (contrib=="01") call writefits_3d('contcheck_ls'//jobno//'.fits',cont,nz)
 
 END SUBROUTINE CONTINUITY_CHECK
 

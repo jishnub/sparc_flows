@@ -45,6 +45,7 @@ find $directory/status -name "forward*" -delete
 find $directory/status -name "adjoint*" -delete
 find $directory/status -name "kernel*" -delete
 
+[ -e $directory/model_c_ls00.fits ] && cp $directory/model_c_ls00.fits $directory/update/model_c_"$itername".fits
 [[ -e $directory/model_psi_ls00.fits ]] && cp $directory/model_psi_ls00.fits $directory/update/model_psi_"$itername".fits
 [[ -e $directory/model_psi_ls00_coeffs.npz ]] && cp $directory/model_psi_ls00_coeffs.npz \
 													$directory/update/model_psi_"$itername"_coeffs.npz

@@ -760,7 +760,7 @@ Subroutine solar_data
 
   do k =1,nz
     z(k) = data(k,1)
-    c_speed(:,:,k) = data(k,2)/dimc  ! smoothed c
+    c_speed(:,:,k) = data(k,2)/dimc 
 !~     c_speed(:,:,k) = data(k,11)/dimc  !*0.01
 !~     c2(:,:,k) = (data(k,2)/dimc)**2.0 !c_speed(4,5,k)**2.0
 
@@ -776,7 +776,7 @@ Subroutine solar_data
   enddo
   c2 = c_speed**2.0 !smoothed c2
 
-  height = (z-1.)*rsun
+  ! height = (z-1.)*rsun
     ! if (sound_speed_perturbation) then
     !     do k=1,nz_kern
     !     sigmax = (10.*exp(height(k)/10.)+10.)/(xlength/10.**8) ! x is non-dimensional

@@ -23,9 +23,9 @@ integer, parameter :: real64 = kind(1.0d0)
 ! A timestep of 2 seconds is generally pretty solid. Too large and the sim
 ! will explode. Too small and the expense is large.
 integer nx, ny, nz
-parameter (nx = 512, ny = 1, nz = 300)
+parameter (nx = 256, ny = 1, nz = 300)
 real*8 xlength, ylength, timestep
-parameter (xlength = 800.0 * 10**(8), ylength = xlength, timestep = 2.0)
+parameter (xlength = 300.0 * 10**(8), ylength = xlength, timestep = 2.0)
 
 
 ! DIRECTORY INFORMATION

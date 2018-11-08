@@ -101,7 +101,7 @@ Contains
  if (damp_waves) call init_damping_2d
 
     if (magnetic) then
-    !    call create_2d_slices ()
+        !    call create_2d_slices ()
         
         if ((.not. kernel_mode) .or. (kernel_mode .and. COMPUTE_DATA) ) then
 
@@ -174,12 +174,12 @@ Contains
         enddo
         reduction=1.0  
         
-    !    do k=nz-30,nz 
-    !     curlboy(:,:,k) = curlboy(:,:,k)/(1. + exp(k-(nz-20.0)) )
-     !   enddo
-    !    curlboy(:,:,nz-30:nz) = 0.
-    !    curlboy = 0.
-        
+        !    do k=nz-30,nz 
+        !     curlboy(:,:,k) = curlboy(:,:,k)/(1. + exp(k-(nz-20.0)) )
+         !   enddo
+        !    curlboy(:,:,nz-30:nz) = 0.
+        !    curlboy = 0.
+          
         box = box * reduction**0.5
         boz = boz * reduction**0.5
         curlboy = curlboy * reduction**0.5

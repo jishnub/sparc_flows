@@ -43,7 +43,13 @@ if len(misfitfiles)==len(lsfiles):
     lsdata = np.loadtxt(updatedir/lsfiles[-1],usecols=2)
     misfit=np.array([sum(lsdata[i*nsrc:(i+1)*nsrc]) for i in range(num_ls_per_src)])
     best_model = misfit.argmin()+1
-    if filecmp.cmp(datadir/"model_psi_ls00.fits",updatedir/"test_psi_{}.fits".format(best_model)):
+    
+    if (datadir/"model_c_ls00.fits").exists():
+        var = "c"
+    elif (datadir/"model_psi_ls00.fits").exists():
+        var = "psi"
+
+    if filecmp.cmp(datadir/"model_{}_ls00.fits".format(var),updatedir/"test_{}_{}.fits".format(var,best_model)):
         print("iteration",int(lsfiles[-1][-2:])+1,"complete")
         print("qsub full.sh")
     else:

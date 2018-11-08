@@ -33,11 +33,15 @@ SUBROUTINE PRODUCE_KERNELS
 
 
   inquire(file=directory//'model_c_ls'//jobno//'.fits',exist = lexist)
+
   if (lexist) then
    call readfits(directory//'model_c_ls'//jobno//'.fits', temp1, nz)
-   if (sum(temp1) .ne. 0) c2 = temp1
-   c2 = (c2/dimc)**2.0
-   c_speed = c2**0.5
+   c_speed = temp1/dimc
+   c2 = c_speed**2
+
+   ! if (sum(temp1) .ne. 0) c2 = temp1
+   ! c2 = (c2/dimc)**2.0
+   ! c_speed = c2**0.5
    cq = c2(1,1,st_z:fi_z)**0.5
   endif
   
@@ -576,7 +580,7 @@ SUBROUTINE PRODUCE_KERNELS
  print *,"Sound speed kernels"
  if (SOUND_SPEED_KERNELS) then
   if (rank==0) print *,'DIMENSIONS OF NORMALIZED SOUND-SPEED KERNELS ARE s^2 Mm^-3'
-  kernelc2 = - kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
+  kernelc2 = kernelc2 * rho0 * c2 * stepskern * timestep * dimen * 2.0
   ! if (flows .and. psi_cont) kernelc2 = kernelc2 + kernelpsi*(1.-psivar(1,1,1)/psivar)
   call writefits_3d(adjustl(trim(directory_rel))//'kernel_c_'//contrib//'.fits', kernelc2, nz_kern)
 
