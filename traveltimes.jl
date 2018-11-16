@@ -2,7 +2,7 @@ module traveltimes
 
 using FFTW,Optim
 
-filt(a,f) = real(ifft(fft(a)*f))
+filt(a,f) = real(ifft(fft(a).*f))
 
 function fft_derivative(a;dt=1)
 	nt = size(a,1)
@@ -29,61 +29,28 @@ function GB02(ξ0::AbstractArray{<:Real,1},ξ::AbstractArray{<:Real,1};dt=1,T_wi
 	return num./den
 end
 
-GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},x_rec_pix::Integer;dt=1) = traveltimes_GB02(ξ0[:,x_rec_pix],ξ[:,x_rec_pix],dt=dt)
+GB02(ξ0::AbstractArray,ξ::AbstractArray,x_rec_pix::Integer;dt=1) = GB02(ξ0[x_rec_pix,:],ξ[x_rec_pix,:],dt=dt)
 
-function GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},(x_min_pix,x_max_pix);dt=1)
+function GB02(ξ0::AbstractArray,ξ::AbstractArray,(x_min_pix,x_max_pix)::Tuple{Int64,Int64};dt=1,T_window_pix = 1:size(ξ0,1))
 	
 	δτ_pix = zeros(x_max_pix - x_min_pix + 1)
 
-	for (ind,x_pix) in x_min_pix:x_max_pix
-		δτ_pix[ind] = GB02(ξ0,ξ,x_pix,dt=dt)
+	for (ind,x_pix) in enumerate(x_min_pix:x_max_pix)
+		δτ_pix[ind] = GB02(ξ0[x_pix,:],ξ[x_pix,:],dt=dt,T_window_pix = T_window_pix)
 	end
 	return δτ_pix 
 end
 
-function GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},x_ranges...;dt=1,dx=1)
-	
-	nx = size(ξ0,2)
-	Lx = dx*nx
 
-	x = range(-Lx/2,stop=Lx/2,length=nx+1)[1:nx]
 
-	x_pix_ranges = Array{UnitRange{Int64},1}(undef,length(x_ranges))
-	
-	for (ind,x_range) in enumerate(x_ranges)
-		x_low = x_range[1]
-		x_low_pix = argmin(abs.(x .- x_low))
-		x_high = x_range[end]
-		x_high_pix = argmin(abs.(x .- x_high))
-		x_pix_ranges[ind] = x_low_pix:x_high_pix
-	end
-
-	δτ_pix = zeros(sum(length.(x_pix_ranges)))
-
-	ind = 0
-	for x_pix_range in x_pix_ranges,x_pix in x_pix_range
-	
-		ind += 1
-		δτ_pix[ind] = GB02(ξ0,ξ,x_pix,dt=dt)
-	
-	end
-	return δτ_pix 
-end
-
-function GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},filter_fn,x_ranges...;dt=1,dx=1)
-	ξ_filt = filt(ξ,filter_fn)
-	ξ0_filt = filt(ξ0,filter_fn)
-	GB02(ξ0_filt,ξ_filt,x_ranges,dt=dt,dx=dx)
-end
-
-function GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},filter_fn;dt=1)
+function GB02(ξ0::AbstractArray,ξ::AbstractArray,filter_fn::AbstractArray;dt=1)
 	ξ_filt = filt(ξ,filter_fn)
 	ξ0_filt = filt(ξ0,filter_fn)
 
 	GB02(ξ0_filt,ξ_filt,dt=dt)
 end
 
-function GB02(ξ0::AbstractArray{<:Real,2},ξ::AbstractArray{<:Real,2},filter_fn,x_rec_pix;dt=1)
+function GB02(ξ0::AbstractArray,ξ::AbstractArray,filter_fn,x_rec_pix;dt=1)
 	ξ_filt = filt(ξ,filter_fn)
 	ξ0_filt = filt(ξ0,filter_fn)
 
