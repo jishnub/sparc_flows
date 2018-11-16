@@ -6,7 +6,6 @@
 *.out
 sparc
 grad
-tt_test
 *.fits
 output*
 error*
@@ -19,6 +18,3 @@ code_python/
 *.eps
 running_full
 linesearch
-compute_data
-fort.*
-.*
