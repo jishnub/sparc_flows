@@ -18,3 +18,5 @@ code_python/
 *.eps
 running_full
 linesearch
+.ipynb_checkpoints/
+
